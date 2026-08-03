@@ -19,13 +19,15 @@ fn print_help() {
 }
 
 fn start_interactive_cli() {
-    println!("╭────────────────────────────────────────────╮");
-    println!("│             iSearch CLI™ Terminal          │");
-    println!("├────────────────────────────────────────────┤");
-    println!("│ Type 'browse' to surf the web/local files, │");
-    println!("│ type 'donate' to support the project, or   │");
-    println!("│ type 'help' to see other commands.         │");
-    println!("╰────────────────────────────────────────────╯");
+    println!("░▀█▀░█▀▀░█▀▀░█▀█░█▀▄░█▀▀░█░█░░░█▀▀░█░░░▀█▀");
+    println!("░░█░░▀▀█░█▀▀░█▀█░█▀▄░█░░░█▀█░░░█░░░█░░░░█░");
+    println!("░▀▀▀░▀▀▀░▀▀▀░▀░▀░▀░▀░▀▀▀░▀░▀░░░▀▀▀░▀▀▀░▀▀▀");
+    println!("                 iSearch CLI™");
+    println!("=================================================");
+    println!(" Type 'browse' to surf the web/local files,");
+    println!(" type 'donate' to support the project, or");
+    println!(" type 'help' to see other commands.");
+    println!("=================================================");
 
     let stdin = io::stdin();
     loop {

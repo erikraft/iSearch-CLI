@@ -7,6 +7,7 @@ use std::process::Command;
 
 pub struct ChromiumEngine {
     executable_path: Option<PathBuf>,
+    pub incognito_mode: bool,
 }
 
 impl Default for ChromiumEngine {
@@ -17,7 +18,7 @@ impl Default for ChromiumEngine {
 
 impl ChromiumEngine {
     pub fn new() -> Self {
-        let mut engine = Self { executable_path: None };
+        let mut engine = Self { executable_path: None, incognito_mode: false };
         engine.executable_path = engine.detect_chromium_path();
         engine
     }
@@ -330,10 +331,17 @@ impl BrowserEngine for ChromiumEngine {
         }
 
         // Run Chrome Headless to fetch DOM after modern JS execution
-        let output = Command::new(exec_path)
-            .arg("--headless=new")
-            .arg("--disable-gpu")
-            .arg("--dump-dom")
+        let mut cmd = Command::new(exec_path);
+        cmd.arg("--headless=new")
+           .arg("--disable-gpu");
+
+        if self.incognito_mode {
+            cmd.arg("--incognito");
+            let temp_dir = std::env::temp_dir().join(format!("isearch_chrome_profile_{}", rand_string()));
+            cmd.arg(format!("--user-data-dir={}", temp_dir.display()));
+        }
+
+        let output = cmd.arg("--dump-dom")
             .arg(&clean_url)
             .output()
             .map_err(|e| BrowserError::IoError(format!("Failed to execute Chromium: {}", e)))?;
@@ -382,10 +390,17 @@ impl BrowserEngine for ChromiumEngine {
         let temp_screenshot = env::temp_dir().join(format!("isearch_screenshot_{}.png", rand_string()));
 
         // Run Chrome to capture screenshot
-        let output = Command::new(exec_path)
-            .arg("--headless=new")
-            .arg("--disable-gpu")
-            .arg(format!("--screenshot={}", temp_screenshot.display()))
+        let mut cmd = Command::new(exec_path);
+        cmd.arg("--headless=new")
+           .arg("--disable-gpu");
+
+        if self.incognito_mode {
+            cmd.arg("--incognito");
+            let temp_dir = std::env::temp_dir().join(format!("isearch_chrome_profile_{}", rand_string()));
+            cmd.arg(format!("--user-data-dir={}", temp_dir.display()));
+        }
+
+        let output = cmd.arg(format!("--screenshot={}", temp_screenshot.display()))
             .arg(format!("--window-size={},{}", width, height))
             .arg(&clean_url)
             .output()
