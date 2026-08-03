@@ -37,6 +37,14 @@ impl BrowserTab {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InstallerStep {
+    Main,
+    DownloadPage,
+    InstallCommands,
+    ConfigurePath,
+}
+
 pub struct BrowserApp {
     pub core: BrowserCore,
     pub tabs: Vec<BrowserTab>,
@@ -47,6 +55,24 @@ pub struct BrowserApp {
     pub scroll_offset: usize,
     pub status_message: String,
     pub term_caps: TerminalCapabilities,
+    pub show_installer: bool,
+    pub installer_step: InstallerStep,
+    pub custom_path_input: String,
+    pub installer_status: String,
+    pub theme: crate::browser::theme::AppTheme,
+    pub theme_preset: crate::browser::theme::ThemePreset,
+    pub bookmarks: Vec<String>,
+    pub history_list: Vec<String>,
+    pub downloads: Vec<(String, f32, String)>, // (filename, progress, status)
+    pub show_bookmarks: bool,
+    pub show_history: bool,
+    pub download_active: bool,
+}
+
+impl Default for BrowserApp {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl BrowserApp {
@@ -61,6 +87,18 @@ impl BrowserApp {
             scroll_offset: 0,
             status_message: "Ready".to_string(),
             term_caps: TerminalCapabilities::detect(),
+            show_installer: false,
+            installer_step: InstallerStep::Main,
+            custom_path_input: String::new(),
+            installer_status: "Ready".to_string(),
+            theme: crate::browser::theme::AppTheme::from_preset(crate::browser::theme::ThemePreset::Default),
+            theme_preset: crate::browser::theme::ThemePreset::Default,
+            bookmarks: vec!["https://www.rust-lang.org".to_string(), "https://news.ycombinator.com".to_string()],
+            history_list: vec!["https://www.google.com".to_string()],
+            downloads: Vec::new(),
+            show_bookmarks: false,
+            show_history: false,
+            download_active: false,
         };
         // Load initial page
         let _ = app.load_current_page();
@@ -70,6 +108,29 @@ impl BrowserApp {
     pub fn load_current_page(&mut self) -> Result<(), BrowserError> {
         self.scroll_offset = 0;
         let url = self.tabs[self.active_tab_idx].url.clone();
+
+        // Android (Termux) target - force native engine and never show Chromium error
+        #[cfg(target_os = "android")]
+        {
+            self.core.current_engine = EngineType::Native;
+        }
+
+        // Check if Chromium is required but not available
+        if self.core.current_engine == EngineType::Chromium && !self.core.chromium_engine.is_available() {
+            #[cfg(target_os = "android")]
+            {
+                // Never show Chromium errors/assistant on Android
+                self.core.current_engine = EngineType::Native;
+            }
+            #[cfg(not(target_os = "android"))]
+            {
+                self.show_installer = true;
+                self.installer_step = InstallerStep::Main;
+                self.status_message = "Chromium required but not available.".to_string();
+                return Err(BrowserError::ChromiumNotAvailable("Chromium not found".to_string()));
+            }
+        }
+
         self.status_message = format!("Loading {}...", url);
 
         match self.core.navigate(&url) {
@@ -83,11 +144,15 @@ impl BrowserApp {
                     PageContent::ArchivePreview { path, .. } => format!("Archive: {}", path.to_string_lossy()),
                     PageContent::ImagePreview { path, .. } => format!("Image: {}", path.to_string_lossy()),
                     PageContent::AnsiText { title, .. } => title.clone(),
+                    PageContent::Mesh3DPreview { title, .. } => format!("3D Model: {}", title),
                 };
 
                 self.tabs[self.active_tab_idx].title = title;
                 self.tabs[self.active_tab_idx].content = Some(content);
-                self.status_message = format!("Loaded.");
+                self.status_message = "Loaded.".to_string();
+                if !self.history_list.contains(&url) {
+                    self.history_list.push(url);
+                }
                 Ok(())
             }
             Err(e) => {
@@ -127,6 +192,23 @@ fn run_loop<B: ratatui::backend::Backend>(
     app: &mut BrowserApp,
 ) -> io::Result<()> {
     loop {
+        if app.download_active {
+            for d in &mut app.downloads {
+                if d.1 < 1.0 {
+                    d.1 += 0.2;
+                    d.2 = format!("Downloading... {:.0}%", d.1 * 100.0);
+                    if d.1 >= 1.0 {
+                        d.1 = 1.0;
+                        d.2 = "Finished".to_string();
+                        app.status_message = format!("Downloaded successfully: {}", d.0);
+                    }
+                }
+            }
+            if app.downloads.iter().all(|d| d.1 >= 1.0) {
+                app.download_active = false;
+            }
+        }
+
         terminal.draw(|f| ui(f, app))?;
 
         if event::poll(std::time::Duration::from_millis(100))? {
@@ -136,7 +218,114 @@ fn run_loop<B: ratatui::backend::Backend>(
                         continue;
                     }
 
-                    if app.input_mode {
+                    if app.show_installer {
+                        match app.installer_step {
+                            InstallerStep::Main => {
+                                match key.code {
+                                    KeyCode::Char('1') => {
+                                        app.installer_step = InstallerStep::DownloadPage;
+                                    }
+                                    KeyCode::Char('2') => {
+                                        app.installer_step = InstallerStep::InstallCommands;
+                                    }
+                                    KeyCode::Char('3') => {
+                                        app.installer_step = InstallerStep::ConfigurePath;
+                                        app.custom_path_input = String::new();
+                                    }
+                                    KeyCode::Char('4') | KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('Q') => {
+                                        app.show_installer = false;
+                                        app.core.set_engine(EngineType::Native);
+                                        app.status_message = "Using Native Rendering Mode".to_string();
+                                        let _ = app.load_current_page();
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            InstallerStep::DownloadPage | InstallerStep::InstallCommands => {
+                                match key.code {
+                                    KeyCode::Esc | KeyCode::Backspace | KeyCode::Char('b') | KeyCode::Char('B') => {
+                                        app.installer_step = InstallerStep::Main;
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            InstallerStep::ConfigurePath => {
+                                match key.code {
+                                    KeyCode::Esc => {
+                                        app.installer_step = InstallerStep::Main;
+                                    }
+                                    KeyCode::Enter => {
+                                        let path = std::path::PathBuf::from(app.custom_path_input.trim());
+                                        if path.exists() {
+                                            app.core.chromium_engine.set_manual_path(path);
+                                            app.show_installer = false;
+                                            app.installer_status = "Custom path configured!".to_string();
+                                            let _ = app.load_current_page();
+                                        } else {
+                                            app.installer_status = "Path does not exist!".to_string();
+                                        }
+                                    }
+                                    KeyCode::Char(c) => {
+                                        app.custom_path_input.push(c);
+                                    }
+                                    KeyCode::Backspace => {
+                                        app.custom_path_input.pop();
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                    } else if app.show_bookmarks {
+                        match key.code {
+                            KeyCode::Esc | KeyCode::Char('o') | KeyCode::Char('O') => {
+                                app.show_bookmarks = false;
+                            }
+                            KeyCode::Up => {
+                                if app.scroll_offset > 0 {
+                                    app.scroll_offset -= 1;
+                                }
+                            }
+                            KeyCode::Down => {
+                                if app.scroll_offset < app.bookmarks.len().saturating_sub(1) {
+                                    app.scroll_offset += 1;
+                                }
+                            }
+                            KeyCode::Enter => {
+                                if !app.bookmarks.is_empty() {
+                                    let selected_url = app.bookmarks[app.scroll_offset.min(app.bookmarks.len() - 1)].clone();
+                                    app.tabs[app.active_tab_idx].url = selected_url;
+                                    app.show_bookmarks = false;
+                                    let _ = app.load_current_page();
+                                }
+                            }
+                            _ => {}
+                        }
+                    } else if app.show_history {
+                        match key.code {
+                            KeyCode::Esc | KeyCode::Char('y') | KeyCode::Char('Y') => {
+                                app.show_history = false;
+                            }
+                            KeyCode::Up => {
+                                if app.scroll_offset > 0 {
+                                    app.scroll_offset -= 1;
+                                }
+                            }
+                            KeyCode::Down => {
+                                if app.scroll_offset < app.history_list.len().saturating_sub(1) {
+                                    app.scroll_offset += 1;
+                                }
+                            }
+                            KeyCode::Enter => {
+                                if !app.history_list.is_empty() {
+                                    let selected_url = app.history_list[app.scroll_offset.min(app.history_list.len() - 1)].clone();
+                                    app.tabs[app.active_tab_idx].url = selected_url;
+                                    app.show_history = false;
+                                    let _ = app.load_current_page();
+                                }
+                            }
+                            _ => {}
+                        }
+                    } else if app.input_mode {
                         match key.code {
                             KeyCode::Esc => {
                                 app.input_mode = false;
@@ -164,7 +353,11 @@ fn run_loop<B: ratatui::backend::Backend>(
                     } else {
                         match key.code {
                             KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('Q') => {
-                                return Ok(());
+                                if app.download_active {
+                                    app.download_active = false;
+                                } else {
+                                    return Ok(());
+                                }
                             }
                             KeyCode::Char('l') | KeyCode::Char('L') => {
                                 app.input_mode = true;
@@ -197,17 +390,36 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 self_render_viewport(app);
                             }
                             KeyCode::Char('w') | KeyCode::Char('W') => {
-                                // Close tab
-                                if app.tabs.len() > 1 {
-                                    app.tabs.remove(app.active_tab_idx);
-                                    if app.active_tab_idx >= app.tabs.len() {
-                                        app.active_tab_idx = app.tabs.len() - 1;
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                    mesh.rotate_x(0.1);
+                                } else {
+                                    // Close tab
+                                    if app.tabs.len() > 1 {
+                                        app.tabs.remove(app.active_tab_idx);
+                                        if app.active_tab_idx >= app.tabs.len() {
+                                            app.active_tab_idx = app.tabs.len() - 1;
+                                        }
+                                        app.address_buffer = app.tabs[app.active_tab_idx].url.clone();
+                                        self_render_viewport(app);
                                     }
-                                    app.address_buffer = app.tabs[app.active_tab_idx].url.clone();
-                                    self_render_viewport(app);
                                 }
                             }
-                            KeyCode::Char('b') | KeyCode::Char('B') | KeyCode::Left => {
+                            KeyCode::Char('s') | KeyCode::Char('S') => {
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                    mesh.rotate_x(-0.1);
+                                }
+                            }
+                            KeyCode::Char('a') | KeyCode::Char('A') => {
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                    mesh.rotate_y(-0.1);
+                                }
+                            }
+                            KeyCode::Char('d') | KeyCode::Char('D') => {
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                    mesh.rotate_y(0.1);
+                                }
+                            }
+                            KeyCode::Char('b') | KeyCode::Char('B') => {
                                 // Back in history
                                 let current_idx = app.tabs[app.active_tab_idx].history_idx;
                                 if current_idx > 0 {
@@ -219,7 +431,7 @@ fn run_loop<B: ratatui::backend::Backend>(
                                     app.status_message = "No back history".to_string();
                                 }
                             }
-                            KeyCode::Char('f') | KeyCode::Char('F') | KeyCode::Right => {
+                            KeyCode::Char('f') | KeyCode::Char('F') => {
                                 // Forward in history
                                 let current_idx = app.tabs[app.active_tab_idx].history_idx;
                                 let hist_len = app.tabs[app.active_tab_idx].history.len();
@@ -235,13 +447,108 @@ fn run_loop<B: ratatui::backend::Backend>(
                             KeyCode::Char('h') | KeyCode::Char('H') => {
                                 app.show_help = !app.show_help;
                             }
+                            KeyCode::Char('o') | KeyCode::Char('O') => {
+                                app.show_bookmarks = !app.show_bookmarks;
+                                app.show_history = false;
+                                app.scroll_offset = 0;
+                            }
+                            KeyCode::Char('y') | KeyCode::Char('Y') => {
+                                app.show_history = !app.show_history;
+                                app.show_bookmarks = false;
+                                app.scroll_offset = 0;
+                            }
+                            KeyCode::Char('g') | KeyCode::Char('G') => {
+                                let current_url = app.tabs[app.active_tab_idx].url.clone();
+                                if !app.bookmarks.contains(&current_url) {
+                                    app.bookmarks.push(current_url);
+                                    app.status_message = "Bookmarked page!".to_string();
+                                } else {
+                                    app.status_message = "Already bookmarked".to_string();
+                                }
+                            }
+                            KeyCode::Char('p') | KeyCode::Char('P') => {
+                                // Trigger simulated/mock download with progress
+                                let filename = app.tabs[app.active_tab_idx].url.split('/').next_back().unwrap_or("index.html").to_string();
+                                let clean_filename = if filename.is_empty() || filename.contains('?') { "index.html".to_string() } else { filename };
+                                app.downloads.push((clean_filename.clone(), 0.0, "Initiating download...".to_string()));
+                                app.download_active = true;
+                                app.status_message = format!("Downloading {}...", clean_filename);
+                            }
+                            KeyCode::Char('k') | KeyCode::Char('K') => {
+                                // Cycle themes
+                                let next_preset = match app.theme_preset {
+                                    crate::browser::theme::ThemePreset::Default => crate::browser::theme::ThemePreset::Dracula,
+                                    crate::browser::theme::ThemePreset::Dracula => crate::browser::theme::ThemePreset::Nord,
+                                    crate::browser::theme::ThemePreset::Nord => crate::browser::theme::ThemePreset::Ocean,
+                                    crate::browser::theme::ThemePreset::Ocean => crate::browser::theme::ThemePreset::Monokai,
+                                    crate::browser::theme::ThemePreset::Monokai => crate::browser::theme::ThemePreset::Light,
+                                    crate::browser::theme::ThemePreset::Light => crate::browser::theme::ThemePreset::Default,
+                                };
+                                app.theme_preset = next_preset;
+                                app.theme = crate::browser::theme::AppTheme::from_preset(next_preset);
+                                app.status_message = format!("Switched theme to {}", app.theme.name);
+                            }
                             KeyCode::Up => {
-                                if app.scroll_offset > 0 {
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                    mesh.rotate_x(0.1);
+                                } else if app.scroll_offset > 0 {
                                     app.scroll_offset -= 1;
                                 }
                             }
                             KeyCode::Down => {
-                                app.scroll_offset += 1;
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                    mesh.rotate_x(-0.1);
+                                } else {
+                                    app.scroll_offset += 1;
+                                }
+                            }
+                            KeyCode::Left => {
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                    mesh.rotate_y(-0.1);
+                                } else {
+                                    // Back in history
+                                    let current_idx = app.tabs[app.active_tab_idx].history_idx;
+                                    if current_idx > 0 {
+                                        app.tabs[app.active_tab_idx].history_idx -= 1;
+                                        let prev_url = app.tabs[app.active_tab_idx].history[current_idx - 1].clone();
+                                        app.tabs[app.active_tab_idx].url = prev_url;
+                                        let _ = app.load_current_page();
+                                    } else {
+                                        app.status_message = "No back history".to_string();
+                                    }
+                                }
+                            }
+                            KeyCode::Right => {
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                    mesh.rotate_y(0.1);
+                                } else {
+                                    // Forward in history
+                                    let current_idx = app.tabs[app.active_tab_idx].history_idx;
+                                    let hist_len = app.tabs[app.active_tab_idx].history.len();
+                                    if current_idx + 1 < hist_len {
+                                        app.tabs[app.active_tab_idx].history_idx += 1;
+                                        let next_url = app.tabs[app.active_tab_idx].history[current_idx + 1].clone();
+                                        app.tabs[app.active_tab_idx].url = next_url;
+                                        let _ = app.load_current_page();
+                                    } else {
+                                        app.status_message = "No forward history".to_string();
+                                    }
+                                }
+                            }
+                            KeyCode::Enter => {
+                                // If inside zip archive browser, we can select a file and navigate to it!
+                                if let Some(PageContent::ArchivePreview { path, files }) = &app.tabs[app.active_tab_idx].content {
+                                    if app.scroll_offset < files.len() {
+                                        let selected_file = &files[app.scroll_offset];
+                                        let archive_url = format!("{}::{}", path.to_string_lossy(), selected_file);
+                                        app.tabs[app.active_tab_idx].url = archive_url.clone();
+                                        let mut hist = app.tabs[app.active_tab_idx].history.clone();
+                                        hist.push(archive_url);
+                                        app.tabs[app.active_tab_idx].history = hist;
+                                        app.tabs[app.active_tab_idx].history_idx += 1;
+                                        let _ = app.load_current_page();
+                                    }
+                                }
                             }
                             _ => {}
                         }
@@ -254,7 +561,7 @@ fn run_loop<B: ratatui::backend::Backend>(
 
                         if r == 1 {
                             // Clicks on Top Bar / Tabs
-                            if c >= 20 && c <= 80 {
+                            if (20..=80).contains(&c) {
                                 let click_idx = ((c - 20) / 18) as usize;
                                 if click_idx < app.tabs.len() {
                                     app.active_tab_idx = click_idx;
@@ -262,7 +569,7 @@ fn run_loop<B: ratatui::backend::Backend>(
                                     self_render_viewport(app);
                                 }
                             }
-                        } else if r >= 3 && r <= 5 {
+                        } else if (3..=5).contains(&r) {
                             // Click on Address bar -> Focus input mode
                             app.input_mode = true;
                             app.address_buffer = app.tabs[app.active_tab_idx].url.clone();
@@ -282,10 +589,10 @@ fn self_render_viewport(app: &mut BrowserApp) {
 pub fn ui(f: &mut Frame, app: &mut BrowserApp) {
     let size = f.area();
 
-    // Theme Colors
-    let primary_style = Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD);
-    let highlight_style = Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD);
-    let border_style = Style::default().fg(Color::DarkGray);
+    // Theme Colors from Theme System
+    let primary_style = Style::default().fg(app.theme.primary).add_modifier(Modifier::BOLD);
+    let highlight_style = Style::default().fg(app.theme.highlight).add_modifier(Modifier::BOLD);
+    let border_style = Style::default().fg(app.theme.border);
 
     // Main layout
     let chunks = Layout::default()
@@ -344,17 +651,115 @@ pub fn ui(f: &mut Frame, app: &mut BrowserApp) {
     let content_area = content_block.inner(chunks[2]);
     f.render_widget(content_block, chunks[2]);
 
+    if app.show_installer {
+        let installer_content = match app.installer_step {
+            InstallerStep::Main => {
+                "\
+Chromium-compatible browser not found.\n\n\
+Modern JavaScript websites require a Chromium-compatible rendering backend.\n\n\
+Supported browsers:\n\
+✓ Google Chrome\n\
+✓ Chromium\n\
+✓ Microsoft Edge\n\
+✓ Brave\n\
+✓ Vivaldi\n\
+✓ Opera\n\
+✓ Ungoogled Chromium\n\n\
+Choose:\n\
+[1] Open the official download page\n\
+[2] Show installation commands (when available)\n\
+[3] Configure an existing executable\n\
+[4] Continue using Native Rendering Mode".to_string()
+            }
+            InstallerStep::DownloadPage => {
+                "\
+Official Browser Download Pages:\n\n\
+- Google Chrome: https://www.google.com/chrome/\n\
+- Chromium: https://www.chromium.org/getting-involved/download-chromium/\n\
+- Microsoft Edge: https://www.microsoft.com/edge/\n\
+- Brave: https://brave.com/\n\
+- Vivaldi: https://vivaldi.com/\n\
+- Opera: https://www.opera.com/\n\n\
+Press [Backspace] or [B] to go back.".to_string()
+            }
+            InstallerStep::InstallCommands => {
+                app.core.chromium_engine.get_guided_install_instructions() + "\n\nPress [Backspace] or [B] to go back."
+            }
+            InstallerStep::ConfigurePath => {
+                format!(
+                    "Configure existing browser executable path:\n\n\
+                     Type/paste absolute path and press [Enter]:\n\n\
+                     > {}\n\n\
+                     Status: {}\n\n\
+                     Press [Esc] to go back.",
+                    app.custom_path_input, app.installer_status
+                )
+            }
+        };
+
+        let installer_p = Paragraph::new(installer_content)
+            .style(Style::default().fg(Color::Yellow))
+            .wrap(Wrap { trim: false });
+        f.render_widget(installer_p, content_area);
+        return;
+    }
+
+    if app.show_bookmarks {
+        let mut bookmark_content = "iSearch CLI™ Bookmarks:\n\n\
+                                    Scroll with [Up/Down] and Press [Enter] to go to page:\n\n".to_string();
+        for (idx, b) in app.bookmarks.iter().enumerate() {
+            let indicator = if idx == app.scroll_offset { "➔  " } else { "   " };
+            let style_str = if idx == app.scroll_offset { format!("[ {} ]", b) } else { b.clone() };
+            bookmark_content.push_str(&format!("{}{}\n", indicator, style_str));
+        }
+        if app.bookmarks.is_empty() {
+            bookmark_content.push_str("No bookmarks saved. Press [G] on any web page to bookmark it!");
+        }
+        bookmark_content.push_str("\n\nPress [Esc] or [O] to exit Bookmarks panel.");
+
+        let bookmarks_p = Paragraph::new(bookmark_content)
+            .style(Style::default().fg(app.theme.primary))
+            .wrap(Wrap { trim: false });
+        f.render_widget(bookmarks_p, content_area);
+        return;
+    }
+
+    if app.show_history {
+        let mut history_content = "iSearch CLI™ Persistent History:\n\n\
+                                   Scroll with [Up/Down] and Press [Enter] to go to page:\n\n".to_string();
+        for (idx, h) in app.history_list.iter().enumerate() {
+            let indicator = if idx == app.scroll_offset { "➔  " } else { "   " };
+            let style_str = if idx == app.scroll_offset { format!("[ {} ]", h) } else { h.clone() };
+            history_content.push_str(&format!("{}{}\n", indicator, style_str));
+        }
+        if app.history_list.is_empty() {
+            history_content.push_str("No history recorded yet.");
+        }
+        history_content.push_str("\n\nPress [Esc] or [Y] to exit History panel.");
+
+        let history_p = Paragraph::new(history_content)
+            .style(Style::default().fg(app.theme.primary))
+            .wrap(Wrap { trim: false });
+        f.render_widget(history_p, content_area);
+        return;
+    }
+
     if app.show_help {
         let help_text = "\
 iSearch CLI™ Terminal Browser Help\n\n\
 Keybindings:\n\
-  [Esc / Q]      Exit the browser\n\
+  [Esc / Q]      Exit the browser / close download popups\n\
   [L]            Focus address bar (type URL or search term)\n\
   [R]            Reload current page\n\
   [E]            Toggle between NATIVE and CHROMIUM engines\n\
   [T]            Open a new tab\n\
   [Tab]          Switch to next tab\n\
   [W]            Close active tab\n\
+  [G]            Bookmark current page\n\
+  [O]            Toggle Bookmarks panel\n\
+  [Y]            Toggle History panel\n\
+  [P]            Download current page/file\n\
+  [K]            Cycle theme preset\n\
   [H]            Toggle this help screen\n\
   [Up / Down]    Scroll viewport up/down\n\n\
 Under the hood:\n\
@@ -362,7 +767,7 @@ Under the hood:\n\
   - Chromium Engine runs Chrome/Chromium headlessly for complex Javascript-heavy modern apps (React, Vue, Next.js).";
 
         let help_p = Paragraph::new(help_text)
-            .style(Style::default().fg(Color::White))
+            .style(Style::default().fg(app.theme.text))
             .wrap(Wrap { trim: false });
         f.render_widget(help_p, content_area);
         return;
@@ -414,13 +819,19 @@ Under the hood:\n\
             }
             PageContent::ArchivePreview { files, .. } => {
                 display_lines.push(Line::from(vec![
-                    Span::styled("Archive Contents (ZIP):", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+                    Span::styled("Archive Contents (ZIP) - Scroll and Press [Enter] to open file:", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
                 ]));
                 display_lines.push(Line::raw(""));
-                for file in files {
+                for (idx, file) in files.iter().enumerate() {
+                    let indicator = if idx == app.scroll_offset { "➔ 📦 " } else { "  📦 " };
+                    let style = if idx == app.scroll_offset {
+                        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(Color::Cyan)
+                    };
                     display_lines.push(Line::from(vec![
-                        Span::raw("📦 "),
-                        Span::styled(file.clone(), Style::default().fg(Color::Cyan)),
+                        Span::raw(indicator),
+                        Span::styled(file.clone(), style),
                     ]));
                 }
             }
@@ -431,6 +842,9 @@ Under the hood:\n\
                     content_area.height as u32,
                     &app.term_caps,
                 );
+            }
+            PageContent::Mesh3DPreview { mesh, .. } => {
+                display_lines = mesh.render_to_lines(content_area.width as usize, content_area.height as usize);
             }
             _ => {
                 display_lines.push(Line::raw("Preview not supported for this media type."));
@@ -449,6 +863,21 @@ Under the hood:\n\
     let offset = std::cmp::min(app.scroll_offset, max_scroll);
     app.scroll_offset = offset;
 
+    if !app.downloads.is_empty() {
+        display_lines.push(Line::raw(""));
+        display_lines.push(Line::from(vec![
+            Span::styled("--- Active Downloads ---", Style::default().fg(app.theme.primary).add_modifier(Modifier::BOLD))
+        ]));
+        for d in &app.downloads {
+            let filled = (d.1 * 10.0) as usize;
+            let bar = format!("  [ {}{} ]  {}", "█".repeat(filled), "░".repeat(10 - filled), d.2);
+            display_lines.push(Line::from(vec![
+                Span::styled(format!("📁 File: {}  ", d.0), Style::default().fg(app.theme.text)),
+                Span::styled(bar, Style::default().fg(app.theme.success)),
+            ]));
+        }
+    }
+
     let scrolled_lines: Vec<Line<'_>> = display_lines.into_iter().skip(offset).take(content_area.height as usize).collect();
     let viewport_p = Paragraph::new(scrolled_lines);
     f.render_widget(viewport_p, content_area);
@@ -460,10 +889,11 @@ Under the hood:\n\
         Span::styled(" [E: Switch Engine] ", Style::default().fg(Color::Gray)),
         Span::styled(" [T: New Tab] ", Style::default().fg(Color::Gray)),
         Span::styled(" [Tab: Next Tab] ", Style::default().fg(Color::Gray)),
+        Span::styled(" [K: Cycle Theme] ", Style::default().fg(Color::Gray)),
         Span::styled(" [H: Toggle Help] ", Style::default().fg(Color::Gray)),
         Span::raw(" │ Status: "),
-        Span::styled(app.status_message.clone(), Style::default().fg(Color::Yellow)),
+        Span::styled(app.status_message.clone(), Style::default().fg(app.theme.highlight)),
     ]))
-    .style(Style::default().bg(Color::Black).fg(Color::White));
+    .style(Style::default().bg(Color::Black).fg(app.theme.text));
     f.render_widget(status_bar, chunks[3]);
 }

@@ -249,7 +249,7 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.active_screen = ActiveScreen::SelectAmount;
                         }
                         KeyCode::Char(c) => {
-                            if c.is_digit(10) || c == '.' || c == ',' {
+                            if c.is_ascii_digit() || c == '.' || c == ',' {
                                 app.custom_amount_buffer.push(c);
                             }
                         }
@@ -301,15 +301,15 @@ fn run_app<B: ratatui::backend::Backend>(
                     if let ActiveScreen::SelectAmount = &app.active_screen {
                         // Estimate where elements are located vertically in terminal coordinate
                         // SelectAmount screen has elements in middle area. Let's do a basic mapping:
-                        if y >= 6 && y <= 12 {
+                        if (6..=12).contains(&y) {
                             app.focus = SelectionFocus::AmountList;
                             let idx = (y - 6) as usize;
                             if idx <= app.default_amounts.len() {
                                 app.amount_list_state.select(Some(idx));
                             }
-                        } else if y >= 14 && y <= 16 {
+                        } else if (14..=16).contains(&y) {
                             app.focus = SelectionFocus::MessageInput;
-                        } else if y >= 18 && y <= 20 {
+                        } else if (18..=20).contains(&y) {
                             app.focus = SelectionFocus::GenerateButton;
                         }
                     }

@@ -54,7 +54,7 @@ fn start_interactive_cli() {
                     if let Err(e) = browser::ui::run_browser_tui() {
                         eprintln!("Error launching browser: {}", e);
                     }
-                } else if trimmed == "" {
+                } else if trimmed.is_empty() {
                     // Do nothing
                 } else {
                     println!("Unknown command: '{}'. Type 'help', 'browse' or 'donate'.", trimmed);
@@ -81,16 +81,13 @@ fn main() {
                 eprintln!("Error launching donation screen: {}", e);
                 std::process::exit(1);
             }
-            return;
         } else if joined_args == "browse" || joined_args == "isearch browse" || joined_args.starts_with("browse ") {
             if let Err(e) = browser::ui::run_browser_tui() {
                 eprintln!("Error launching browser: {}", e);
                 std::process::exit(1);
             }
-            return;
         } else if joined_args == "help" || joined_args == "--help" || joined_args == "-h" {
             print_help();
-            return;
         } else {
             eprintln!("Unknown arguments: '{}'", joined_args);
             print_help();

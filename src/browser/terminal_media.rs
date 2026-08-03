@@ -44,9 +44,20 @@ impl TerminalCapabilities {
             }
         }
 
+        let term_program = env::var("TERM_PROGRAM").unwrap_or_default().to_lowercase();
+        if term_program == "apple_terminal" {
+            return ColorSupport::Ansi256;
+        }
+        if term_program == "vscode" || term_program == "ghostty" || term_program == "wezterm" {
+            return ColorSupport::TrueColor;
+        }
+
         if let Ok(term) = env::var("TERM") {
-            if term.contains("256color") || term.contains("kitty") || term.contains("alacritty") {
+            if term.contains("truecolor") || term.contains("24bit") || term.contains("kitty") || term.contains("alacritty") || term.contains("ghostty") {
                 return ColorSupport::TrueColor;
+            }
+            if term.contains("256color") {
+                return ColorSupport::Ansi256;
             }
             if term.contains("color") || term == "xterm" || term == "screen" {
                 return ColorSupport::Ansi16;
@@ -65,13 +76,13 @@ impl TerminalCapabilities {
             return TerminalGraphicsProtocol::Kitty;
         }
 
-        // 2. iTerm2 image protocol detection
-        if term_program.contains("iterm") || term_program.contains("wezterm") {
+        // 2. iTerm2 image protocol detection (iTerm2, WezTerm, Ghostty all support this)
+        if term_program.contains("iterm") || term_program.contains("wezterm") || term_program.contains("ghostty") {
             return TerminalGraphicsProtocol::ITerm2;
         }
 
         // 3. Sixel detection
-        if term.contains("mlterm") || term.contains("foot") || term_program.contains("wezterm") {
+        if term.contains("mlterm") || term.contains("foot") || term.contains("sixel") {
             return TerminalGraphicsProtocol::Sixel;
         }
 
