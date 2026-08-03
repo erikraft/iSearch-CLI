@@ -39,10 +39,8 @@ pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
     }
 
     // 2. Platform-specific fallbacks
-    if is_termux() {
-        if run_command_with_input("termux-clipboard-set", &[], text).is_ok() {
-            return Ok(());
-        }
+    if is_termux() && run_command_with_input("termux-clipboard-set", &[], text).is_ok() {
+        return Ok(());
     }
 
     #[cfg(target_os = "macos")]
@@ -92,7 +90,7 @@ pub fn render_qr_half_blocks(code: &QrCode) -> String {
     let total_width = width + 2 * qz;
     let total_height = width + 2 * qz;
 
-    for y_pair in 0..((total_height + 1) / 2) {
+    for y_pair in 0..total_height.div_ceil(2) {
         let y_top = y_pair * 2;
         let y_bottom = y_top + 1;
 

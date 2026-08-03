@@ -9,6 +9,12 @@ pub struct ChromiumEngine {
     executable_path: Option<PathBuf>,
 }
 
+impl Default for ChromiumEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ChromiumEngine {
     pub fn new() -> Self {
         let mut engine = Self { executable_path: None };
@@ -221,11 +227,27 @@ impl ChromiumEngine {
         #[cfg(target_os = "linux")]
         {
             let linux_paths = [
+                // Google Chrome
                 "/usr/bin/google-chrome",
+                "/usr/bin/google-chrome-stable",
+                // Chromium
                 "/usr/bin/chromium",
                 "/usr/bin/chromium-browser",
                 "/snap/bin/chromium",
                 "/var/lib/flatpak/exports/bin/org.chromium.Chromium",
+                // Microsoft Edge
+                "/usr/bin/microsoft-edge",
+                "/usr/bin/microsoft-edge-stable",
+                // Brave
+                "/usr/bin/brave-browser",
+                "/usr/bin/brave",
+                // Vivaldi
+                "/usr/bin/vivaldi",
+                "/usr/bin/vivaldi-stable",
+                // Opera
+                "/usr/bin/opera",
+                // Ungoogled Chromium
+                "/usr/bin/ungoogled-chromium",
             ];
             for path in linux_paths {
                 let p = PathBuf::from(path);
@@ -241,6 +263,10 @@ impl ChromiumEngine {
                 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
                 "/Applications/Chromium.app/Contents/MacOS/Chromium",
                 "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
+                "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+                "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+                "/Applications/Vivaldi.app/Contents/MacOS/Vivaldi",
+                "/Applications/Opera.app/Contents/MacOS/Opera",
             ];
             for path in mac_paths {
                 let p = PathBuf::from(path);
@@ -257,11 +283,28 @@ impl ChromiumEngine {
             let local_app_data = env::var("LocalAppData").unwrap_or_else(|_| "C:\\Users\\Default\\AppData\\Local".to_string());
 
             let win_paths = [
+                // Google Chrome
                 format!("{}\\Google\\Chrome\\Application\\chrome.exe", program_files),
                 format!("{}\\Google\\Chrome\\Application\\chrome.exe", program_files_x86),
                 format!("{}\\Google\\Chrome\\Application\\chrome.exe", local_app_data),
+                // Chromium
                 format!("{}\\Chromium\\Application\\chrome.exe", program_files),
                 format!("{}\\Chromium\\Application\\chrome.exe", program_files_x86),
+                // Microsoft Edge
+                format!("{}\\Microsoft\\Edge\\Application\\msedge.exe", program_files),
+                format!("{}\\Microsoft\\Edge\\Application\\msedge.exe", program_files_x86),
+                // Brave
+                format!("{}\\BraveSoftware\\Brave-Browser\\Application\\brave.exe", program_files),
+                format!("{}\\BraveSoftware\\Brave-Browser\\Application\\brave.exe", program_files_x86),
+                format!("{}\\BraveSoftware\\Brave-Browser\\Application\\brave.exe", local_app_data),
+                // Vivaldi
+                format!("{}\\Vivaldi\\Application\\vivaldi.exe", program_files),
+                format!("{}\\Vivaldi\\Application\\vivaldi.exe", program_files_x86),
+                format!("{}\\Vivaldi\\Application\\vivaldi.exe", local_app_data),
+                // Opera
+                format!("{}\\Opera\\launcher.exe", program_files),
+                format!("{}\\Opera\\launcher.exe", program_files_x86),
+                format!("{}\\Opera\\launcher.exe", local_app_data),
             ];
             for path in win_paths {
                 let p = PathBuf::from(path);

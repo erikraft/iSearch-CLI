@@ -77,6 +77,10 @@ pub enum PageContent {
         title: String,
         content: String,
     },
+    Mesh3DPreview {
+        title: String,
+        mesh: crate::browser::native::Mesh3D,
+    },
 }
 
 pub trait BrowserEngine {
@@ -89,6 +93,13 @@ pub struct BrowserCore {
     pub current_engine: EngineType,
     pub native_engine: crate::browser::native::NativeEngine,
     pub chromium_engine: crate::browser::chromium::ChromiumEngine,
+    pub adblocker: crate::browser::plugins::AdBlocker,
+}
+
+impl Default for BrowserCore {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl BrowserCore {
@@ -97,6 +108,7 @@ impl BrowserCore {
             current_engine: EngineType::Native,
             native_engine: crate::browser::native::NativeEngine::new(),
             chromium_engine: crate::browser::chromium::ChromiumEngine::new(),
+            adblocker: crate::browser::plugins::AdBlocker::new(),
         }
     }
 
@@ -105,6 +117,12 @@ impl BrowserCore {
     }
 
     pub fn navigate(&mut self, url: &str) -> Result<PageContent, BrowserError> {
+        if self.adblocker.is_blocked(url) {
+            return Ok(PageContent::AnsiText {
+                title: "Ad Blocked".to_string(),
+                content: format!("The request to '{}' was blocked by the integrated iSearch AdBlocker plugin.", url),
+            });
+        }
         match self.current_engine {
             EngineType::Native => self.native_engine.navigate(url),
             EngineType::Chromium => {

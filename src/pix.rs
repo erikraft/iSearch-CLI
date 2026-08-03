@@ -1,4 +1,4 @@
-/// Module for PIX payload generation according to the Banco Central do Brasil specifications.
+//! Module for PIX payload generation according to the Banco Central do Brasil specifications.
 
 pub fn crc16_ccitt(data: &[u8]) -> u16 {
     let mut crc = 0xFFFFu16;

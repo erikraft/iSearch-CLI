@@ -22,6 +22,12 @@ pub enum HtmlNode {
 
 pub struct NativeEngine {}
 
+impl Default for NativeEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NativeEngine {
     pub fn new() -> Self {
         Self {}
@@ -82,6 +88,45 @@ impl NativeEngine {
             _ => None,
         }
     }
+}
+
+pub fn render_hex_dump(bytes: &[u8], width: usize) -> Vec<Line<'static>> {
+    let mut lines = Vec::new();
+    let chunk_size = if width > 80 { 16 } else { 8 };
+    for (i, chunk) in bytes.chunks(chunk_size).enumerate() {
+        let offset = i * chunk_size;
+        let mut spans = vec![
+            Span::styled(format!("{:08x}:  ", offset), Style::default().fg(Color::Yellow)),
+        ];
+
+        let mut hex_part = String::new();
+        let mut ascii_part = String::new();
+
+        for (j, &b) in chunk.iter().enumerate() {
+            hex_part.push_str(&format!("{:02x} ", b));
+            if j == chunk_size / 2 - 1 {
+                hex_part.push(' ');
+            }
+            if b.is_ascii_graphic() || b == b' ' {
+                ascii_part.push(b as char);
+            } else {
+                ascii_part.push('.');
+            }
+        }
+
+        let padding = chunk_size * 3 + 1 - hex_part.len();
+        if padding > 0 {
+            hex_part.push_str(&" ".repeat(padding));
+        }
+
+        spans.push(Span::styled(hex_part, Style::default().fg(Color::Cyan)));
+        spans.push(Span::styled(" |", Style::default().fg(Color::DarkGray)));
+        spans.push(Span::styled(ascii_part, Style::default().fg(Color::Green)));
+        spans.push(Span::styled("|", Style::default().fg(Color::DarkGray)));
+
+        lines.push(Line::from(spans));
+    }
+    lines
 }
 
 // Simple CSS property parsing
@@ -176,7 +221,7 @@ pub fn render_html_to_lines(nodes: &[HtmlNode], width: usize, base_style: CssSty
     lines
 }
 
-fn render_node_to_lines(node: &HtmlNode, width: usize, parent_style: CssStyle, lines: &mut Vec<Line<'static>>) {
+fn render_node_to_lines(node: &HtmlNode, _width: usize, parent_style: CssStyle, lines: &mut Vec<Line<'static>>) {
     match node {
         HtmlNode::Text(txt) => {
             if txt.is_empty() {
@@ -241,7 +286,7 @@ fn render_node_to_lines(node: &HtmlNode, width: usize, parent_style: CssStyle, l
                     };
                     let mut heading_lines = Vec::new();
                     for child in children {
-                        render_node_to_lines(child, width, style.clone(), &mut heading_lines);
+                        render_node_to_lines(child, _width, style.clone(), &mut heading_lines);
                     }
                     for line in heading_lines {
                         let mut new_spans = vec![Span::styled(prefix, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))];
@@ -253,7 +298,7 @@ fn render_node_to_lines(node: &HtmlNode, width: usize, parent_style: CssStyle, l
                 "p" => {
                     lines.push(Line::raw(""));
                     for child in children {
-                        render_node_to_lines(child, width, style.clone(), lines);
+                        render_node_to_lines(child, _width, style.clone(), lines);
                     }
                     lines.push(Line::raw(""));
                 }
@@ -268,7 +313,7 @@ fn render_node_to_lines(node: &HtmlNode, width: usize, parent_style: CssStyle, l
                     // Implement terminal hyperlink protocol OSC 8 if possible or format as link
                     let mut a_lines = Vec::new();
                     for child in children {
-                        render_node_to_lines(child, width, style.clone(), &mut a_lines);
+                        render_node_to_lines(child, _width, style.clone(), &mut a_lines);
                     }
                     for line in a_lines {
                         let mut spans = line.spans;
@@ -303,7 +348,7 @@ fn render_node_to_lines(node: &HtmlNode, width: usize, parent_style: CssStyle, l
                     } else {
                         let mut btn_lines = Vec::new();
                         for child in children {
-                            render_node_to_lines(child, width, style.clone(), &mut btn_lines);
+                            render_node_to_lines(child, _width, style.clone(), &mut btn_lines);
                         }
                         if btn_lines.is_empty() {
                             // Value or Placeholder for inputs
@@ -327,7 +372,7 @@ fn render_node_to_lines(node: &HtmlNode, width: usize, parent_style: CssStyle, l
                     // Indented block with left border style
                     let mut quote_lines = Vec::new();
                     for child in children {
-                        render_node_to_lines(child, width, style.clone(), &mut quote_lines);
+                        render_node_to_lines(child, _width, style.clone(), &mut quote_lines);
                     }
                     for line in quote_lines {
                         let mut spans = vec![
@@ -345,7 +390,7 @@ fn render_node_to_lines(node: &HtmlNode, width: usize, parent_style: CssStyle, l
                             _ => "• ".to_string(),
                         };
                         let mut item_lines = Vec::new();
-                        render_node_to_lines(child, width, style.clone(), &mut item_lines);
+                        render_node_to_lines(child, _width, style.clone(), &mut item_lines);
                         for (idx, line) in item_lines.into_iter().enumerate() {
                             let mut spans = Vec::new();
                             if idx == 0 {
@@ -361,7 +406,7 @@ fn render_node_to_lines(node: &HtmlNode, width: usize, parent_style: CssStyle, l
                 }
                 "li" => {
                     for child in children {
-                        render_node_to_lines(child, width, style.clone(), lines);
+                        render_node_to_lines(child, _width, style.clone(), lines);
                     }
                 }
                 "progress" => {
@@ -442,7 +487,7 @@ fn render_node_to_lines(node: &HtmlNode, width: usize, parent_style: CssStyle, l
                         lines.push(Line::raw("┌────────────────────────────────────────┐"));
                     }
                     for child in children {
-                        render_node_to_lines(child, width, style.clone(), lines);
+                        render_node_to_lines(child, _width, style.clone(), lines);
                     }
                     if style.border {
                         lines.push(Line::raw("└────────────────────────────────────────┘"));
@@ -505,7 +550,7 @@ pub fn render_markdown_to_lines(md: &str, _width: usize) -> Vec<Line<'static>> {
             Event::Start(tag) => match tag {
                 Tag::Heading { level, .. } => {
                     if !current_line_spans.is_empty() {
-                        lines.push(Line::from(current_line_spans.drain(..).collect::<Vec<_>>()));
+                        lines.push(Line::from(std::mem::take(&mut current_line_spans)));
                     }
                     lines.push(Line::raw(""));
                     let prefix = "#".repeat(level as usize) + " ";
@@ -524,7 +569,7 @@ pub fn render_markdown_to_lines(md: &str, _width: usize) -> Vec<Line<'static>> {
                 }
                 Tag::Item => {
                     if !current_line_spans.is_empty() {
-                        lines.push(Line::from(current_line_spans.drain(..).collect::<Vec<_>>()));
+                        lines.push(Line::from(std::mem::take(&mut current_line_spans)));
                     }
                     let prefix = if in_ordered_list {
                         let p = format!(" {}. ", list_index);
@@ -553,7 +598,7 @@ pub fn render_markdown_to_lines(md: &str, _width: usize) -> Vec<Line<'static>> {
             Event::End(tag_end) => match tag_end {
                 TagEnd::Heading(_) => {
                     if !current_line_spans.is_empty() {
-                        lines.push(Line::from(current_line_spans.drain(..).collect::<Vec<_>>()));
+                        lines.push(Line::from(std::mem::take(&mut current_line_spans)));
                     }
                     lines.push(Line::raw(""));
                 }
@@ -562,7 +607,7 @@ pub fn render_markdown_to_lines(md: &str, _width: usize) -> Vec<Line<'static>> {
                 }
                 TagEnd::Item => {
                     if !current_line_spans.is_empty() {
-                        lines.push(Line::from(current_line_spans.drain(..).collect::<Vec<_>>()));
+                        lines.push(Line::from(std::mem::take(&mut current_line_spans)));
                     }
                 }
                 TagEnd::CodeBlock => {
@@ -597,7 +642,7 @@ pub fn render_markdown_to_lines(md: &str, _width: usize) -> Vec<Line<'static>> {
             }
             Event::SoftBreak | Event::HardBreak => {
                 if !current_line_spans.is_empty() {
-                    lines.push(Line::from(current_line_spans.drain(..).collect::<Vec<_>>()));
+                    lines.push(Line::from(std::mem::take(&mut current_line_spans)));
                 }
             }
             _ => {}
@@ -610,12 +655,158 @@ pub fn render_markdown_to_lines(md: &str, _width: usize) -> Vec<Line<'static>> {
     lines
 }
 
+#[derive(Debug, Clone)]
+pub struct Mesh3D {
+    pub vertices: Vec<[f32; 3]>,
+    pub edges: Vec<(usize, usize)>,
+}
+
+impl Mesh3D {
+    pub fn new_cube() -> Self {
+        Self {
+            vertices: vec![
+                [-1.0, -1.0, -1.0],
+                [ 1.0, -1.0, -1.0],
+                [ 1.0,  1.0, -1.0],
+                [-1.0,  1.0, -1.0],
+                [-1.0, -1.0,  1.0],
+                [ 1.0, -1.0,  1.0],
+                [ 1.0,  1.0,  1.0],
+                [-1.0,  1.0,  1.0],
+            ],
+            edges: vec![
+                (0, 1), (1, 2), (2, 3), (3, 0), // back face
+                (4, 5), (5, 6), (6, 7), (7, 4), // front face
+                (0, 4), (1, 5), (2, 6), (3, 7), // connections
+            ],
+        }
+    }
+
+    pub fn rotate_y(&mut self, angle: f32) {
+        let cos_a = angle.cos();
+        let sin_a = angle.sin();
+        for v in &mut self.vertices {
+            let x = v[0];
+            let z = v[2];
+            v[0] = x * cos_a - z * sin_a;
+            v[2] = x * sin_a + z * cos_a;
+        }
+    }
+
+    pub fn rotate_x(&mut self, angle: f32) {
+        let cos_a = angle.cos();
+        let sin_a = angle.sin();
+        for v in &mut self.vertices {
+            let y = v[1];
+            let z = v[2];
+            v[1] = y * cos_a - z * sin_a;
+            v[2] = y * sin_a + z * cos_a;
+        }
+    }
+
+    pub fn render_to_lines(&self, width: usize, height: usize) -> Vec<Line<'static>> {
+        let mut grid = vec![vec![' '; width]; height];
+
+        // Draw edges
+        for &(i1, i2) in &self.edges {
+            let v1 = self.vertices[i1];
+            let v2 = self.vertices[i2];
+
+            // Orthographic projection & scale to fit terminal viewport
+            let scale_x = (width as f32) * 0.25;
+            let scale_y = (height as f32) * 0.45;
+
+            let x1 = ((width as f32) / 2.0 + v1[0] * scale_x) as isize;
+            let y1 = ((height as f32) / 2.0 - v1[1] * scale_y) as isize;
+            let x2 = ((width as f32) / 2.0 + v2[0] * scale_x) as isize;
+            let y2 = ((height as f32) / 2.0 - v2[1] * scale_y) as isize;
+
+            draw_line_on_grid(&mut grid, x1, y1, x2, y2, '*');
+        }
+
+        grid.into_iter()
+            .map(|row| Line::from(vec![Span::styled(row.into_iter().collect::<String>(), Style::default().fg(Color::Magenta))]))
+            .collect()
+    }
+}
+
+fn draw_line_on_grid(grid: &mut [Vec<char>], mut x1: isize, mut y1: isize, x2: isize, y2: isize, ch: char) {
+    let dx = (x2 - x1).abs();
+    let dy = (y2 - y1).abs();
+    let sx = if x1 < x2 { 1 } else { -1 };
+    let sy = if y1 < y2 { 1 } else { -1 };
+    let mut err = dx - dy;
+
+    let height = grid.len() as isize;
+    if height == 0 { return; }
+    let width = grid[0].len() as isize;
+
+    loop {
+        if x1 >= 0 && x1 < width && y1 >= 0 && y1 < height {
+            grid[y1 as usize][x1 as usize] = ch;
+        }
+
+        if x1 == x2 && y1 == y2 { break; }
+        let e2 = 2 * err;
+        if e2 > -dy {
+            err -= dy;
+            x1 += sx;
+        }
+        if e2 < dx {
+            err += dx;
+            y1 += sy;
+        }
+    }
+}
+
 impl BrowserEngine for NativeEngine {
     fn navigate(&mut self, url: &str) -> Result<PageContent, BrowserError> {
+        // Handle zip inner file format: /path/to/archive.zip::filename.txt
+        if url.contains("::") {
+            let parts: Vec<&str> = url.split("::").collect();
+            if parts.len() == 2 {
+                let zip_path_str = if parts[0].starts_with("file://") { &parts[0][7..] } else { parts[0] };
+                let zip_path = PathBuf::from(zip_path_str);
+                let file_in_zip = parts[1];
+                if zip_path.exists() {
+                    if let Ok(file) = fs::File::open(&zip_path) {
+                        if let Ok(mut archive) = zip::ZipArchive::new(file) {
+                            if let Ok(mut subfile) = archive.by_name(file_in_zip) {
+                                let mut contents = Vec::new();
+                                if std::io::copy(&mut subfile, &mut contents).is_ok() {
+                                    if let Ok(text) = String::from_utf8(contents.clone()) {
+                                        return Ok(PageContent::FilePreview {
+                                            path: PathBuf::from(url),
+                                            content: text,
+                                            is_binary: false,
+                                        });
+                                    } else {
+                                        let lines = render_hex_dump(&contents, 80);
+                                        let mut content = String::new();
+                                        for line in lines {
+                                            for span in line.spans {
+                                                content.push_str(&span.content);
+                                            }
+                                            content.push('\n');
+                                        }
+                                        return Ok(PageContent::FilePreview {
+                                            path: PathBuf::from(url),
+                                            content,
+                                            is_binary: true,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Handle file:/// or local path paths
         if url.starts_with("file://") || url.starts_with('/') || url.contains('\\') || std::path::Path::new(url).exists() {
-            let path_str = if url.starts_with("file://") {
-                &url[7..]
+            let path_str = if let Some(stripped) = url.strip_prefix("file://") {
+                stripped
             } else {
                 url
             };
@@ -635,6 +826,7 @@ impl BrowserEngine for NativeEngine {
                 // Check if zip archive
                 if let Some(ext) = path.extension() {
                     if ext.to_string_lossy().to_lowercase() == "zip" {
+                        // Check if a sub-file is being requested, e.g. /path/to/archive.zip::subfile.txt
                         if let Ok(file) = fs::File::open(&path) {
                             if let Ok(mut archive) = zip::ZipArchive::new(file) {
                                 let mut files = Vec::new();
@@ -662,6 +854,12 @@ impl BrowserEngine for NativeEngine {
                         if let Ok(bytes) = fs::read(&path) {
                             return Ok(PageContent::ImagePreview { path: path.clone(), raw_bytes: bytes });
                         }
+                    } else if ["obj", "mesh", "3d"].contains(&ext.to_string_lossy().to_lowercase().as_str()) {
+                        // Return custom 3D mesh preview
+                        return Ok(PageContent::Mesh3DPreview {
+                            title: path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "3D Mesh".to_string()),
+                            mesh: Mesh3D::new_cube(),
+                        });
                     }
                 }
 
@@ -670,7 +868,16 @@ impl BrowserEngine for NativeEngine {
                     if let Ok(text) = String::from_utf8(bytes.clone()) {
                         return Ok(PageContent::FilePreview { path, content: text, is_binary: false });
                     } else {
-                        return Ok(PageContent::FilePreview { path, content: format!("Binary data ({} bytes)", bytes.len()), is_binary: true });
+                        // Render structured hex dump
+                        let lines = render_hex_dump(&bytes, 80);
+                        let mut content = String::new();
+                        for line in lines {
+                            for span in line.spans {
+                                content.push_str(&span.content);
+                            }
+                            content.push('\n');
+                        }
+                        return Ok(PageContent::FilePreview { path, content, is_binary: true });
                     }
                 }
             }
@@ -687,10 +894,7 @@ impl BrowserEngine for NativeEngine {
         match agent.get(&clean_url).call() {
             Ok(response) => {
                 let mut body_obj = response.into_body();
-                let body = match body_obj.read_to_string() {
-                    Ok(b) => b,
-                    Err(_) => String::new(),
-                };
+                let body = body_obj.read_to_string().unwrap_or_default();
 
                 let title = if let Ok(dom) = tl::parse(&body, tl::ParserOptions::default()) {
                     let mut t_str = clean_url.clone();
