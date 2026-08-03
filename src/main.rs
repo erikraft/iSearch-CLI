@@ -2,6 +2,7 @@ pub mod config;
 pub mod pix;
 pub mod utils;
 pub mod ui;
+pub mod browser;
 
 use std::env;
 use std::io::{self, Write};
@@ -11,6 +12,7 @@ use ui::run_donation_tui;
 fn print_help() {
     println!("iSearch CLI™ - Version 0.1.0");
     println!("Available commands:");
+    println!("  browse         - Open the premium multi-engine interactive terminal browser");
     println!("  donate         - Open the premium terminal donation screen");
     println!("  help           - Display this help message");
     println!("  exit / quit    - Exit the interactive CLI");
@@ -20,7 +22,8 @@ fn start_interactive_cli() {
     println!("╭────────────────────────────────────────────╮");
     println!("│             iSearch CLI™ Terminal          │");
     println!("├────────────────────────────────────────────┤");
-    println!("│ Type 'donate' to support the project, or   │");
+    println!("│ Type 'browse' to surf the web/local files, │");
+    println!("│ type 'donate' to support the project, or   │");
     println!("│ type 'help' to see other commands.         │");
     println!("╰────────────────────────────────────────────╯");
 
@@ -37,24 +40,24 @@ fn start_interactive_cli() {
             Ok(0) => break, // EOF
             Ok(_) => {
                 let trimmed = input.trim();
-                match trimmed {
-                    "exit" | "quit" => {
-                        println!("Goodbye!");
-                        break;
+                if trimmed == "exit" || trimmed == "quit" {
+                    println!("Goodbye!");
+                    break;
+                } else if trimmed == "help" {
+                    print_help();
+                } else if trimmed == "donate" || trimmed == "isearch donate" {
+                    let config = load_config();
+                    if let Err(e) = run_donation_tui(config) {
+                        eprintln!("Error launching donation screen: {}", e);
                     }
-                    "help" => {
-                        print_help();
+                } else if trimmed == "browse" || trimmed == "isearch browse" || trimmed.starts_with("browse ") {
+                    if let Err(e) = browser::ui::run_browser_tui() {
+                        eprintln!("Error launching browser: {}", e);
                     }
-                    "donate" | "isearch donate" => {
-                        let config = load_config();
-                        if let Err(e) = run_donation_tui(config) {
-                            eprintln!("Error launching donation screen: {}", e);
-                        }
-                    }
-                    "" => {}
-                    _ => {
-                        println!("Unknown command: '{}'. Type 'help' or 'donate'.", trimmed);
-                    }
+                } else if trimmed == "" {
+                    // Do nothing
+                } else {
+                    println!("Unknown command: '{}'. Type 'help', 'browse' or 'donate'.", trimmed);
                 }
             }
             Err(e) => {
@@ -76,6 +79,12 @@ fn main() {
             let config = load_config();
             if let Err(e) = run_donation_tui(config) {
                 eprintln!("Error launching donation screen: {}", e);
+                std::process::exit(1);
+            }
+            return;
+        } else if joined_args == "browse" || joined_args == "isearch browse" || joined_args.starts_with("browse ") {
+            if let Err(e) = browser::ui::run_browser_tui() {
+                eprintln!("Error launching browser: {}", e);
                 std::process::exit(1);
             }
             return;
