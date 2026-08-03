@@ -1,6 +1,8 @@
 use crate::browser::core::{BrowserCore, EngineType, PageContent, BrowserError};
 use crate::browser::native::{render_html_to_lines, render_markdown_to_lines, CssStyle};
 use crate::browser::terminal_media::TerminalCapabilities;
+use crate::browser::favorites::{FavoritesManager, FavoriteItem};
+use crate::browser::history::{HistoryManager, HistoryItem, group_by_date, group_by_domain};
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseButton, MouseEventKind},
@@ -61,12 +63,40 @@ pub struct BrowserApp {
     pub installer_status: String,
     pub theme: crate::browser::theme::AppTheme,
     pub theme_preset: crate::browser::theme::ThemePreset,
-    pub bookmarks: Vec<String>,
-    pub history_list: Vec<String>,
     pub downloads: Vec<(String, f32, String)>, // (filename, progress, status)
-    pub show_bookmarks: bool,
-    pub show_history: bool,
     pub download_active: bool,
+
+    // New additions
+    pub favorites_mgr: FavoritesManager,
+    pub history_mgr: HistoryManager,
+    pub private_mode: bool,
+
+    // UI Panels
+    pub show_favorites: bool,
+    pub show_history_mgr: bool,
+
+    // Favorites state
+    pub fav_search_buffer: String,
+    pub fav_input_mode: bool,
+    pub fav_input_field: usize, // 0 = Title, 1 = URL, 2 = Folder, 3 = Search, 4 = ImportPath, 5 = ExportPath
+    pub fav_title_input: String,
+    pub fav_url_input: String,
+    pub fav_folder_input: String,
+    pub fav_path_input: String,
+    pub fav_selected_idx: usize,
+    pub fav_folder_filter: String, // "All" or folder name
+
+    // History state
+    pub hist_search_buffer: String,
+    pub hist_domain_filter: String,
+    pub hist_sort_by: String, // "date" or "visits"
+    pub hist_group_by: String, // "none", "date", or "domain"
+    pub hist_selected_idx: usize,
+    pub hist_input_mode: bool,
+    pub hist_input_field: usize, // 0 = Search, 1 = Domain Filter, 2 = ImportPath, 3 = ExportPath
+
+    // Temporary list for downloads in private mode
+    pub temp_downloads: Vec<(String, f32, String)>,
 }
 
 impl Default for BrowserApp {
@@ -93,14 +123,35 @@ impl BrowserApp {
             installer_status: "Ready".to_string(),
             theme: crate::browser::theme::AppTheme::from_preset(crate::browser::theme::ThemePreset::Default),
             theme_preset: crate::browser::theme::ThemePreset::Default,
-            bookmarks: vec!["https://www.rust-lang.org".to_string(), "https://news.ycombinator.com".to_string()],
-            history_list: vec!["https://www.google.com".to_string()],
             downloads: Vec::new(),
-            show_bookmarks: false,
-            show_history: false,
             download_active: false,
+
+            favorites_mgr: FavoritesManager::new("favorites.json"),
+            history_mgr: HistoryManager::new("history.db"),
+            private_mode: false,
+            show_favorites: false,
+            show_history_mgr: false,
+
+            fav_search_buffer: String::new(),
+            fav_input_mode: false,
+            fav_input_field: 0,
+            fav_title_input: String::new(),
+            fav_url_input: String::new(),
+            fav_folder_input: String::new(),
+            fav_path_input: String::new(),
+            fav_selected_idx: 0,
+            fav_folder_filter: "All".to_string(),
+
+            hist_search_buffer: String::new(),
+            hist_domain_filter: String::new(),
+            hist_sort_by: "date".to_string(),
+            hist_group_by: "none".to_string(),
+            hist_selected_idx: 0,
+            hist_input_mode: false,
+            hist_input_field: 0,
+
+            temp_downloads: Vec::new(),
         };
-        // Load initial page
         let _ = app.load_current_page();
         app
     }
@@ -109,17 +160,14 @@ impl BrowserApp {
         self.scroll_offset = 0;
         let url = self.tabs[self.active_tab_idx].url.clone();
 
-        // Android (Termux) target - force native engine and never show Chromium error
         #[cfg(target_os = "android")]
         {
             self.core.current_engine = EngineType::Native;
         }
 
-        // Check if Chromium is required but not available
         if self.core.current_engine == EngineType::Chromium && !self.core.chromium_engine.is_available() {
             #[cfg(target_os = "android")]
             {
-                // Never show Chromium errors/assistant on Android
                 self.core.current_engine = EngineType::Native;
             }
             #[cfg(not(target_os = "android"))]
@@ -132,6 +180,9 @@ impl BrowserApp {
         }
 
         self.status_message = format!("Loading {}...", url);
+
+        // Apply incognito flag to chromium engine dynamically
+        self.core.chromium_engine.incognito_mode = self.private_mode;
 
         match self.core.navigate(&url) {
             Ok(content) => {
@@ -147,11 +198,13 @@ impl BrowserApp {
                     PageContent::Mesh3DPreview { title, .. } => format!("3D Model: {}", title),
                 };
 
-                self.tabs[self.active_tab_idx].title = title;
+                self.tabs[self.active_tab_idx].title = title.clone();
                 self.tabs[self.active_tab_idx].content = Some(content);
                 self.status_message = "Loaded.".to_string();
-                if !self.history_list.contains(&url) {
-                    self.history_list.push(url);
+
+                // Save to history if NOT in private mode
+                if !self.private_mode {
+                    let _ = self.history_mgr.add_visit(&title, &url);
                 }
                 Ok(())
             }
@@ -160,6 +213,30 @@ impl BrowserApp {
                 Err(e)
             }
         }
+    }
+
+    pub fn get_favorites_filtered(&self) -> Vec<FavoriteItem> {
+        let items = if self.fav_search_buffer.is_empty() {
+            self.favorites_mgr.list.items.clone()
+        } else {
+            self.favorites_mgr.search(&self.fav_search_buffer)
+        };
+
+        if self.fav_folder_filter == "All" {
+            items
+        } else {
+            items.into_iter()
+                .filter(|item| item.folder == self.fav_folder_filter)
+                .collect()
+        }
+    }
+
+    pub fn get_history_filtered(&self) -> Vec<HistoryItem> {
+        self.history_mgr.get_all(
+            &self.hist_search_buffer,
+            &self.hist_domain_filter,
+            &self.hist_sort_by
+        ).unwrap_or_default()
     }
 }
 
@@ -192,8 +269,10 @@ fn run_loop<B: ratatui::backend::Backend>(
     app: &mut BrowserApp,
 ) -> io::Result<()> {
     loop {
+        // Handle download progress
         if app.download_active {
-            for d in &mut app.downloads {
+            let active_list = if app.private_mode { &mut app.temp_downloads } else { &mut app.downloads };
+            for d in active_list.iter_mut() {
                 if d.1 < 1.0 {
                     d.1 += 0.2;
                     d.2 = format!("Downloading... {:.0}%", d.1 * 100.0);
@@ -204,7 +283,7 @@ fn run_loop<B: ratatui::backend::Backend>(
                     }
                 }
             }
-            if app.downloads.iter().all(|d| d.1 >= 1.0) {
+            if active_list.iter().all(|d| d.1 >= 1.0) {
                 app.download_active = false;
             }
         }
@@ -275,55 +354,256 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 }
                             }
                         }
-                    } else if app.show_bookmarks {
-                        match key.code {
-                            KeyCode::Esc | KeyCode::Char('o') | KeyCode::Char('O') => {
-                                app.show_bookmarks = false;
-                            }
-                            KeyCode::Up => {
-                                if app.scroll_offset > 0 {
-                                    app.scroll_offset -= 1;
+                    } else if app.show_favorites {
+                        if app.fav_input_mode {
+                            match key.code {
+                                KeyCode::Esc => {
+                                    app.fav_input_mode = false;
                                 }
-                            }
-                            KeyCode::Down => {
-                                if app.scroll_offset < app.bookmarks.len().saturating_sub(1) {
-                                    app.scroll_offset += 1;
+                                KeyCode::Tab => {
+                                    // Cycle input fields
+                                    if app.fav_input_field == 4 || app.fav_input_field == 5 {
+                                        // Import or Export
+                                        app.fav_input_mode = false;
+                                    } else {
+                                        app.fav_input_field = (app.fav_input_field + 1) % 4;
+                                    }
                                 }
-                            }
-                            KeyCode::Enter => {
-                                if !app.bookmarks.is_empty() {
-                                    let selected_url = app.bookmarks[app.scroll_offset.min(app.bookmarks.len() - 1)].clone();
-                                    app.tabs[app.active_tab_idx].url = selected_url;
-                                    app.show_bookmarks = false;
-                                    let _ = app.load_current_page();
+                                KeyCode::Backspace => {
+                                    match app.fav_input_field {
+                                        0 => { app.fav_title_input.pop(); }
+                                        1 => { app.fav_url_input.pop(); }
+                                        2 => { app.fav_folder_input.pop(); }
+                                        3 => { app.fav_search_buffer.pop(); }
+                                        4 | 5 => { app.fav_path_input.pop(); }
+                                        _ => {}
+                                    }
                                 }
+                                KeyCode::Char(c) => {
+                                    match app.fav_input_field {
+                                        0 => { app.fav_title_input.push(c); }
+                                        1 => { app.fav_url_input.push(c); }
+                                        2 => { app.fav_folder_input.push(c); }
+                                        3 => { app.fav_search_buffer.push(c); }
+                                        4 | 5 => { app.fav_path_input.push(c); }
+                                        _ => {}
+                                    }
+                                }
+                                KeyCode::Enter => {
+                                    match app.fav_input_field {
+                                        0 | 1 | 2 => {
+                                            if !app.fav_url_input.trim().is_empty() {
+                                                let title = if app.fav_title_input.trim().is_empty() { "Untitled" } else { &app.fav_title_input };
+                                                let _ = app.favorites_mgr.add(title, &app.fav_url_input, &app.fav_folder_input);
+                                                app.status_message = "Favorite added successfully!".to_string();
+                                            }
+                                            app.fav_input_mode = false;
+                                        }
+                                        3 => {
+                                            app.fav_input_mode = false;
+                                        }
+                                        4 => {
+                                            // Import
+                                            match app.favorites_mgr.import_from_file(app.fav_path_input.trim()) {
+                                                Ok(_) => { app.status_message = "Favorites imported!".to_string(); }
+                                                Err(e) => { app.status_message = format!("Import failed: {}", e); }
+                                            }
+                                            app.fav_input_mode = false;
+                                        }
+                                        5 => {
+                                            // Export
+                                            match app.favorites_mgr.export_to_file(app.fav_path_input.trim()) {
+                                                Ok(_) => { app.status_message = "Favorites exported!".to_string(); }
+                                                Err(e) => { app.status_message = format!("Export failed: {}", e); }
+                                            }
+                                            app.fav_input_mode = false;
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                                _ => {}
                             }
-                            _ => {}
+                        } else {
+                            match key.code {
+                                KeyCode::Esc | KeyCode::Char('o') | KeyCode::Char('O') => {
+                                    app.show_favorites = false;
+                                }
+                                KeyCode::Up => {
+                                    if app.fav_selected_idx > 0 {
+                                        app.fav_selected_idx -= 1;
+                                    }
+                                }
+                                KeyCode::Down => {
+                                    let items = app.get_favorites_filtered();
+                                    if app.fav_selected_idx < items.len().saturating_sub(1) {
+                                        app.fav_selected_idx += 1;
+                                    }
+                                }
+                                KeyCode::Char('a') | KeyCode::Char('A') => {
+                                    app.fav_input_mode = true;
+                                    app.fav_input_field = 0;
+                                    app.fav_title_input = String::new();
+                                    app.fav_url_input = app.tabs[app.active_tab_idx].url.clone();
+                                    app.fav_folder_input = "General".to_string();
+                                }
+                                KeyCode::Char('d') | KeyCode::Char('D') | KeyCode::Delete => {
+                                    let items = app.get_favorites_filtered();
+                                    if !items.is_empty() && app.fav_selected_idx < items.len() {
+                                        let selected_url = items[app.fav_selected_idx].url.clone();
+                                        let _ = app.favorites_mgr.remove(&selected_url);
+                                        app.status_message = "Favorite removed.".to_string();
+                                        app.fav_selected_idx = app.fav_selected_idx.saturating_sub(1);
+                                    }
+                                }
+                                KeyCode::Char('/') | KeyCode::Char('s') | KeyCode::Char('S') => {
+                                    app.fav_input_mode = true;
+                                    app.fav_input_field = 3;
+                                    app.fav_search_buffer = String::new();
+                                }
+                                KeyCode::Char('f') | KeyCode::Char('F') => {
+                                    // Cycle folder filter
+                                    let folders = app.favorites_mgr.folders();
+                                    if let Some(pos) = folders.iter().position(|f| f == &app.fav_folder_filter) {
+                                        let next_pos = (pos + 1) % folders.len();
+                                        app.fav_folder_filter = folders[next_pos].clone();
+                                    } else {
+                                        app.fav_folder_filter = "All".to_string();
+                                    }
+                                    app.fav_selected_idx = 0;
+                                }
+                                KeyCode::Char('i') | KeyCode::Char('I') => {
+                                    app.fav_input_mode = true;
+                                    app.fav_input_field = 4;
+                                    app.fav_path_input = "favorites_import.json".to_string();
+                                }
+                                KeyCode::Char('x') | KeyCode::Char('X') | KeyCode::Char('e') | KeyCode::Char('E') => {
+                                    app.fav_input_mode = true;
+                                    app.fav_input_field = 5;
+                                    app.fav_path_input = "favorites_export.json".to_string();
+                                }
+                                KeyCode::Enter => {
+                                    let items = app.get_favorites_filtered();
+                                    if !items.is_empty() && app.fav_selected_idx < items.len() {
+                                        let selected_url = items[app.fav_selected_idx].url.clone();
+                                        app.tabs[app.active_tab_idx].url = selected_url;
+                                        app.show_favorites = false;
+                                        let _ = app.load_current_page();
+                                    }
+                                }
+                                _ => {}
+                            }
                         }
-                    } else if app.show_history {
-                        match key.code {
-                            KeyCode::Esc | KeyCode::Char('y') | KeyCode::Char('Y') => {
-                                app.show_history = false;
-                            }
-                            KeyCode::Up => {
-                                if app.scroll_offset > 0 {
-                                    app.scroll_offset -= 1;
+                    } else if app.show_history_mgr {
+                        if app.hist_input_mode {
+                            match key.code {
+                                KeyCode::Esc => {
+                                    app.hist_input_mode = false;
                                 }
-                            }
-                            KeyCode::Down => {
-                                if app.scroll_offset < app.history_list.len().saturating_sub(1) {
-                                    app.scroll_offset += 1;
+                                KeyCode::Tab => {
+                                    app.hist_input_field = (app.hist_input_field + 1) % 2;
                                 }
-                            }
-                            KeyCode::Enter => {
-                                if !app.history_list.is_empty() {
-                                    let selected_url = app.history_list[app.scroll_offset.min(app.history_list.len() - 1)].clone();
-                                    app.tabs[app.active_tab_idx].url = selected_url;
-                                    app.show_history = false;
-                                    let _ = app.load_current_page();
+                                KeyCode::Backspace => {
+                                    match app.hist_input_field {
+                                        0 => { app.hist_search_buffer.pop(); }
+                                        1 => { app.hist_domain_filter.pop(); }
+                                        _ => {}
+                                    }
                                 }
+                                KeyCode::Char(c) => {
+                                    match app.hist_input_field {
+                                        0 => { app.hist_search_buffer.push(c); }
+                                        1 => { app.hist_domain_filter.push(c); }
+                                        _ => {}
+                                    }
+                                }
+                                KeyCode::Enter => {
+                                    app.hist_input_mode = false;
+                                }
+                                _ => {}
                             }
-                            _ => {}
+                        } else {
+                            match key.code {
+                                KeyCode::Esc | KeyCode::Char('y') | KeyCode::Char('Y') => {
+                                    app.show_history_mgr = false;
+                                }
+                                KeyCode::Up => {
+                                    if app.hist_selected_idx > 0 {
+                                        app.hist_selected_idx -= 1;
+                                    }
+                                }
+                                KeyCode::Down => {
+                                    let items = app.get_history_filtered();
+                                    if app.hist_selected_idx < items.len().saturating_sub(1) {
+                                        app.hist_selected_idx += 1;
+                                    }
+                                }
+                                KeyCode::Char('/') | KeyCode::Char('s') | KeyCode::Char('S') => {
+                                    app.hist_input_mode = true;
+                                    app.hist_input_field = 0;
+                                    app.hist_search_buffer = String::new();
+                                }
+                                KeyCode::Char('f') | KeyCode::Char('F') => {
+                                    app.hist_input_mode = true;
+                                    app.hist_input_field = 1;
+                                    app.hist_domain_filter = String::new();
+                                }
+                                KeyCode::Char('r') | KeyCode::Char('R') => {
+                                    // Toggle sort by
+                                    if app.hist_sort_by == "date" {
+                                        app.hist_sort_by = "visits".to_string();
+                                    } else {
+                                        app.hist_sort_by = "date".to_string();
+                                    }
+                                    app.hist_selected_idx = 0;
+                                }
+                                KeyCode::Char('g') | KeyCode::Char('G') => {
+                                    // Toggle group by
+                                    match app.hist_group_by.as_str() {
+                                        "none" => app.hist_group_by = "date".to_string(),
+                                        "date" => app.hist_group_by = "domain".to_string(),
+                                        _ => app.hist_group_by = "none".to_string(),
+                                    }
+                                    app.hist_selected_idx = 0;
+                                }
+                                KeyCode::Char('d') | KeyCode::Char('D') | KeyCode::Delete => {
+                                    let items = app.get_history_filtered();
+                                    if !items.is_empty() && app.hist_selected_idx < items.len() {
+                                        if let Some(id) = items[app.hist_selected_idx].id {
+                                            let _ = app.history_mgr.delete_selected(id);
+                                            app.status_message = "History item deleted.".to_string();
+                                            app.hist_selected_idx = app.hist_selected_idx.saturating_sub(1);
+                                        }
+                                    }
+                                }
+                                KeyCode::Char('c') | KeyCode::Char('C') | KeyCode::Backspace => {
+                                    // Delete all
+                                    let _ = app.history_mgr.delete_all();
+                                    app.status_message = "All history cleared!".to_string();
+                                    app.hist_selected_idx = 0;
+                                }
+                                KeyCode::Char('i') | KeyCode::Char('I') => {
+                                    match app.history_mgr.import_from_file("history_import.json") {
+                                        Ok(_) => { app.status_message = "History imported!".to_string(); }
+                                        Err(e) => { app.status_message = format!("Import failed: {}", e); }
+                                    }
+                                }
+                                KeyCode::Char('x') | KeyCode::Char('X') | KeyCode::Char('e') | KeyCode::Char('E') => {
+                                    match app.history_mgr.export_to_file("history_export.json") {
+                                        Ok(_) => { app.status_message = "History exported to history_export.json!".to_string(); }
+                                        Err(e) => { app.status_message = format!("Export failed: {}", e); }
+                                    }
+                                }
+                                KeyCode::Enter => {
+                                    let items = app.get_history_filtered();
+                                    if !items.is_empty() && app.hist_selected_idx < items.len() {
+                                        let selected_url = items[app.hist_selected_idx].url.clone();
+                                        app.tabs[app.active_tab_idx].url = selected_url;
+                                        app.show_history_mgr = false;
+                                        let _ = app.load_current_page();
+                                    }
+                                }
+                                _ => {}
+                            }
                         }
                     } else if app.input_mode {
                         match key.code {
@@ -367,7 +647,6 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 let _ = app.load_current_page();
                             }
                             KeyCode::Char('e') | KeyCode::Char('E') => {
-                                // Toggle engine
                                 let next = match app.core.current_engine {
                                     EngineType::Native => EngineType::Chromium,
                                     EngineType::Chromium => EngineType::Native,
@@ -377,14 +656,12 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 let _ = app.load_current_page();
                             }
                             KeyCode::Char('t') | KeyCode::Char('T') => {
-                                // New tab
                                 app.tabs.push(BrowserTab::new("https://www.google.com"));
                                 app.active_tab_idx = app.tabs.len() - 1;
                                 app.address_buffer = "https://www.google.com".to_string();
                                 let _ = app.load_current_page();
                             }
                             KeyCode::Tab => {
-                                // Next tab
                                 app.active_tab_idx = (app.active_tab_idx + 1) % app.tabs.len();
                                 app.address_buffer = app.tabs[app.active_tab_idx].url.clone();
                                 self_render_viewport(app);
@@ -393,7 +670,6 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
                                     mesh.rotate_x(0.1);
                                 } else {
-                                    // Close tab
                                     if app.tabs.len() > 1 {
                                         app.tabs.remove(app.active_tab_idx);
                                         if app.active_tab_idx >= app.tabs.len() {
@@ -420,7 +696,6 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 }
                             }
                             KeyCode::Char('b') | KeyCode::Char('B') => {
-                                // Back in history
                                 let current_idx = app.tabs[app.active_tab_idx].history_idx;
                                 if current_idx > 0 {
                                     app.tabs[app.active_tab_idx].history_idx -= 1;
@@ -432,7 +707,6 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 }
                             }
                             KeyCode::Char('f') | KeyCode::Char('F') => {
-                                // Forward in history
                                 let current_idx = app.tabs[app.active_tab_idx].history_idx;
                                 let hist_len = app.tabs[app.active_tab_idx].history.len();
                                 if current_idx + 1 < hist_len {
@@ -448,34 +722,33 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 app.show_help = !app.show_help;
                             }
                             KeyCode::Char('o') | KeyCode::Char('O') => {
-                                app.show_bookmarks = !app.show_bookmarks;
-                                app.show_history = false;
+                                app.show_favorites = !app.show_favorites;
+                                app.show_history_mgr = false;
                                 app.scroll_offset = 0;
                             }
                             KeyCode::Char('y') | KeyCode::Char('Y') => {
-                                app.show_history = !app.show_history;
-                                app.show_bookmarks = false;
+                                app.show_history_mgr = !app.show_history_mgr;
+                                app.show_favorites = false;
                                 app.scroll_offset = 0;
                             }
                             KeyCode::Char('g') | KeyCode::Char('G') => {
                                 let current_url = app.tabs[app.active_tab_idx].url.clone();
-                                if !app.bookmarks.contains(&current_url) {
-                                    app.bookmarks.push(current_url);
-                                    app.status_message = "Bookmarked page!".to_string();
-                                } else {
-                                    app.status_message = "Already bookmarked".to_string();
-                                }
+                                let current_title = app.tabs[app.active_tab_idx].title.clone();
+                                let _ = app.favorites_mgr.add(&current_title, &current_url, "General");
+                                app.status_message = "Added current page to favorites!".to_string();
                             }
                             KeyCode::Char('p') | KeyCode::Char('P') => {
-                                // Trigger simulated/mock download with progress
                                 let filename = app.tabs[app.active_tab_idx].url.split('/').next_back().unwrap_or("index.html").to_string();
                                 let clean_filename = if filename.is_empty() || filename.contains('?') { "index.html".to_string() } else { filename };
-                                app.downloads.push((clean_filename.clone(), 0.0, "Initiating download...".to_string()));
+                                if app.private_mode {
+                                    app.temp_downloads.push((clean_filename.clone(), 0.0, "Initiating private download...".to_string()));
+                                } else {
+                                    app.downloads.push((clean_filename.clone(), 0.0, "Initiating download...".to_string()));
+                                }
                                 app.download_active = true;
                                 app.status_message = format!("Downloading {}...", clean_filename);
                             }
                             KeyCode::Char('k') | KeyCode::Char('K') => {
-                                // Cycle themes
                                 let next_preset = match app.theme_preset {
                                     crate::browser::theme::ThemePreset::Default => crate::browser::theme::ThemePreset::Dracula,
                                     crate::browser::theme::ThemePreset::Dracula => crate::browser::theme::ThemePreset::Nord,
@@ -487,6 +760,17 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 app.theme_preset = next_preset;
                                 app.theme = crate::browser::theme::AppTheme::from_preset(next_preset);
                                 app.status_message = format!("Switched theme to {}", app.theme.name);
+                            }
+                            KeyCode::Char('v') | KeyCode::Char('V') => {
+                                // Toggle Private Mode (Anonymous mode)
+                                app.private_mode = !app.private_mode;
+                                if app.private_mode {
+                                    app.status_message = "ANONYMOUS BROWSING MODE ACTIVE".to_string();
+                                } else {
+                                    app.temp_downloads.clear();
+                                    app.status_message = "Returned to standard browsing mode".to_string();
+                                }
+                                let _ = app.load_current_page();
                             }
                             KeyCode::Up => {
                                 if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
@@ -506,7 +790,6 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
                                     mesh.rotate_y(-0.1);
                                 } else {
-                                    // Back in history
                                     let current_idx = app.tabs[app.active_tab_idx].history_idx;
                                     if current_idx > 0 {
                                         app.tabs[app.active_tab_idx].history_idx -= 1;
@@ -522,7 +805,6 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
                                     mesh.rotate_y(0.1);
                                 } else {
-                                    // Forward in history
                                     let current_idx = app.tabs[app.active_tab_idx].history_idx;
                                     let hist_len = app.tabs[app.active_tab_idx].history.len();
                                     if current_idx + 1 < hist_len {
@@ -536,7 +818,6 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 }
                             }
                             KeyCode::Enter => {
-                                // If inside zip archive browser, we can select a file and navigate to it!
                                 if let Some(PageContent::ArchivePreview { path, files }) = &app.tabs[app.active_tab_idx].content {
                                     if app.scroll_offset < files.len() {
                                         let selected_file = &files[app.scroll_offset];
@@ -560,7 +841,6 @@ fn run_loop<B: ratatui::backend::Backend>(
                         let c = mouse_event.column;
 
                         if r == 1 {
-                            // Clicks on Top Bar / Tabs
                             if (20..=80).contains(&c) {
                                 let click_idx = ((c - 20) / 18) as usize;
                                 if click_idx < app.tabs.len() {
@@ -570,7 +850,6 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 }
                             }
                         } else if (3..=5).contains(&r) {
-                            // Click on Address bar -> Focus input mode
                             app.input_mode = true;
                             app.address_buffer = app.tabs[app.active_tab_idx].url.clone();
                         }
@@ -589,12 +868,20 @@ fn self_render_viewport(app: &mut BrowserApp) {
 pub fn ui(f: &mut Frame, app: &mut BrowserApp) {
     let size = f.area();
 
-    // Theme Colors from Theme System
-    let primary_style = Style::default().fg(app.theme.primary).add_modifier(Modifier::BOLD);
-    let highlight_style = Style::default().fg(app.theme.highlight).add_modifier(Modifier::BOLD);
-    let border_style = Style::default().fg(app.theme.border);
+    // Theme and style settings
+    let primary_style = if app.private_mode {
+        Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(app.theme.primary).add_modifier(Modifier::BOLD)
+    };
 
-    // Main layout
+    let highlight_style = Style::default().fg(app.theme.highlight).add_modifier(Modifier::BOLD);
+    let border_style = if app.private_mode {
+        Style::default().fg(Color::Magenta)
+    } else {
+        Style::default().fg(app.theme.border)
+    };
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -605,7 +892,7 @@ pub fn ui(f: &mut Frame, app: &mut BrowserApp) {
         ])
         .split(size);
 
-    // 1. Top bar (Tabs)
+    // 1. Top bar
     let mut tabs_spans = Vec::new();
     for (i, tab) in app.tabs.iter().enumerate() {
         let style = if i == app.active_tab_idx {
@@ -617,7 +904,7 @@ pub fn ui(f: &mut Frame, app: &mut BrowserApp) {
     }
     let engine_mode = format!(" Engine: {:?} ", app.core.current_engine);
     let mut top_spans = vec![
-        Span::styled(" iSearch Browser™ ", primary_style),
+        Span::styled(if app.private_mode { " iSearch CLI™ [PRIVATE] " } else { " iSearch Browser™ " }, primary_style),
         Span::raw(" │ "),
     ];
     top_spans.extend(tabs_spans);
@@ -642,7 +929,7 @@ pub fn ui(f: &mut Frame, app: &mut BrowserApp) {
     .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).border_style(addr_border_style));
     f.render_widget(addr_bar, chunks[1]);
 
-    // 3. Main content viewport
+    // 3. Main content
     let content_block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
@@ -704,18 +991,48 @@ Press [Backspace] or [B] to go back.".to_string()
         return;
     }
 
-    if app.show_bookmarks {
-        let mut bookmark_content = "iSearch CLI™ Bookmarks:\n\n\
-                                    Scroll with [Up/Down] and Press [Enter] to go to page:\n\n".to_string();
-        for (idx, b) in app.bookmarks.iter().enumerate() {
-            let indicator = if idx == app.scroll_offset { "➔  " } else { "   " };
-            let style_str = if idx == app.scroll_offset { format!("[ {} ]", b) } else { b.clone() };
-            bookmark_content.push_str(&format!("{}{}\n", indicator, style_str));
+    if app.show_favorites {
+        let mut bookmark_content = "\
+░█▀▀░█▀█░█░█░█▀█░█▀▄░▀█▀░▀█▀░█▀▀░█▀▀
+░█▀▀░█▀█░▀▄▀░█░█░█▀▄░░█░░░█░░█▀▀░▀▀█
+░▀░░░▀░▀░░▀░░▀▀▀░▀░▀░▀▀▀░░▀░░▀▀▀░▀▀▀
+                 iSearch CLI™ FAVORITES PANEL
+\n".to_string();
+
+        bookmark_content.push_str(&format!("  [ Filter Folder: {} ]  [ Search: {} ]\n\n", app.fav_folder_filter, app.fav_search_buffer));
+
+        if app.fav_input_mode {
+            bookmark_content.push_str("  --- ENTER NEW FAVORITE DETAILS ---\n");
+            let fields = [
+                format!("  Title : {}", app.fav_title_input),
+                format!("  URL   : {}", app.fav_url_input),
+                format!("  Folder: {}", app.fav_folder_input),
+                format!("  Search: {}", app.fav_search_buffer),
+                format!("  Import File Path: {}", app.fav_path_input),
+                format!("  Export File Path: {}", app.fav_path_input),
+            ];
+            for (idx, field) in fields.iter().enumerate() {
+                if idx == app.fav_input_field {
+                    bookmark_content.push_str(&format!("➔ {} █\n", field));
+                } else {
+                    bookmark_content.push_str(&format!("  {}\n", field));
+                }
+            }
+            bookmark_content.push_str("\n  Press [Tab] to cycle, [Enter] to save/confirm, [Esc] to cancel.\n");
+        } else {
+            let items = app.get_favorites_filtered();
+            for (idx, item) in items.iter().enumerate() {
+                let indicator = if idx == app.fav_selected_idx { "➔  " } else { "   " };
+                let line_str = format!("{} [{}] {} - {}", indicator, item.folder, item.title, item.url);
+                bookmark_content.push_str(&format!("{}\n", line_str));
+            }
+            if items.is_empty() {
+                bookmark_content.push_str("  No favorites found.\n");
+            }
+            bookmark_content.push_str("\n  Keyboard Shortcuts:\n");
+            bookmark_content.push_str("    [A] Add Favorite  [D / Del] Delete selected  [/ / S] Search  [F] Toggle Folder Filter\n");
+            bookmark_content.push_str("    [I] Import JSON  [E / X] Export JSON  [Esc / O] Close panel  [Enter] Go to Favorite\n");
         }
-        if app.bookmarks.is_empty() {
-            bookmark_content.push_str("No bookmarks saved. Press [G] on any web page to bookmark it!");
-        }
-        bookmark_content.push_str("\n\nPress [Esc] or [O] to exit Bookmarks panel.");
 
         let bookmarks_p = Paragraph::new(bookmark_content)
             .style(Style::default().fg(app.theme.primary))
@@ -724,18 +1041,74 @@ Press [Backspace] or [B] to go back.".to_string()
         return;
     }
 
-    if app.show_history {
-        let mut history_content = "iSearch CLI™ Persistent History:\n\n\
-                                   Scroll with [Up/Down] and Press [Enter] to go to page:\n\n".to_string();
-        for (idx, h) in app.history_list.iter().enumerate() {
-            let indicator = if idx == app.scroll_offset { "➔  " } else { "   " };
-            let style_str = if idx == app.scroll_offset { format!("[ {} ]", h) } else { h.clone() };
-            history_content.push_str(&format!("{}{}\n", indicator, style_str));
+    if app.show_history_mgr {
+        let mut history_content = "\
+░█░█░▀█▀░█▀▀░▀█▀░█▀█░█▀▄░█░█
+░█▀█░░█░░▀▀█░░█░░█░█░█▀▄░░█░
+░▀░▀░▀▀▀░▀▀▀░░▀░░▀▀▀░▀░▀░░▀░
+                iSearch CLI™ HISTORY MANAGER
+\n".to_string();
+
+        history_content.push_str(&format!("  [ Search: {} ]  [ Filter Domain: {} ]  [ Sort: {} ]  [ Group: {} ]\n\n",
+            app.hist_search_buffer, app.hist_domain_filter, app.hist_sort_by, app.hist_group_by));
+
+        if app.hist_input_mode {
+            history_content.push_str("  --- ENTER FILTER DETAILS ---\n");
+            let fields = [
+                format!("  Search : {}", app.hist_search_buffer),
+                format!("  Domain : {}", app.hist_domain_filter),
+            ];
+            for (idx, field) in fields.iter().enumerate() {
+                if idx == app.hist_input_field {
+                    history_content.push_str(&format!("➔ {} █\n", field));
+                } else {
+                    history_content.push_str(&format!("  {}\n", field));
+                }
+            }
+            history_content.push_str("\n  Press [Tab] to cycle, [Enter] to submit, [Esc] to cancel.\n");
+        } else {
+            let items = app.get_history_filtered();
+            if items.is_empty() {
+                history_content.push_str("  No history recorded yet.\n");
+            } else {
+                match app.hist_group_by.as_str() {
+                    "date" => {
+                        let groups = group_by_date(&items);
+                        for (date, grp_items) in groups {
+                            history_content.push_str(&format!("  📅 Date: {}\n", date));
+                            for (orig_idx, item) in grp_items {
+                                let indicator = if orig_idx == app.hist_selected_idx { "➔ " } else { "  " };
+                                history_content.push_str(&format!("    {} - [{}] {} ({})\n", indicator, item.visited_at, item.title, item.url));
+                            }
+                        }
+                    }
+                    "domain" => {
+                        let groups = group_by_domain(&items);
+                        for (domain, grp_items) in groups {
+                            history_content.push_str(&format!("  🌐 Domain: {}\n", domain));
+                            for (orig_idx, item) in grp_items {
+                                let indicator = if orig_idx == app.hist_selected_idx { "➔ " } else { "  " };
+                                history_content.push_str(&format!("    {} - [{}] {} ({})\n", indicator, item.visited_at, item.title, item.url));
+                            }
+                        }
+                    }
+                    _ => {
+                        // Standard list
+                        for (idx, item) in items.iter().enumerate() {
+                            let indicator = if idx == app.hist_selected_idx { "➔  " } else { "   " };
+                            let line_str = format!("{} [{}] {} - {} (visits: {})", indicator, item.visited_at, item.title, item.url, item.visit_count);
+                            history_content.push_str(&format!("{}\n", line_str));
+                        }
+                    }
+                }
+            }
+
+            history_content.push_str("\n  Keyboard Shortcuts:\n");
+            history_content.push_str("    [/ / S] Search  [F] Domain Filter  [R] Toggle Sort  [G] Toggle Group (Date/Domain)\n");
+            history_content.push_str("    [D / Del] Delete selected  [C / Backspace] Clear ALL history\n");
+            history_content.push_str("    [I] Import history_import.json  [E / X] Export history_export.json\n");
+            history_content.push_str("    [Esc / Y] Close panel  [Enter] Go to History URL\n");
         }
-        if app.history_list.is_empty() {
-            history_content.push_str("No history recorded yet.");
-        }
-        history_content.push_str("\n\nPress [Esc] or [Y] to exit History panel.");
 
         let history_p = Paragraph::new(history_content)
             .style(Style::default().fg(app.theme.primary))
@@ -756,10 +1129,11 @@ Keybindings:\n\
   [Tab]          Switch to next tab\n\
   [W]            Close active tab\n\
   [G]            Bookmark current page\n\
-  [O]            Toggle Bookmarks panel\n\
-  [Y]            Toggle History panel\n\
+  [O]            Toggle Favorites panel\n\
+  [Y]            Toggle History Manager panel\n\
   [P]            Download current page/file\n\
   [K]            Cycle theme preset\n\
+  [V]            Toggle Private / Anonymous Browsing Mode\n\
   [H]            Toggle this help screen\n\
   [Up / Down]    Scroll viewport up/down\n\n\
 Under the hood:\n\
@@ -775,7 +1149,28 @@ Under the hood:\n\
 
     // Render loaded PageContent
     let mut display_lines = Vec::new();
-    if let Some(content) = &app.tabs[app.active_tab_idx].content {
+
+    // If private mode is toggled but we have no tabs yet, render private browsing ASCII banner!
+    if app.private_mode && app.tabs[app.active_tab_idx].content.is_none() {
+        display_lines.push(Line::raw(""));
+        display_lines.push(Line::from(vec![
+            Span::styled("░█▀█░█▀█░█▀█░█▀█░█░█░█▄█░█▀█░█░█░█▀▀░░░█▀▄░█▀▄░█▀█░█░█░█▀▀░▀█▀░█▀█░█▀▀", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD))
+        ]));
+        display_lines.push(Line::from(vec![
+            Span::styled("░█▀█░█░█░█░█░█░█░░█░░█░█░█░█░█░█░▀▀█░░░█▀▄░█▀▄░█░█░█▄█░▀▀█░░█░░█░█░█░█", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD))
+        ]));
+        display_lines.push(Line::from(vec![
+            Span::styled("░▀░▀░▀░▀░▀▀▀░▀░▀░░▀░░▀░▀░▀▀▀░▀▀▀░▀▀▀░░░▀▀░░▀░▀░▀▀▀░▀░▀░▀▀▀░▀▀▀░▀░▀░▀▀▀", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD))
+        ]));
+        display_lines.push(Line::raw(""));
+        display_lines.push(Line::raw("  🕵️ You are now in Private / Anonymous Browsing Mode."));
+        display_lines.push(Line::raw("  - No history is written or recorded."));
+        display_lines.push(Line::raw("  - Cookies and caches are isolated and automatically deleted when you close."));
+        display_lines.push(Line::raw("  - No bookmark suggestions or session states are restored."));
+        display_lines.push(Line::raw("  - Downloads are stored in a temporary, in-memory list only."));
+        display_lines.push(Line::raw(""));
+        display_lines.push(Line::raw("  Press [L] to search or visit any web page or local file!"));
+    } else if let Some(content) = &app.tabs[app.active_tab_idx].content {
         match content {
             PageContent::Html { parsed_nodes, .. } => {
                 display_lines = render_html_to_lines(parsed_nodes, content_area.width as usize, CssStyle::default());
@@ -854,7 +1249,7 @@ Under the hood:\n\
         display_lines.push(Line::raw("No content loaded. Press [L] and enter a URL to start browsing."));
     }
 
-    // Scroll handling and rendering
+    // Scroll handling
     let max_scroll = if display_lines.len() > content_area.height as usize {
         display_lines.len() - content_area.height as usize
     } else {
@@ -863,12 +1258,14 @@ Under the hood:\n\
     let offset = std::cmp::min(app.scroll_offset, max_scroll);
     app.scroll_offset = offset;
 
-    if !app.downloads.is_empty() {
+    // Render downloads lists (normal and private)
+    let active_downloads = if app.private_mode { &app.temp_downloads } else { &app.downloads };
+    if !active_downloads.is_empty() {
         display_lines.push(Line::raw(""));
         display_lines.push(Line::from(vec![
-            Span::styled("--- Active Downloads ---", Style::default().fg(app.theme.primary).add_modifier(Modifier::BOLD))
+            Span::styled(if app.private_mode { "--- Temporary Private Downloads ---" } else { "--- Active Downloads ---" }, Style::default().fg(app.theme.primary).add_modifier(Modifier::BOLD))
         ]));
-        for d in &app.downloads {
+        for d in active_downloads {
             let filled = (d.1 * 10.0) as usize;
             let bar = format!("  [ {}{} ]  {}", "█".repeat(filled), "░".repeat(10 - filled), d.2);
             display_lines.push(Line::from(vec![
@@ -889,6 +1286,7 @@ Under the hood:\n\
         Span::styled(" [E: Switch Engine] ", Style::default().fg(Color::Gray)),
         Span::styled(" [T: New Tab] ", Style::default().fg(Color::Gray)),
         Span::styled(" [Tab: Next Tab] ", Style::default().fg(Color::Gray)),
+        Span::styled(" [V: Toggle Private Mode] ", Style::default().fg(Color::Gray)),
         Span::styled(" [K: Cycle Theme] ", Style::default().fg(Color::Gray)),
         Span::styled(" [H: Toggle Help] ", Style::default().fg(Color::Gray)),
         Span::raw(" │ Status: "),
