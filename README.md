@@ -1,108 +1,82 @@
 # iSearch CLI™
 
-iSearch CLI™ is a modern, premium, and lightning-fast command-line search assistant.
+**iSearch CLI™** is a polished terminal browser and search assistant designed for modern developers, power users, and terminal-first workflows.
+
+## What is iSearch CLI™?
+
+iSearch CLI™ delivers a premium terminal experience with a professional interactive user interface, rich search integration, and native support for modern command-line platforms.
+
+- Built for **Windows, macOS, Linux, Android Termux, Docker, SSH sessions, GitHub Codespaces, VS Code terminals, JetBrains terminals, and any ANSI-compatible terminal**
+- Designed for **keyboard-first navigation** with optional mouse support when available
+- Supports **Unicode icons, 24-bit color, responsive layouts, and polished terminal rendering**
+- Offers seamless **search, browsing, and donation workflows entirely inside the terminal**
 
 ## Features
 
-- **Beautiful Interactive TUI**: Terminal User Interface with full keyboard & mouse navigation.
-- **Cross-Platform**: Support for Windows, macOS, Linux, and Android (via Termux).
-- **Integrated Donation System**: Support the project directly from your terminal without leaving the command line!
+- Interactive, modern TUI with rounded borders, color themes, and responsive layouts
+- Cross-platform support for major desktop and mobile terminal environments
+- Native terminal search interface with support for search engine aliases and presets
+- Terminal-based PIX donation screen with QR code generation and clipboard integration
+- Customizable configuration via `config.toml`
+- Secure offline-first operations and privacy-friendly defaults
 
----
-
-## Installation & Getting Started
-
-To compile and run iSearch CLI™:
+## Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/erikraft/iSearch-CLI.git
 cd iSearch-CLI
+cargo run --release
+```
 
-# Run the interactive CLI
+For development builds:
+
+```bash
 cargo run
 ```
 
----
+## Quick Start
 
-## Donate
+Launch the interactive shell:
 
-Allowing users to support the project financially directly from their favorite environment is a core pillar of iSearch CLI™. We provide a beautiful, seamless, and fully integrated terminal-based PIX payment system.
-
-### How to open the donation screen
-
-You can launch the donation interface in two different ways:
-
-1. **Directly from your shell**:
-   ```bash
-   isearch donate
-   # Or using cargo run:
-   cargo run -- donate
-   ```
-
-2. **From inside the interactive CLI**:
-   Simply run `donate` when you are already inside the interactive iSearch CLI environment:
-   ```text
-   iSearch> donate
-   ```
-
-### How PIX works
-
-PIX is an instant, secure, and modern payment method created by the Banco Central do Brasil.
-1. When you choose an amount (or enter a custom value) and optional message on our donation screen, iSearch CLI™ generates a valid, standard-compliant EMV Co QR Code payload.
-2. The terminal displays a **high-quality scannable QR Code** rendered with Unicode block characters.
-3. Simply scan the QR code using your favorite bank's mobile app to complete the instant payment safely.
-4. You can also copy the PIX payload instantly to your system clipboard by pressing `C` or `Enter` on the copy button.
-
-### Supported platforms
-
-The donation system and clipboard auto-copying are fully optimized and supported natively across:
-- **macOS** (utilizing native clipboard APIs or `pbcopy`)
-- **Windows** (utilizing PowerShell or system `clip` utilities)
-- **Linux** (using `xclip`, `xsel` under X11 or `wl-copy` under Wayland)
-- **Android / Termux** (utilizing `termux-clipboard-set` package)
-
-### Privacy considerations
-
-- **Offline-First**: All PIX code formatting, CRC16 CCITT validation, and QR Code generation are done locally on your machine.
-- **No telemetry / trackers**: iSearch CLI™ never sends any personal data, session logs, or payment information over the network.
-- **Secure payment**: Since the payment is routed directly through standard PIX keys via your trusted banking app, no credit card numbers or sensitive details are exposed or requested.
-
----
-
-### Terminal Donation Interface Example
-
-When launching the donation flow, you'll be greeted with our professional interactive screen:
-
-```text
-╭────────────────────────────────────────────╮
-│             Support iSearch CLI™           │
-├────────────────────────────────────────────┤
-│                                            │
-│ Thank you for supporting the project.      │
-│                                            │
-│ Choose an amount:                          │
-│                                            │
-│   ● R$ 5                                   │
-│   ○ R$ 10                                  │
-│   ○ R$ 20                                  │
-│   ○ R$ 50                                  │
-│   ○ R$ 100                                 │
-│   ○ Custom Amount                          │
-│                                            │
-│ Message (Optional):                        │
-│ [ Supporting iSearch CLI™                ] │
-│                                            │
-│          [ Generate PIX QR Code ]          │
-│                                            │
-╰────────────────────────────────────────────╯
+```bash
+cargo run --release
 ```
 
----
+Inside the iSearch CLI™ prompt, run commands such as:
+
+```text
+iSearch> search rust terminal browser
+iSearch> donate
+```
+
+## Donation Support
+
+iSearch CLI™ includes a professional terminal donation flow powered by PIX.
+
+### Launch the donation screen
+
+```bash
+isearch donate
+# or
+cargo run -- donate
+```
+
+From inside the interactive prompt:
+
+```text
+iSearch> donate
+```
+
+### Donation experience
+
+- Generates a standard-compliant EMV Co QR Code payload
+- Renders a high-quality QR code directly in the terminal
+- Supports clipboard copy on macOS, Windows, Linux, and Termux
+- Performs all formatting and validation locally for secure offline operation
 
 ## Configuration
 
-iSearch CLI™ respects your preferences. You can customize the default donation options and keys inside a `config.toml` file in your workspace:
+Create or update `config.toml` with your preferences:
 
 ```toml
 [donation]
@@ -111,8 +85,26 @@ currency = "BRL"
 default_values = [5, 10, 20, 50, 100]
 ```
 
----
+## Supported Platforms
 
-## License
+- macOS
+- Windows
+- Linux
+- Android (Termux)
+- Docker containers
+- SSH terminals
+- GitHub Codespaces
+- VS Code terminal
+- JetBrains terminal
+
+## Privacy & Security
+
+- Offline-first QR generation and validation
+- No telemetry or tracking
+- Secure defaults for safe terminal browsing
+
+## Author
+
+Original author: **ErikrafT**
 
 MIT License. See [LICENSE](LICENSE) for details.
