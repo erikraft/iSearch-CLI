@@ -153,15 +153,12 @@ pub trait BrowserEngine {
     ///
     /// * `query` - Keywords.
     fn search(&mut self, query: &str) -> Result<PageContent, BrowserError>;
-
-    /// Spawns a background browser frame and captures a snapshot.
-    ///
-    /// # Arguments
-    ///
-    /// * `url` - Address to open.
-    /// * `width` - Frame window width.
-    /// * `height` - Frame window height.
-    fn capture_screenshot(&mut self, url: &str, width: u32, height: u32) -> Result<Vec<u8>, BrowserError>;
+    fn capture_screenshot(
+        &mut self,
+        url: &str,
+        width: u32,
+        height: u32,
+    ) -> Result<Vec<u8>, BrowserError>;
 }
 
 /// Top-level unified orchestrator coordinating backends, plugins, and caching pipelines.
@@ -243,7 +240,10 @@ impl BrowserCore {
         if self.adblocker.is_blocked(url) {
             return Ok(PageContent::AnsiText {
                 title: "Ad Blocked".to_string(),
-                content: format!("The request to '{}' was blocked by the integrated iSearch AdBlocker plugin.", url),
+                content: format!(
+                    "The request to '{}' was blocked by the integrated iSearch AdBlocker plugin.",
+                    url
+                ),
             });
         }
         match self.current_engine {
@@ -258,29 +258,29 @@ impl BrowserCore {
         }
     }
 
-    /// Resolves custom search aliases and requests search engine indexes.
-    ///
-    /// Support aliases like "google", "duckduckgo", and "bing".
-    ///
-    /// # Arguments
-    ///
-    /// * `query` - Text string query.
-    /// * `alias` - Optional shorthand identifier for target search systems (e.g. `g` or `ddg`).
-    ///
-    /// # Returns
-    ///
-    /// Returns parsed search index [PageContent].
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if engine navigation fails.
-    pub fn search(&mut self, query: &str, alias: Option<&str>) -> Result<PageContent, BrowserError> {
+    pub fn search(
+        &mut self,
+        query: &str,
+        alias: Option<&str>,
+    ) -> Result<PageContent, BrowserError> {
         let engine = alias.unwrap_or("google");
         let url = match engine {
-            "google" | "g" => format!("https://www.google.com/search?q={}", percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)),
-            "duckduckgo" | "ddg" => format!("https://duckduckgo.com/html/?q={}", percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)),
-            "bing" | "b" => format!("https://www.bing.com/search?q={}", percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)),
-            _ => format!("https://www.google.com/search?q={}", percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)),
+            "google" | "g" => format!(
+                "https://www.google.com/search?q={}",
+                percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)
+            ),
+            "duckduckgo" | "ddg" => format!(
+                "https://duckduckgo.com/html/?q={}",
+                percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)
+            ),
+            "bing" | "b" => format!(
+                "https://www.bing.com/search?q={}",
+                percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)
+            ),
+            _ => format!(
+                "https://www.google.com/search?q={}",
+                percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)
+            ),
         };
         self.navigate(&url)
     }

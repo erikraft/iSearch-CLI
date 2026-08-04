@@ -96,7 +96,9 @@ pub fn validate_amount(amount_str: &str) -> Result<f64, String> {
         return Err("Amount cannot be empty.".to_string());
     }
 
-    let val: f64 = trimmed.parse().map_err(|_| "Please enter a valid numeric amount (e.g., 10.50).".to_string())?;
+    let val: f64 = trimmed
+        .parse()
+        .map_err(|_| "Please enter a valid numeric amount (e.g., 10.50).".to_string())?;
 
     if val <= 0.0 {
         return Err("Amount must be greater than zero.".to_string());
@@ -176,7 +178,9 @@ pub fn generate_pix_payload(
         let clean_msg: String = msg
             .chars()
             .take(72)
-            .filter(|c| c.is_ascii_alphanumeric() || c.is_ascii_whitespace() || *c == '-' || *c == '_')
+            .filter(|c| {
+                c.is_ascii_alphanumeric() || c.is_ascii_whitespace() || *c == '-' || *c == '_'
+            })
             .collect();
         if !clean_msg.is_empty() {
             merchant_account_info.push_str(&format_tlv("02", &clean_msg));

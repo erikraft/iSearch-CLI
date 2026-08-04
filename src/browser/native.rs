@@ -12,16 +12,16 @@
 //! * [Mesh3D] implements an interactive orthographic projection engine that rotates and projects vectors onto character matrices.
 
 use crate::browser::core::{BrowserEngine, BrowserError, PageContent};
-use std::path::PathBuf;
-use std::fs;
-use tl::Node;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
+use std::fs;
+use std::path::PathBuf;
+use tl::Node;
 
-use pulldown_cmark::{Parser, Event, Tag, TagEnd, CodeBlockKind};
+use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 use syntect::easy::HighlightLines;
-use syntect::parsing::SyntaxSet;
 use syntect::highlighting::ThemeSet;
+use syntect::parsing::SyntaxSet;
 
 /// Represents a parsed HTML element node or leaf text block.
 #[derive(Debug, Clone)]
@@ -147,9 +147,10 @@ pub fn render_hex_dump(bytes: &[u8], width: usize) -> Vec<Line<'static>> {
     let chunk_size = if width > 80 { 16 } else { 8 };
     for (i, chunk) in bytes.chunks(chunk_size).enumerate() {
         let offset = i * chunk_size;
-        let mut spans = vec![
-            Span::styled(format!("{:08x}:  ", offset), Style::default().fg(Color::Yellow)),
-        ];
+        let mut spans = vec![Span::styled(
+            format!("{:08x}:  ", offset),
+            Style::default().fg(Color::Yellow),
+        )];
 
         let mut hex_part = String::new();
         let mut ascii_part = String::new();
@@ -312,18 +313,12 @@ pub fn parse_style_attribute(style_str: &str) -> CssStyle {
     style
 }
 
-/// Recursively converts array sequences of [HtmlNode] into lists of styled ratatui [Line] sequences.
-///
-/// # Arguments
-///
-/// * `nodes` - Array slice of source HTML parsed elements.
-/// * `width` - Target display column width constraints.
-/// * `base_style` - Starting global fallback style configurations.
-///
-/// # Returns
-///
-/// Returns a vector of styled [Line] elements.
-pub fn render_html_to_lines(nodes: &[HtmlNode], width: usize, base_style: CssStyle) -> Vec<Line<'static>> {
+// Convert HTML nodes recursively into styled Lines
+pub fn render_html_to_lines(
+    nodes: &[HtmlNode],
+    width: usize,
+    base_style: CssStyle,
+) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
     for node in nodes {
         render_node_to_lines(node, width, base_style.clone(), &mut lines);
@@ -331,8 +326,12 @@ pub fn render_html_to_lines(nodes: &[HtmlNode], width: usize, base_style: CssSty
     lines
 }
 
-/// Recursively parses an [HtmlNode] structure and appends appropriate lines to the out container.
-fn render_node_to_lines(node: &HtmlNode, _width: usize, parent_style: CssStyle, lines: &mut Vec<Line<'static>>) {
+fn render_node_to_lines(
+    node: &HtmlNode,
+    _width: usize,
+    parent_style: CssStyle,
+    lines: &mut Vec<Line<'static>>,
+) {
     match node {
         HtmlNode::Text(txt) => {
             if txt.is_empty() {
@@ -358,20 +357,40 @@ fn render_node_to_lines(node: &HtmlNode, _width: usize, parent_style: CssStyle, 
                 Span::styled(txt.clone(), style),
             ]));
         }
-        HtmlNode::Element { tag, attributes, children } => {
+        HtmlNode::Element {
+            tag,
+            attributes,
+            children,
+        } => {
             let mut style = parent_style.clone();
             let mut href = None;
             for (k, v) in attributes {
                 if k.to_lowercase() == "style" {
                     let s = parse_style_attribute(v);
-                    if let Some(fg) = s.fg { style.fg = Some(fg); }
-                    if let Some(bg) = s.bg { style.bg = Some(bg); }
-                    if s.bold { style.bold = true; }
-                    if s.underline { style.underline = true; }
-                    if s.border { style.border = true; }
-                    if s.rounded { style.rounded = true; }
-                    if s.margin_left > 0 { style.margin_left = s.margin_left; }
-                    if s.padding_left > 0 { style.padding_left = s.padding_left; }
+                    if let Some(fg) = s.fg {
+                        style.fg = Some(fg);
+                    }
+                    if let Some(bg) = s.bg {
+                        style.bg = Some(bg);
+                    }
+                    if s.bold {
+                        style.bold = true;
+                    }
+                    if s.underline {
+                        style.underline = true;
+                    }
+                    if s.border {
+                        style.border = true;
+                    }
+                    if s.rounded {
+                        style.rounded = true;
+                    }
+                    if s.margin_left > 0 {
+                        style.margin_left = s.margin_left;
+                    }
+                    if s.padding_left > 0 {
+                        style.padding_left = s.padding_left;
+                    }
                 } else if k.to_lowercase() == "href" {
                     href = Some(v.clone());
                 } else if k.to_lowercase() == "value" && tag.to_lowercase() == "progress" {
@@ -400,7 +419,12 @@ fn render_node_to_lines(node: &HtmlNode, _width: usize, parent_style: CssStyle, 
                         render_node_to_lines(child, _width, style.clone(), &mut heading_lines);
                     }
                     for line in heading_lines {
-                        let mut new_spans = vec![Span::styled(prefix, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))];
+                        let mut new_spans = vec![Span::styled(
+                            prefix,
+                            Style::default()
+                                .fg(Color::Cyan)
+                                .add_modifier(Modifier::BOLD),
+                        )];
                         new_spans.extend(line.spans);
                         lines.push(Line::from(new_spans));
                     }
@@ -429,7 +453,10 @@ fn render_node_to_lines(node: &HtmlNode, _width: usize, parent_style: CssStyle, 
                     for line in a_lines {
                         let mut spans = line.spans;
                         if let Some(target) = &href {
-                            spans.push(Span::styled(format!(" ({})", target), Style::default().fg(Color::DarkGray)));
+                            spans.push(Span::styled(
+                                format!(" ({})", target),
+                                Style::default().fg(Color::DarkGray),
+                            ));
                         }
                         lines.push(Line::from(spans));
                     }
@@ -443,19 +470,27 @@ fn render_node_to_lines(node: &HtmlNode, _width: usize, parent_style: CssStyle, 
                         style.fg = Some(Color::White);
                     }
 
-                    let input_type = attributes.iter().find(|(k, _)| k.to_lowercase() == "type").map(|(_, v)| v.to_lowercase()).unwrap_or_else(|| "text".to_string());
-                    let is_checked = attributes.iter().any(|(k, _)| k.to_lowercase() == "checked");
+                    let input_type = attributes
+                        .iter()
+                        .find(|(k, _)| k.to_lowercase() == "type")
+                        .map(|(_, v)| v.to_lowercase())
+                        .unwrap_or_else(|| "text".to_string());
+                    let is_checked = attributes
+                        .iter()
+                        .any(|(k, _)| k.to_lowercase() == "checked");
 
                     if input_type == "checkbox" {
                         let marker = if is_checked { "[x]" } else { "[ ]" };
-                        lines.push(Line::from(vec![
-                            Span::styled(format!(" {} ", marker), Style::default().fg(Color::Green))
-                        ]));
+                        lines.push(Line::from(vec![Span::styled(
+                            format!(" {} ", marker),
+                            Style::default().fg(Color::Green),
+                        )]));
                     } else if input_type == "radio" {
                         let marker = if is_checked { "(*)" } else { "( )" };
-                        lines.push(Line::from(vec![
-                            Span::styled(format!(" {} ", marker), Style::default().fg(Color::Green))
-                        ]));
+                        lines.push(Line::from(vec![Span::styled(
+                            format!(" {} ", marker),
+                            Style::default().fg(Color::Green),
+                        )]));
                     } else {
                         let mut btn_lines = Vec::new();
                         for child in children {
@@ -463,12 +498,27 @@ fn render_node_to_lines(node: &HtmlNode, _width: usize, parent_style: CssStyle, 
                         }
                         if btn_lines.is_empty() {
                             // Value or Placeholder for inputs
-                            let placeholder = attributes.iter().find(|(k, _)| k.to_lowercase() == "placeholder").map(|(_, v)| v.clone()).unwrap_or_default();
-                            let value = attributes.iter().find(|(k, _)| k.to_lowercase() == "value").map(|(_, v)| v.clone()).unwrap_or_default();
-                            let text = if !value.is_empty() { value } else if !placeholder.is_empty() { placeholder } else { "Input".to_string() };
-                            lines.push(Line::from(vec![
-                                Span::styled(format!(" [ {} ] ", text), Style::default().fg(Color::Yellow).bg(Color::DarkGray))
-                            ]));
+                            let placeholder = attributes
+                                .iter()
+                                .find(|(k, _)| k.to_lowercase() == "placeholder")
+                                .map(|(_, v)| v.clone())
+                                .unwrap_or_default();
+                            let value = attributes
+                                .iter()
+                                .find(|(k, _)| k.to_lowercase() == "value")
+                                .map(|(_, v)| v.clone())
+                                .unwrap_or_default();
+                            let text = if !value.is_empty() {
+                                value
+                            } else if !placeholder.is_empty() {
+                                placeholder
+                            } else {
+                                "Input".to_string()
+                            };
+                            lines.push(Line::from(vec![Span::styled(
+                                format!(" [ {} ] ", text),
+                                Style::default().fg(Color::Yellow).bg(Color::DarkGray),
+                            )]));
                         } else {
                             for line in btn_lines {
                                 let mut spans = vec![Span::raw(" [ ")];
@@ -486,9 +536,8 @@ fn render_node_to_lines(node: &HtmlNode, _width: usize, parent_style: CssStyle, 
                         render_node_to_lines(child, _width, style.clone(), &mut quote_lines);
                     }
                     for line in quote_lines {
-                        let mut spans = vec![
-                            Span::styled("│ ", Style::default().fg(Color::DarkGray)),
-                        ];
+                        let mut spans =
+                            vec![Span::styled("│ ", Style::default().fg(Color::DarkGray))];
                         spans.extend(line.spans);
                         lines.push(Line::from(spans));
                     }
@@ -505,7 +554,10 @@ fn render_node_to_lines(node: &HtmlNode, _width: usize, parent_style: CssStyle, 
                         for (idx, line) in item_lines.into_iter().enumerate() {
                             let mut spans = Vec::new();
                             if idx == 0 {
-                                spans.push(Span::styled(bullet.clone(), Style::default().fg(Color::Yellow)));
+                                spans.push(Span::styled(
+                                    bullet.clone(),
+                                    Style::default().fg(Color::Yellow),
+                                ));
                             } else {
                                 spans.push(Span::raw("  "));
                             }
@@ -524,21 +576,39 @@ fn render_node_to_lines(node: &HtmlNode, _width: usize, parent_style: CssStyle, 
                     let val = style.progress_value.unwrap_or(0.0);
                     let percent = (val * 100.0) as usize;
                     let filled = percent / 10;
-                    let bar = format!("[{}{}] {}%", "█".repeat(filled), "░".repeat(10 - filled), percent);
-                    lines.push(Line::from(vec![
-                        Span::styled(bar, Style::default().fg(Color::Green))
-                    ]));
+                    let bar = format!(
+                        "[{}{}] {}%",
+                        "█".repeat(filled),
+                        "░".repeat(10 - filled),
+                        percent
+                    );
+                    lines.push(Line::from(vec![Span::styled(
+                        bar,
+                        Style::default().fg(Color::Green),
+                    )]));
                 }
                 "table" => {
                     // Render simple grids/tables
                     let mut table_rows = Vec::new();
                     for child in children {
-                        if let HtmlNode::Element { tag: child_tag, children: td_children, .. } = child {
+                        if let HtmlNode::Element {
+                            tag: child_tag,
+                            children: td_children,
+                            ..
+                        } = child
+                        {
                             if child_tag.to_lowercase() == "tr" {
                                 let mut cols = Vec::new();
                                 for td in td_children {
-                                    if let HtmlNode::Element { tag: td_tag, children: text_children, .. } = td {
-                                        if td_tag.to_lowercase() == "td" || td_tag.to_lowercase() == "th" {
+                                    if let HtmlNode::Element {
+                                        tag: td_tag,
+                                        children: text_children,
+                                        ..
+                                    } = td
+                                    {
+                                        if td_tag.to_lowercase() == "td"
+                                            || td_tag.to_lowercase() == "th"
+                                        {
                                             let mut text = String::new();
                                             for tc in text_children {
                                                 if let HtmlNode::Text(t) = tc {
@@ -568,7 +638,14 @@ fn render_node_to_lines(node: &HtmlNode, _width: usize, parent_style: CssStyle, 
                         }
 
                         // Top border
-                        let border_line = format!("┌{}┐", col_widths.iter().map(|w| "─".repeat(*w)).collect::<Vec<_>>().join("┬"));
+                        let border_line = format!(
+                            "┌{}┐",
+                            col_widths
+                                .iter()
+                                .map(|w| "─".repeat(*w))
+                                .collect::<Vec<_>>()
+                                .join("┬")
+                        );
                         lines.push(Line::raw(border_line.clone()));
 
                         for (r_idx, row) in table_rows.iter().enumerate() {
@@ -577,18 +654,42 @@ fn render_node_to_lines(node: &HtmlNode, _width: usize, parent_style: CssStyle, 
                             for (c_idx, col) in row.iter().enumerate() {
                                 let width = col_widths[c_idx];
                                 let padded = format!(" {:<width$} ", col, width = width - 2);
-                                row_cells.push(Span::styled(padded, if r_idx == 0 { Style::default().add_modifier(Modifier::BOLD).fg(Color::Yellow) } else { Style::default() }));
-                                row_cells.push(Span::styled("│", Style::default().fg(Color::DarkGray)));
+                                row_cells.push(Span::styled(
+                                    padded,
+                                    if r_idx == 0 {
+                                        Style::default()
+                                            .add_modifier(Modifier::BOLD)
+                                            .fg(Color::Yellow)
+                                    } else {
+                                        Style::default()
+                                    },
+                                ));
+                                row_cells
+                                    .push(Span::styled("│", Style::default().fg(Color::DarkGray)));
                             }
                             lines.push(Line::from(row_cells));
 
                             // Separator or bottom border
                             if r_idx == 0 {
-                                let sep = format!("├{}┤", col_widths.iter().map(|w| "─".repeat(*w)).collect::<Vec<_>>().join("┼"));
+                                let sep = format!(
+                                    "├{}┤",
+                                    col_widths
+                                        .iter()
+                                        .map(|w| "─".repeat(*w))
+                                        .collect::<Vec<_>>()
+                                        .join("┼")
+                                );
                                 lines.push(Line::raw(sep));
                             }
                         }
-                        let bottom_line = format!("└{}┘", col_widths.iter().map(|w| "─".repeat(*w)).collect::<Vec<_>>().join("┴"));
+                        let bottom_line = format!(
+                            "└{}┘",
+                            col_widths
+                                .iter()
+                                .map(|w| "─".repeat(*w))
+                                .collect::<Vec<_>>()
+                                .join("┴")
+                        );
                         lines.push(Line::raw(bottom_line));
                     }
                 }
@@ -627,7 +728,8 @@ fn to_ratatui_color(c: syntect::highlighting::Color) -> Color {
 pub fn highlight_code_block(code: &str, lang: &str) -> Vec<Line<'static>> {
     let ps = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
-    let syntax = ps.find_syntax_by_token(lang)
+    let syntax = ps
+        .find_syntax_by_token(lang)
         .unwrap_or_else(|| ps.find_syntax_plain_text());
     let theme = &ts.themes["base16-ocean.dark"];
     let mut h = HighlightLines::new(syntax, theme);
@@ -639,10 +741,16 @@ pub fn highlight_code_block(code: &str, lang: &str) -> Vec<Line<'static>> {
             for (style, text) in ranges {
                 let fg = to_ratatui_color(style.foreground);
                 let mut span_style = Style::default().fg(fg);
-                if style.font_style.contains(syntect::highlighting::FontStyle::BOLD) {
+                if style
+                    .font_style
+                    .contains(syntect::highlighting::FontStyle::BOLD)
+                {
                     span_style = span_style.add_modifier(Modifier::BOLD);
                 }
-                if style.font_style.contains(syntect::highlighting::FontStyle::UNDERLINE) {
+                if style
+                    .font_style
+                    .contains(syntect::highlighting::FontStyle::UNDERLINE)
+                {
                     span_style = span_style.add_modifier(Modifier::UNDERLINED);
                 }
                 spans.push(Span::styled(text.to_string(), span_style));
@@ -686,7 +794,12 @@ pub fn render_markdown_to_lines(md: &str, _width: usize) -> Vec<Line<'static>> {
                     }
                     lines.push(Line::raw(""));
                     let prefix = "#".repeat(level as usize) + " ";
-                    current_line_spans.push(Span::styled(prefix, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
+                    current_line_spans.push(Span::styled(
+                        prefix,
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
+                    ));
                 }
                 Tag::BlockQuote(_kind) => {
                     in_blockquote = true;
@@ -710,7 +823,8 @@ pub fn render_markdown_to_lines(md: &str, _width: usize) -> Vec<Line<'static>> {
                     } else {
                         " • ".to_string()
                     };
-                    current_line_spans.push(Span::styled(prefix, Style::default().fg(Color::Yellow)));
+                    current_line_spans
+                        .push(Span::styled(prefix, Style::default().fg(Color::Yellow)));
                 }
                 Tag::CodeBlock(kind) => {
                     in_code_block = true;
@@ -726,7 +840,7 @@ pub fn render_markdown_to_lines(md: &str, _width: usize) -> Vec<Line<'static>> {
                     let _ = dest_url;
                 }
                 _ => {}
-            }
+            },
             Event::End(tag_end) => match tag_end {
                 TagEnd::Heading(_) => {
                     if !current_line_spans.is_empty() {
@@ -754,28 +868,35 @@ pub fn render_markdown_to_lines(md: &str, _width: usize) -> Vec<Line<'static>> {
                     lines.push(Line::raw("└───────────────────────────────────────────"));
                 }
                 TagEnd::Link => {
-                    current_line_spans.push(Span::styled("]", Style::default().fg(Color::Blue).add_modifier(Modifier::UNDERLINED)));
+                    current_line_spans.push(Span::styled(
+                        "]",
+                        Style::default()
+                            .fg(Color::Blue)
+                            .add_modifier(Modifier::UNDERLINED),
+                    ));
                 }
                 _ => {}
-            }
+            },
             Event::Text(txt) => {
                 if in_code_block {
                     code_block_content.push_str(&txt);
                 } else {
                     let style = Style::default();
                     if in_blockquote {
-                        current_line_spans.push(Span::styled("│ ", Style::default().fg(Color::DarkGray)));
+                        current_line_spans
+                            .push(Span::styled("│ ", Style::default().fg(Color::DarkGray)));
                     }
                     current_line_spans.push(Span::styled(txt.to_string(), style));
                 }
             }
             Event::Code(txt) => {
-                current_line_spans.push(Span::styled(format!("`{}`", txt), Style::default().fg(Color::Magenta)));
+                current_line_spans.push(Span::styled(
+                    format!("`{}`", txt),
+                    Style::default().fg(Color::Magenta),
+                ));
             }
-            Event::SoftBreak | Event::HardBreak => {
-                if !current_line_spans.is_empty() {
-                    lines.push(Line::from(std::mem::take(&mut current_line_spans)));
-                }
+            Event::SoftBreak | Event::HardBreak if !current_line_spans.is_empty() => {
+                lines.push(Line::from(std::mem::take(&mut current_line_spans)));
             }
             _ => {}
         }
@@ -810,18 +931,27 @@ impl Mesh3D {
         Self {
             vertices: vec![
                 [-1.0, -1.0, -1.0],
-                [ 1.0, -1.0, -1.0],
-                [ 1.0,  1.0, -1.0],
-                [-1.0,  1.0, -1.0],
-                [-1.0, -1.0,  1.0],
-                [ 1.0, -1.0,  1.0],
-                [ 1.0,  1.0,  1.0],
-                [-1.0,  1.0,  1.0],
+                [1.0, -1.0, -1.0],
+                [1.0, 1.0, -1.0],
+                [-1.0, 1.0, -1.0],
+                [-1.0, -1.0, 1.0],
+                [1.0, -1.0, 1.0],
+                [1.0, 1.0, 1.0],
+                [-1.0, 1.0, 1.0],
             ],
             edges: vec![
-                (0, 1), (1, 2), (2, 3), (3, 0), // back face
-                (4, 5), (5, 6), (6, 7), (7, 4), // front face
-                (0, 4), (1, 5), (2, 6), (3, 7), // connections
+                (0, 1),
+                (1, 2),
+                (2, 3),
+                (3, 0), // back face
+                (4, 5),
+                (5, 6),
+                (6, 7),
+                (7, 4), // front face
+                (0, 4),
+                (1, 5),
+                (2, 6),
+                (3, 7), // connections
             ],
         }
     }
@@ -891,13 +1021,24 @@ impl Mesh3D {
         }
 
         grid.into_iter()
-            .map(|row| Line::from(vec![Span::styled(row.into_iter().collect::<String>(), Style::default().fg(Color::Magenta))]))
+            .map(|row| {
+                Line::from(vec![Span::styled(
+                    row.into_iter().collect::<String>(),
+                    Style::default().fg(Color::Magenta),
+                )])
+            })
             .collect()
     }
 }
 
-/// Traces wire characters on a grid using standard integer Bresenham's algorithms.
-fn draw_line_on_grid(grid: &mut [Vec<char>], mut x1: isize, mut y1: isize, x2: isize, y2: isize, ch: char) {
+fn draw_line_on_grid(
+    grid: &mut [Vec<char>],
+    mut x1: isize,
+    mut y1: isize,
+    x2: isize,
+    y2: isize,
+    ch: char,
+) {
     let dx = (x2 - x1).abs();
     let dy = (y2 - y1).abs();
     let sx = if x1 < x2 { 1 } else { -1 };
@@ -905,7 +1046,9 @@ fn draw_line_on_grid(grid: &mut [Vec<char>], mut x1: isize, mut y1: isize, x2: i
     let mut err = dx - dy;
 
     let height = grid.len() as isize;
-    if height == 0 { return; }
+    if height == 0 {
+        return;
+    }
     let width = grid[0].len() as isize;
 
     loop {
@@ -913,7 +1056,9 @@ fn draw_line_on_grid(grid: &mut [Vec<char>], mut x1: isize, mut y1: isize, x2: i
             grid[y1 as usize][x1 as usize] = ch;
         }
 
-        if x1 == x2 && y1 == y2 { break; }
+        if x1 == x2 && y1 == y2 {
+            break;
+        }
         let e2 = 2 * err;
         if e2 > -dy {
             err -= dy;
@@ -945,7 +1090,11 @@ impl BrowserEngine for NativeEngine {
         if url.contains("::") {
             let parts: Vec<&str> = url.split("::").collect();
             if parts.len() == 2 {
-                let zip_path_str = if parts[0].starts_with("file://") { &parts[0][7..] } else { parts[0] };
+                let zip_path_str = if parts[0].starts_with("file://") {
+                    &parts[0][7..]
+                } else {
+                    parts[0]
+                };
                 let zip_path = PathBuf::from(zip_path_str);
                 let file_in_zip = parts[1];
                 if zip_path.exists() {
@@ -984,7 +1133,11 @@ impl BrowserEngine for NativeEngine {
         }
 
         // Handle file:/// or local path paths
-        if url.starts_with("file://") || url.starts_with('/') || url.contains('\\') || std::path::Path::new(url).exists() {
+        if url.starts_with("file://")
+            || url.starts_with('/')
+            || url.contains('\\')
+            || std::path::Path::new(url).exists()
+        {
             let path_str = if let Some(stripped) = url.strip_prefix("file://") {
                 stripped
             } else {
@@ -1030,14 +1183,24 @@ impl BrowserEngine for NativeEngine {
                             pages_count: 1,
                             text_preview: "PDF binary files are previewed natively in high-fidelity on supported viewers.\nHere we parse metadata and structure for console output.".to_string(),
                         });
-                    } else if ["png", "jpg", "jpeg", "webp", "gif", "bmp"].contains(&ext.to_string_lossy().to_lowercase().as_str()) {
+                    } else if ["png", "jpg", "jpeg", "webp", "gif", "bmp"]
+                        .contains(&ext.to_string_lossy().to_lowercase().as_str())
+                    {
                         if let Ok(bytes) = fs::read(&path) {
-                            return Ok(PageContent::ImagePreview { path: path.clone(), raw_bytes: bytes });
+                            return Ok(PageContent::ImagePreview {
+                                path: path.clone(),
+                                raw_bytes: bytes,
+                            });
                         }
-                    } else if ["obj", "mesh", "3d"].contains(&ext.to_string_lossy().to_lowercase().as_str()) {
+                    } else if ["obj", "mesh", "3d"]
+                        .contains(&ext.to_string_lossy().to_lowercase().as_str())
+                    {
                         // Return custom 3D mesh preview
                         return Ok(PageContent::Mesh3DPreview {
-                            title: path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "3D Mesh".to_string()),
+                            title: path
+                                .file_name()
+                                .map(|n| n.to_string_lossy().to_string())
+                                .unwrap_or_else(|| "3D Mesh".to_string()),
                             mesh: Mesh3D::new_cube(),
                         });
                     }
@@ -1046,7 +1209,11 @@ impl BrowserEngine for NativeEngine {
                 // Normal file
                 if let Ok(bytes) = fs::read(&path) {
                     if let Ok(text) = String::from_utf8(bytes.clone()) {
-                        return Ok(PageContent::FilePreview { path, content: text, is_binary: false });
+                        return Ok(PageContent::FilePreview {
+                            path,
+                            content: text,
+                            is_binary: false,
+                        });
                     } else {
                         // Render structured hex dump
                         let lines = render_hex_dump(&bytes, 80);
@@ -1057,7 +1224,11 @@ impl BrowserEngine for NativeEngine {
                             }
                             content.push('\n');
                         }
-                        return Ok(PageContent::FilePreview { path, content, is_binary: true });
+                        return Ok(PageContent::FilePreview {
+                            path,
+                            content,
+                            is_binary: true,
+                        });
                     }
                 }
             }
@@ -1093,10 +1264,17 @@ impl BrowserEngine for NativeEngine {
 
                 // Check content-type if we can, or parse as html
                 if clean_url.ends_with(".md") {
-                    Ok(PageContent::Markdown { title, raw_md: body })
+                    Ok(PageContent::Markdown {
+                        title,
+                        raw_md: body,
+                    })
                 } else {
                     let parsed = Self::parse_html(&body);
-                    Ok(PageContent::Html { title, raw_html: body, parsed_nodes: parsed })
+                    Ok(PageContent::Html {
+                        title,
+                        raw_html: body,
+                        parsed_nodes: parsed,
+                    })
                 }
             }
             Err(e) => Err(BrowserError::NetworkError(format!("{:?}", e))),
@@ -1117,23 +1295,22 @@ impl BrowserEngine for NativeEngine {
     ///
     /// Returns an error if navigation fails.
     fn search(&mut self, query: &str) -> Result<PageContent, BrowserError> {
-        let url = format!("https://www.google.com/search?q={}", percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC));
+        let url = format!(
+            "https://www.google.com/search?q={}",
+            percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)
+        );
         self.navigate(&url)
     }
 
-    /// Screenshots are unsupported inside the native engine.
-    ///
-    /// # Arguments
-    ///
-    /// * `_url` - target.
-    /// * `_width` - target columns.
-    /// * `_height` - target rows.
-    ///
-    /// # Errors
-    ///
-    /// Always returns [BrowserError::UnsupportedPlatform].
-    fn capture_screenshot(&mut self, _url: &str, _width: u32, _height: u32) -> Result<Vec<u8>, BrowserError> {
-        Err(BrowserError::UnsupportedPlatform("Native engine cannot capture screenshots".to_string()))
+    fn capture_screenshot(
+        &mut self,
+        _url: &str,
+        _width: u32,
+        _height: u32,
+    ) -> Result<Vec<u8>, BrowserError> {
+        Err(BrowserError::UnsupportedPlatform(
+            "Native engine cannot capture screenshots".to_string(),
+        ))
     }
 }
 

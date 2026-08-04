@@ -1,19 +1,5 @@
-//! Persistent SQLite browser history management system.
-//!
-//! # Purpose
-//! This module tracks navigated URLs, counts visits, timestamps visits, and supports filtering,
-//! sorting, grouping, and exporting history tables.
-//!
-//! # Architecture
-//! Uses a SQLite backend database via the `rusqlite` crate (specifically with the `bundled` feature).
-//! Items are loaded into [HistoryItem] structural types.
-//!
-//! # Interactions
-//! Modifying endpoints inside [HistoryManager] directly saves navigation states.
-//! Grouping utilities [group_by_date] and [group_by_domain] restructure arrays for visual grouping.
-
-use serde::{Serialize, Deserialize};
 use rusqlite::{params, Connection};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
@@ -107,7 +93,8 @@ impl HistoryManager {
                 visit_count INTEGER DEFAULT 1
             )",
             [],
-        ).map_err(|e| e.to_string())?;
+        )
+        .map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -135,7 +122,8 @@ impl HistoryManager {
                 visited_at = datetime('now', 'localtime'),
                 visit_count = visit_count + 1",
             params![title.trim(), url.trim()],
-        ).map_err(|e| e.to_string())?;
+        )
+        .map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -154,7 +142,8 @@ impl HistoryManager {
     /// Returns an error if SQL execution fails.
     pub fn delete_selected(&self, id: i64) -> Result<(), String> {
         let conn = self.connect()?;
-        conn.execute("DELETE FROM history WHERE id = ?1", params![id]).map_err(|e| e.to_string())?;
+        conn.execute("DELETE FROM history WHERE id = ?1", params![id])
+            .map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -169,28 +158,20 @@ impl HistoryManager {
     /// Returns an error if SQL execution fails.
     pub fn delete_all(&self) -> Result<(), String> {
         let conn = self.connect()?;
-        conn.execute("DELETE FROM history", []).map_err(|e| e.to_string())?;
+        conn.execute("DELETE FROM history", [])
+            .map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    /// Fetches all matched navigation items based on search parameters, domain filters, and sorting keys.
-    ///
-    /// # Arguments
-    ///
-    /// * `search_query` - Filters title or URL containing this substring.
-    /// * `filter_domain` - Restricts results to URLs with specified domain parameters.
-    /// * `sort_by` - Controls output ordering. `"visits"` sorts by frequency, otherwise sorts by recent dates.
-    ///
-    /// # Returns
-    ///
-    /// Returns a vector of [HistoryItem] objects matching criteria on success, or an error.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the database query fails.
-    pub fn get_all(&self, search_query: &str, filter_domain: &str, sort_by: &str) -> Result<Vec<HistoryItem>, String> {
+    pub fn get_all(
+        &self,
+        search_query: &str,
+        filter_domain: &str,
+        sort_by: &str,
+    ) -> Result<Vec<HistoryItem>, String> {
         let conn = self.connect()?;
-        let mut sql = "SELECT id, title, url, visited_at, visit_count FROM history WHERE 1=1".to_string();
+        let mut sql =
+            "SELECT id, title, url, visited_at, visit_count FROM history WHERE 1=1".to_string();
         let mut params_vec: Vec<String> = Vec::new();
 
         if !search_query.trim().is_empty() {
@@ -214,9 +195,15 @@ impl HistoryManager {
 
         let mut rows = match params_vec.len() {
             0 => stmt.query([]).map_err(|e| e.to_string())?,
-            1 => stmt.query(params![params_vec[0]]).map_err(|e| e.to_string())?,
-            2 => stmt.query(params![params_vec[0], params_vec[1]]).map_err(|e| e.to_string())?,
-            3 => stmt.query(params![params_vec[0], params_vec[1], params_vec[2]]).map_err(|e| e.to_string())?,
+            1 => stmt
+                .query(params![params_vec[0]])
+                .map_err(|e| e.to_string())?,
+            2 => stmt
+                .query(params![params_vec[0], params_vec[1]])
+                .map_err(|e| e.to_string())?,
+            3 => stmt
+                .query(params![params_vec[0], params_vec[1], params_vec[2]])
+                .map_err(|e| e.to_string())?,
             _ => stmt.query([]).map_err(|e| e.to_string())?,
         };
 
@@ -365,7 +352,11 @@ pub fn group_by_domain(items: &[HistoryItem]) -> Vec<(String, Vec<(usize, Histor
     let mut groups: Vec<(String, Vec<(usize, HistoryItem)>)> = Vec::new();
     for (original_idx, item) in items.iter().enumerate() {
         let domain = extract_domain(&item.url);
-        let domain_name = if domain.is_empty() { "Local/Other".to_string() } else { domain };
+        let domain_name = if domain.is_empty() {
+            "Local/Other".to_string()
+        } else {
+            domain
+        };
         if let Some(group) = groups.iter_mut().find(|(d, _)| d == &domain_name) {
             group.1.push((original_idx, item.clone()));
         } else {
@@ -388,7 +379,8 @@ mod tests {
 
         // Add visit
         mgr.add_visit("Google", "https://google.com").unwrap();
-        mgr.add_visit("Rust Lang", "https://rust-lang.org/index.html").unwrap();
+        mgr.add_visit("Rust Lang", "https://rust-lang.org/index.html")
+            .unwrap();
 
         // Get all
         let list = mgr.get_all("", "", "date").unwrap();
@@ -400,7 +392,10 @@ mod tests {
         assert_eq!(search_res[0].title, "Google");
 
         // Domain extraction
-        assert_eq!(extract_domain("https://www.google.com/search?q=rust"), "www.google.com");
+        assert_eq!(
+            extract_domain("https://www.google.com/search?q=rust"),
+            "www.google.com"
+        );
 
         // Cleanup
         let _ = fs::remove_file(temp_db);

@@ -1,14 +1,4 @@
-//! Favorite bookmarks manager system for the terminal browser.
-//!
-//! # Purpose
-//! This module handles persistent storage, addition, deletion, categorization (folders), and search
-//! queries for browser bookmarks.
-//!
-//! # Architecture
-//! Uses a JSON-based local file specified in [FavoritesManager] containing a list of [FavoriteItem]s.
-//! Supported features include directory exporting and importing from custom paths.
-
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
@@ -214,8 +204,12 @@ impl FavoritesManager {
     /// Returns a vector of matching clones [FavoriteItem].
     pub fn search(&self, query: &str) -> Vec<FavoriteItem> {
         let q = query.to_lowercase();
-        self.list.items.iter()
-            .filter(|item| item.title.to_lowercase().contains(&q) || item.url.to_lowercase().contains(&q))
+        self.list
+            .items
+            .iter()
+            .filter(|item| {
+                item.title.to_lowercase().contains(&q) || item.url.to_lowercase().contains(&q)
+            })
             .cloned()
             .collect()
     }

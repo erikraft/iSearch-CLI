@@ -1,0 +1,341 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build Linux Binaries & Packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu, armv7-unknown-linux-gnueabihf
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf pkg-config libsqlite3-dev alien dpkg-dev rpm
+
+      - name: Build Linux x86_64
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+
+      - name: Build Linux Aarch64
+        run: cargo build --release --target aarch64-unknown-linux-gnu
+
+      - name: Build Linux Armv7
+        run: cargo build --release --target armv7-unknown-linux-gnueabihf
+
+      - name: Package .deb, .rpm, .AppImage, .tar.gz
+        run: |
+          mkdir -p dist
+
+          # Copy binaries
+          cp target/x86_64-unknown-linux-gnu/release/isearch-cli dist/isearch-linux-x86_64
+          cp target/aarch64-unknown-linux-gnu/release/isearch-cli dist/isearch-linux-aarch64
+          cp target/armv7-unknown-linux-gnueabihf/release/isearch-cli dist/isearch-linux-arm
+
+          # Generate portable archives
+          tar -czf dist/isearch-linux-x86_64.tar.gz -C dist isearch-linux-x86_64
+          tar -czf dist/isearch-linux-aarch64.tar.gz -C dist isearch-linux-aarch64
+          tar -czf dist/isearch-linux-arm.tar.gz -C dist isearch-linux-arm
+
+          # Build Debian package (.deb)
+          mkdir -p debian/DEBIAN
+          mkdir -p debian/usr/bin
+          cp target/x86_64-unknown-linux-gnu/release/isearch-cli debian/usr/bin/isearch
+          cat <<EOF > debian/DEBIAN/control
+          Package: isearch-cli
+          Version: 0.1.0
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: ErikrafT
+          Description: Premium terminal browser and search assistant
+          EOF
+          dpkg-deb --build debian dist/isearch-linux-x86_64.deb
+
+          # Convert to RedHat package (.rpm) using alien
+          sudo alien --to-rpm --scripts dist/isearch-linux-x86_64.deb
+          mv isearch-cli-*.rpm dist/isearch-linux-x86_64.rpm || mv isearch-*.rpm dist/isearch-linux-x86_64.rpm || true
+
+          # Build AppImage
+          mkdir -p AppDir/usr/bin
+          cp target/x86_64-unknown-linux-gnu/release/isearch-cli AppDir/usr/bin/isearch
+          cat <<'EOF' > AppDir/AppRun
+          #!/bin/sh
+          exec "$APPDIR/usr/bin/isearch" "$@"
+          EOF
+          chmod +x AppDir/AppRun
+          cat <<'EOF' > AppDir/isearch.desktop
+          [Desktop Entry]
+          Type=Application
+          Name=isearch
+          Exec=isearch
+          Icon=isearch
+          Categories=Utility;
+          EOF
+
+          # Generate valid 1x1 transparent PNG icon dynamically without committing binary assets to Git
+          python3 -c "import sys; open('AppDir/isearch.png', 'wb').write(bytes.fromhex('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000b49444154789cc5c0010d00000002000183b118af0000000049454e44ae426082'))"
+
+          # Download and run appimagetool safely without FUSE dependencies
+          curl -LO https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          ./appimagetool-x86_64.AppImage --appimage-extract
+          ./squashfs-root/AppRun AppDir dist/isearch-linux-x86_64.AppImage
+
+      - name: Upload Linux Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release-assets
+          path: dist/*
+
+  build-windows:
+    name: Build Windows Binaries & Installers
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build Windows
+        run: cargo build --release --target x86_64-pc-windows-msvc
+
+      - name: Build Installers (.exe, .msi)
+        shell: pwsh
+        run: |
+          mkdir dist
+          cp target/x86_64-pc-windows-msvc/release/isearch-cli.exe dist/isearch-windows-x86_64.exe
+
+          # Compile NSIS Installer (.exe) and WiX (.msi) from inside scripts/ to resolve relative paths
+          cd scripts
+          makensis installer.nsi
+          candle installer.wxs -o installer.wixobj
+          light -ext WixUIExtension installer.wixobj -o ../dist/isearch-installer-x86_64.msi
+
+      - name: Upload Windows Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-assets
+          path: dist/*
+
+  build-macos:
+    name: Build macOS Binaries & Installers
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin, aarch64-apple-darwin
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build macOS Intel
+        run: cargo build --release --target x86_64-apple-darwin
+
+      - name: Build macOS Apple Silicon
+        run: cargo build --release --target aarch64-apple-darwin
+
+      - name: Package macOS Installers (.pkg, .dmg, .tar.gz)
+        run: |
+          mkdir dist
+          cp target/x86_64-apple-darwin/release/isearch-cli dist/isearch-macos-x86_64
+          cp target/aarch64-apple-darwin/release/isearch-cli dist/isearch-macos-aarch64
+
+          # Package as .tar.gz
+          tar -czf dist/isearch-macos-x86_64.tar.gz -C dist isearch-macos-x86_64
+          tar -czf dist/isearch-macos-aarch64.tar.gz -C dist isearch-macos-aarch64
+
+          # Build Apple Silicon PKG
+          mkdir -p osx-pkg-aarch64/usr/local/bin
+          cp target/aarch64-apple-darwin/release/isearch-cli osx-pkg-aarch64/usr/local/bin/isearch
+          pkgbuild --identifier com.erikraft.isearch.aarch64 --version 0.1.0 --install-location / --root osx-pkg-aarch64 dist/isearch-installer-macos-aarch64.pkg
+
+          # Build Intel PKG
+          mkdir -p osx-pkg-x86_64/usr/local/bin
+          cp target/x86_64-apple-darwin/release/isearch-cli osx-pkg-x86_64/usr/local/bin/isearch
+          pkgbuild --identifier com.erikraft.isearch.x86_64 --version 0.1.0 --install-location / --root osx-pkg-x86_64 dist/isearch-installer-macos-x86_64.pkg
+
+          # Build DMG
+          mkdir -p dmg-folder-x86_64
+          cp target/x86_64-apple-darwin/release/isearch-cli dmg-folder-x86_64/isearch
+          hdiutil create -volname "iSearch CLI x86_64" -srcfolder dmg-folder-x86_64 -ov -format UDZO dist/isearch-installer-macos-x86_64.dmg
+
+          mkdir -p dmg-folder-aarch64
+          cp target/aarch64-apple-darwin/release/isearch-cli dmg-folder-aarch64/isearch
+          hdiutil create -volname "iSearch CLI aarch64" -srcfolder dmg-folder-aarch64 -ov -format UDZO dist/isearch-installer-macos-aarch64.dmg
+
+      - name: Upload macOS Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release-assets
+          path: dist/*
+
+  build-android:
+    name: Build Android Termux Binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Compile native Android binaries
+        run: |
+          mkdir dist
+
+          # Setup compilers, linkers, and archivers for Android Aarch64 using pre-installed NDK
+          export CC_aarch64_linux_android=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
+          export AR_aarch64_linux_android=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
+
+          cargo build --release --target aarch64-linux-android
+          cp target/aarch64-linux-android/release/isearch-cli dist/isearch-linux-android-aarch64
+
+          # Setup compilers, linkers, and archivers for Android Armv7
+          export CC_armv7_linux_androideabi=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi33-clang
+          export CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi33-clang
+          export AR_armv7_linux_androideabi=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
+
+          cargo build --release --target armv7-linux-androideabi
+          cp target/armv7-linux-androideabi/release/isearch-cli dist/isearch-linux-android-armv7
+
+      - name: Upload Android Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-assets
+          path: dist/*
+
+  release:
+    name: Draft and Publish GitHub Release
+    needs: [build-linux, build-windows, build-macos, build-android]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download Linux Assets
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-release-assets
+          path: release-binaries
+
+      - name: Download Windows Assets
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-release-assets
+          path: release-binaries
+
+      - name: Download macOS Assets
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-release-assets
+          path: release-binaries
+
+      - name: Download Android Assets
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release-assets
+          path: release-binaries
+
+      - name: Copy Installer Script
+        run: |
+          cp scripts/install-termux.sh release-binaries/
+
+      - name: Compute Checksums
+        run: |
+          cd release-binaries
+          sha256sum * > SHA256SUMS
+          cp SHA256SUMS checksums.txt
+          echo "Checksums computed successfully."
+
+      - name: Generate Release Notes
+        run: |
+          cat << 'EOF' > release_notes.md
+          # iSearch CLI™ Release
+
+          Official Author: ErikrafT
+          Copyright: Copyright © 2026 ErikrafT
+
+          ## Introduction
+          This release contains the latest premium terminal browser and developer assistant - **iSearch CLI™**. All binaries, installers, and checksum files were built and verified entirely by GitHub Actions CI.
+
+          ## Supported Platforms
+          - **Linux (x86_64, aarch64, armv7):** Portable binary, `.deb`, `.rpm`, `.AppImage`, and `.tar.gz`
+          - **Windows (x86_64):** Portable `.exe`, Installer executable, and `.msi`
+          - **macOS (Intel, Apple Silicon):** Portable binaries, `.pkg` installers, `.dmg` files, and `.tar.gz`
+          - **Android (Termux):** Custom installation via `install-termux.sh`
+
+          ## Installation Methods
+
+          ### 📦 Android Termux (Automatic Installation)
+          ```bash
+          curl -fsSL https://download.erikraft.com/install-termux.sh | bash
+          ```
+          Or using `wget`:
+          ```bash
+          wget -qO- https://download.erikraft.com/install-termux.sh | bash
+          ```
+
+          ### 📦 Manual Installation
+          1. Download the compatible binary from the assets list below.
+          2. Move the binary into your PATH (e.g. `/usr/local/bin` on Unix or `C:\Windows\System32` on Windows).
+          3. Set permissions (`chmod +x`) and run `isearch`.
+
+          ### 🔄 Updating
+          To update your existing installation automatically, run:
+          ```bash
+          isearch self-update
+          ```
+
+          ## 🔒 Integrity and Verification
+          Verify download integrity using SHA256 checksums:
+          ```bash
+          sha256sum --check SHA256SUMS
+          ```
+
+          Known issues and limitations are documented in the [docs/releases.md](https://download.erikraft.com/docs/releases.html).
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          body_path: release_notes.md
+          files: |
+            release-binaries/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

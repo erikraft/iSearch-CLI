@@ -19,17 +19,19 @@ use crate::pix::{generate_pix_payload, validate_amount};
 use crate::utils::{copy_to_clipboard, generate_qr_code_for_terminal};
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseButton, MouseEventKind},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseButton, MouseEventKind,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout, Rect, Alignment},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::Span,
-    widgets::{Block, Borders, BorderType, List, ListItem, ListState, Paragraph, Wrap},
-    Terminal, Frame,
+    widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph, Wrap},
+    Frame, Terminal,
 };
 use std::io;
 
@@ -238,7 +240,8 @@ fn run_app<B: ratatui::backend::Backend>(
                                 if current > 0 {
                                     app.amount_list_state.select(Some(current - 1));
                                 } else {
-                                    app.amount_list_state.select(Some(app.default_amounts.len()));
+                                    app.amount_list_state
+                                        .select(Some(app.default_amounts.len()));
                                 }
                             }
                         }
@@ -269,7 +272,8 @@ fn run_app<B: ratatui::backend::Backend>(
                                     if idx == app.default_amounts.len() {
                                         // Selected Custom Amount
                                         app.active_screen = ActiveScreen::EnterCustomAmount;
-                                        app.custom_amount_buffer = app.custom_amount
+                                        app.custom_amount_buffer = app
+                                            .custom_amount
                                             .map(|a| format!("{:.2}", a))
                                             .unwrap_or_default();
                                         app.custom_amount_error = None;
@@ -284,7 +288,8 @@ fn run_app<B: ratatui::backend::Backend>(
                                     // Generate QR code and proceed
                                     match app.get_selected_amount() {
                                         Ok(amt) => {
-                                            let message_opt = if app.message_input.trim().is_empty() {
+                                            let message_opt = if app.message_input.trim().is_empty()
+                                            {
                                                 None
                                             } else {
                                                 Some(app.message_input.as_str())
@@ -297,27 +302,37 @@ fn run_app<B: ratatui::backend::Backend>(
                                                 message_opt,
                                             ) {
                                                 Ok(payload) => {
-                                                    let term_width = crossterm::terminal::size().map(|(w, _)| w).unwrap_or(80);
-                                                    match generate_qr_code_for_terminal(&payload, term_width) {
+                                                    let term_width = crossterm::terminal::size()
+                                                        .map(|(w, _)| w)
+                                                        .unwrap_or(80);
+                                                    match generate_qr_code_for_terminal(
+                                                        &payload, term_width,
+                                                    ) {
                                                         Ok((qr_text, _)) => {
-                                                            app.active_screen = ActiveScreen::ShowQRCode {
-                                                                amount: amt,
-                                                                message: app.message_input.clone(),
-                                                                payload,
-                                                                qr_code_text: qr_text,
-                                                                copied: false,
-                                                                error_msg: None,
-                                                            };
+                                                            app.active_screen =
+                                                                ActiveScreen::ShowQRCode {
+                                                                    amount: amt,
+                                                                    message: app
+                                                                        .message_input
+                                                                        .clone(),
+                                                                    payload,
+                                                                    qr_code_text: qr_text,
+                                                                    copied: false,
+                                                                    error_msg: None,
+                                                                };
                                                         }
                                                         Err(e) => {
-                                                            app.active_screen = ActiveScreen::ShowQRCode {
-                                                                amount: amt,
-                                                                message: app.message_input.clone(),
-                                                                payload,
-                                                                qr_code_text: String::new(),
-                                                                copied: false,
-                                                                error_msg: Some(e),
-                                                            };
+                                                            app.active_screen =
+                                                                ActiveScreen::ShowQRCode {
+                                                                    amount: amt,
+                                                                    message: app
+                                                                        .message_input
+                                                                        .clone(),
+                                                                    payload,
+                                                                    qr_code_text: String::new(),
+                                                                    copied: false,
+                                                                    error_msg: Some(e),
+                                                                };
                                                         }
                                                     }
                                                 }
@@ -349,22 +364,27 @@ fn run_app<B: ratatui::backend::Backend>(
                         KeyCode::Backspace => {
                             app.custom_amount_buffer.pop();
                         }
-                        KeyCode::Enter => {
-                            match validate_amount(&app.custom_amount_buffer) {
-                                Ok(amt) => {
-                                    app.custom_amount = Some(amt);
-                                    app.custom_amount_error = None;
-                                    app.active_screen = ActiveScreen::SelectAmount;
-                                    app.focus = SelectionFocus::GenerateButton;
-                                }
-                                Err(e) => {
-                                    app.custom_amount_error = Some(e);
-                                }
+                        KeyCode::Enter => match validate_amount(&app.custom_amount_buffer) {
+                            Ok(amt) => {
+                                app.custom_amount = Some(amt);
+                                app.custom_amount_error = None;
+                                app.active_screen = ActiveScreen::SelectAmount;
+                                app.focus = SelectionFocus::GenerateButton;
                             }
-                        }
+                            Err(e) => {
+                                app.custom_amount_error = Some(e);
+                            }
+                        },
                         _ => {}
                     },
-                    ActiveScreen::ShowQRCode { amount, message, payload, qr_code_text, copied, error_msg } => match key.code {
+                    ActiveScreen::ShowQRCode {
+                        amount,
+                        message,
+                        payload,
+                        qr_code_text,
+                        copied,
+                        error_msg,
+                    } => match key.code {
                         KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('Q') => {
                             app.active_screen = ActiveScreen::SelectAmount;
                         }
@@ -425,16 +445,19 @@ fn ui(f: &mut Frame, app: &mut DonationApp) {
 
     // Premium UI Theme colors matching both Dark and Light Backgrounds
     let primary_style = Style::default().fg(Color::Cyan);
-    let highlight_style = Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD);
+    let highlight_style = Style::default()
+        .fg(Color::Yellow)
+        .add_modifier(Modifier::BOLD);
     let error_style = Style::default().fg(Color::Red).add_modifier(Modifier::BOLD);
     let border_style = Style::default().fg(Color::DarkGray);
 
     // Dynamic layout responsiveness: check minimum terminal dimensions
     if size.width < 55 || size.height < 18 {
-        let warning_p = Paragraph::new("Terminal too small. Please resize terminal to at least 60x20.")
-            .style(error_style)
-            .alignment(Alignment::Center)
-            .wrap(Wrap { trim: true });
+        let warning_p =
+            Paragraph::new("Terminal too small. Please resize terminal to at least 60x20.")
+                .style(error_style)
+                .alignment(Alignment::Center)
+                .wrap(Wrap { trim: true });
         f.render_widget(warning_p, size);
         return;
     }
@@ -448,7 +471,10 @@ fn ui(f: &mut Frame, app: &mut DonationApp) {
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(border_style)
-                .title(Span::styled(" Support iSearch CLI™ ", primary_style.add_modifier(Modifier::BOLD)));
+                .title(Span::styled(
+                    " Support iSearch CLI™ ",
+                    primary_style.add_modifier(Modifier::BOLD),
+                ));
             f.render_widget(main_block, area);
 
             // Inner content split
@@ -464,9 +490,11 @@ fn ui(f: &mut Frame, app: &mut DonationApp) {
                 .split(area);
 
             // 1. Thank you message
-            let subtitle = Paragraph::new("Thank you for supporting the project!\nChoose an amount to support our team:")
-                .alignment(Alignment::Center)
-                .style(Style::default().fg(Color::White));
+            let subtitle = Paragraph::new(
+                "Thank you for supporting the project!\nChoose an amount to support our team:",
+            )
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(Color::White));
             f.render_widget(subtitle, inner_chunks[0]);
 
             // 2. Amount list
@@ -497,11 +525,13 @@ fn ui(f: &mut Frame, app: &mut DonationApp) {
             };
 
             let msg_box = Paragraph::new(app.message_input.as_str())
-                .block(Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .border_style(msg_border_style)
-                    .title(" Message (Optional) "))
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(msg_border_style)
+                        .title(" Message (Optional) "),
+                )
                 .style(Style::default().fg(Color::White));
             f.render_widget(msg_box, inner_chunks[2]);
 
@@ -515,10 +545,12 @@ fn ui(f: &mut Frame, app: &mut DonationApp) {
             let btn_text = " [ Generate PIX QR Code ] ";
             let btn_p = Paragraph::new(btn_text)
                 .alignment(Alignment::Center)
-                .block(Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .border_style(btn_border_style))
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(btn_border_style),
+                )
                 .style(if app.focus == SelectionFocus::GenerateButton {
                     highlight_style
                 } else {
@@ -547,21 +579,36 @@ fn ui(f: &mut Frame, app: &mut DonationApp) {
                 ])
                 .split(area);
 
-            let label = Paragraph::new("Enter amount (R$):").style(Style::default().fg(Color::White));
+            let label =
+                Paragraph::new("Enter amount (R$):").style(Style::default().fg(Color::White));
             f.render_widget(label, inner[0]);
 
             let input_box = Paragraph::new(app.custom_amount_buffer.as_str())
-                .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).border_style(highlight_style))
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(highlight_style),
+                )
                 .style(Style::default().fg(Color::Yellow));
             f.render_widget(input_box, inner[1]);
 
             if let Some(err) = &app.custom_amount_error {
-                let err_p = Paragraph::new(err.as_str()).style(error_style).alignment(Alignment::Center);
+                let err_p = Paragraph::new(err.as_str())
+                    .style(error_style)
+                    .alignment(Alignment::Center);
                 f.render_widget(err_p, inner[2]);
             }
         }
 
-        ActiveScreen::ShowQRCode { amount, message, payload, qr_code_text, copied, error_msg } => {
+        ActiveScreen::ShowQRCode {
+            amount,
+            message,
+            payload,
+            qr_code_text,
+            copied,
+            error_msg,
+        } => {
             // Adjust box size to fit the QR code and recipient details
             let area = centered_rect(64, 23, size);
 
@@ -569,7 +616,10 @@ fn ui(f: &mut Frame, app: &mut DonationApp) {
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(border_style)
-                .title(Span::styled(" PIX Payment Terminal ", primary_style.add_modifier(Modifier::BOLD)));
+                .title(Span::styled(
+                    " PIX Payment Terminal ",
+                    primary_style.add_modifier(Modifier::BOLD),
+                ));
             f.render_widget(main_block, area);
 
             let chunks = Layout::default()
@@ -593,35 +643,72 @@ fn ui(f: &mut Frame, app: &mut DonationApp) {
                 ])
                 .split(chunks[0]);
 
-            let recipient_p = Paragraph::new("Erik Rodrigues Balisa")
-                .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).border_style(border_style).title(" Recipient "));
+            let recipient_p = Paragraph::new("Erik Rodrigues Balisa").block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(border_style)
+                    .title(" Recipient "),
+            );
             f.render_widget(recipient_p, details_layout[0]);
 
-            let key_p = Paragraph::new("11925416678")
-                .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).border_style(border_style).title(" PIX Key (Phone) "));
+            let key_p = Paragraph::new("11925416678").block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(border_style)
+                    .title(" PIX Key (Phone) "),
+            );
             f.render_widget(key_p, details_layout[1]);
 
-            let amount_msg_str = format!("R$ {:.2}\nMsg: {}", amount, if message.is_empty() { "None" } else { message });
-            let amt_p = Paragraph::new(amount_msg_str)
-                .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).border_style(border_style).title(" Donation Details "));
+            let amount_msg_str = format!(
+                "R$ {:.2}\nMsg: {}",
+                amount,
+                if message.is_empty() { "None" } else { message }
+            );
+            let amt_p = Paragraph::new(amount_msg_str).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(border_style)
+                    .title(" Donation Details "),
+            );
             f.render_widget(amt_p, details_layout[2]);
 
             // Copy paste display
-            let copy_label = if *copied { " Copied! " } else { " PIX Copy & Paste " };
-            let copy_box_style = if *copied { highlight_style } else { border_style };
+            let copy_label = if *copied {
+                " Copied! "
+            } else {
+                " PIX Copy & Paste "
+            };
+            let copy_box_style = if *copied {
+                highlight_style
+            } else {
+                border_style
+            };
             let truncated_payload = if payload.len() > 30 {
                 format!("{}...", &payload[..27])
             } else {
                 payload.clone()
             };
-            let copy_box_p = Paragraph::new(truncated_payload)
-                .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).border_style(copy_box_style).title(copy_label));
+            let copy_box_p = Paragraph::new(truncated_payload).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(copy_box_style)
+                    .title(copy_label),
+            );
             f.render_widget(copy_box_p, details_layout[3]);
 
             // Copy action button
             let btn_p = Paragraph::new(" [C] Copy to clipboard ")
                 .alignment(Alignment::Center)
-                .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).border_style(highlight_style))
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(highlight_style),
+                )
                 .style(highlight_style);
             f.render_widget(btn_p, details_layout[4]);
 

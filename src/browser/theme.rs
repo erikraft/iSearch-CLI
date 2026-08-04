@@ -1,15 +1,5 @@
-//! Styling configurations and presets for the terminal browser interface.
-//!
-//! # Purpose
-//! This module defines color layouts and theme structures to allow responsive rendering
-//! of the TUI browser interface across various color depth capabilities.
-//!
-//! # Architecture & Responsibilities
-//! * [ThemePreset] lists predefined styles.
-//! * [AppTheme] wraps exact `ratatui::style::Color` mappings for frame headers, tabs, borders, and text components.
-
-use serde::Deserialize;
 use ratatui::style::Color;
+use serde::Deserialize;
 
 /// Enum representing the available built-in color style themes.
 #[derive(Debug, Clone, Deserialize, Copy)]
@@ -114,12 +104,12 @@ impl AppTheme {
             },
             ThemePreset::Monokai => Self {
                 name: "Monokai".to_string(),
-                primary: Color::Rgb(102, 217, 239),   // Cyan
-                highlight: Color::Rgb(249, 38, 114),  // Pink
-                border: Color::Rgb(117, 113, 94),     // Gray
-                background: Color::Rgb(39, 40, 34),    // Dark gray
-                text: Color::Rgb(248, 248, 242),      // White
-                success: Color::Rgb(166, 226, 46),    // Green
+                primary: Color::Rgb(102, 217, 239),  // Cyan
+                highlight: Color::Rgb(249, 38, 114), // Pink
+                border: Color::Rgb(117, 113, 94),    // Gray
+                background: Color::Rgb(39, 40, 34),  // Dark gray
+                text: Color::Rgb(248, 248, 242),     // White
+                success: Color::Rgb(166, 226, 46),   // Green
             },
             ThemePreset::Light => Self {
                 name: "Light".to_string(),

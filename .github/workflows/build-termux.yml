@@ -1,0 +1,56 @@
+name: Build Termux
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Android Termux Binaries (Aarch64 & Armv7)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Compile native Android binaries
+        run: |
+          mkdir dist
+
+          # Setup compilers, linkers, and archivers for Android Aarch64 using pre-installed NDK
+          export CC_aarch64_linux_android=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
+          export AR_aarch64_linux_android=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
+
+          cargo build --release --target aarch64-linux-android
+          cp target/aarch64-linux-android/release/isearch-cli dist/isearch-linux-android-aarch64
+
+          # Setup compilers, linkers, and archivers for Android Armv7
+          export CC_armv7_linux_androideabi=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi33-clang
+          export CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi33-clang
+          export AR_armv7_linux_androideabi=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
+
+          cargo build --release --target armv7-linux-androideabi
+          cp target/armv7-linux-androideabi/release/isearch-cli dist/isearch-linux-android-armv7
+
+      - name: Upload Termux Aarch64 Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: isearch-termux-aarch64
+          path: dist/isearch-linux-android-aarch64
+
+      - name: Upload Termux Armv7 Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: isearch-termux-armv7
+          path: dist/isearch-linux-android-armv7

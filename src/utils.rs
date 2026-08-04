@@ -1,20 +1,6 @@
-//! Utilities for QR code generation and clipboard operations.
-//!
-//! # Purpose
-//! This module provides terminal-friendly rendering techniques for QR codes and offers cross-platform
-//! system clipboard accessibility (via native crates or shell command fallbacks).
-//!
-//! # Architecture & Responsibilities
-//! * **QR Generation**: Renders QrCodes into high-quality Unicode half-block characters or ASCII characters based on size limits.
-//! * **Clipboard Operations**: Integrates a robust clipboard abstraction supporting macOS, Windows, Linux, and Termux platforms.
-//!
-//! # Interactions
-//! These functions are primarily leveraged by [crate::ui::run_donation_tui] to show generated payment QRs
-//! and allow users to copy raw payment payload strings to their system-wide clipboards.
-
-use qrcode::{QrCode, Color};
-use std::process::{Command, Stdio};
+use qrcode::{Color, QrCode};
 use std::io::Write;
+use std::process::{Command, Stdio};
 
 /// Detects if the current running environment is Termux on Android.
 ///
@@ -31,7 +17,8 @@ use std::io::Write;
 /// let termux = is_termux();
 /// ```
 pub fn is_termux() -> bool {
-    std::env::var("TERMUX_VERSION").is_ok() || std::path::Path::new("/data/data/com.termux").exists()
+    std::env::var("TERMUX_VERSION").is_ok()
+        || std::path::Path::new("/data/data/com.termux").exists()
 }
 
 /// Runs an OS command with standard input piped into it.
@@ -59,7 +46,9 @@ fn run_command_with_input(cmd: &str, args: &[&str], input: &str) -> Result<(), S
         .map_err(|e| e.to_string())?;
 
     if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(input.as_bytes()).map_err(|e| e.to_string())?;
+        stdin
+            .write_all(input.as_bytes())
+            .map_err(|e| e.to_string())?;
     }
 
     let status = child.wait().map_err(|e| e.to_string())?;
@@ -118,7 +107,18 @@ pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         // Try PowerShell clipboard command
-        if run_command_with_input("powershell", &["-Command", "Set-Clipboard", "-Value", &format!("'{}'", text.replace("'", "''"))], "").is_ok() {
+        if run_command_with_input(
+            "powershell",
+            &[
+                "-Command",
+                "Set-Clipboard",
+                "-Value",
+                &format!("'{}'", text.replace("'", "''")),
+            ],
+            "",
+        )
+        .is_ok()
+        {
             return Ok(());
         }
         // Try clip.exe
@@ -186,11 +186,12 @@ pub fn render_qr_half_blocks(code: &QrCode) -> String {
                 code[(x - qz, y_top - qz)] == Color::Light
             };
 
-            let bottom_is_light = if y_bottom < qz || y_bottom >= width + qz || x < qz || x >= width + qz {
-                true
-            } else {
-                code[(x - qz, y_bottom - qz)] == Color::Light
-            };
+            let bottom_is_light =
+                if y_bottom < qz || y_bottom >= width + qz || x < qz || x >= width + qz {
+                    true
+                } else {
+                    code[(x - qz, y_bottom - qz)] == Color::Light
+                };
 
             let ch = match (top_is_light, bottom_is_light) {
                 (true, true) => '█',
@@ -254,35 +255,12 @@ pub fn render_qr_pure_ascii(code: &QrCode) -> String {
     qr_str
 }
 
-/// Generates the QR Code formatted for terminal output.
-///
-/// Automatically determines whether the terminal width is sufficient to display the high-quality
-/// Unicode half-block layout or fallback ASCII layout. It fails if the terminal is too narrow.
-///
-/// # Arguments
-///
-/// * `payload` - The string value to encode inside the QR code.
-/// * `term_width` - The current terminal column width for bounds-checking.
-///
-/// # Returns
-///
-/// Returns `Ok((rendered_string, is_unicode))` on success, where `is_unicode` specifies whether half-blocks
-/// were used. Returns `Err(String)` if the terminal is too narrow to securely render.
-///
-/// # Errors
-///
-/// Returns an error if:
-/// * Generating the QR code fails.
-/// * The terminal is too narrow to display the QR code safely without distortion.
-///
-/// # Examples
-///
-/// ```
-/// use isearch_cli::utils::generate_qr_code_for_terminal;
-/// let (qr, is_uni) = generate_qr_code_for_terminal("https://example.com", 80).unwrap();
-/// assert!(is_uni);
-/// ```
-pub fn generate_qr_code_for_terminal(payload: &str, term_width: u16) -> Result<(String, bool), String> {
+/// Generates the QR Code for the terminal.
+/// Automatically detects terminal width and handles fallback if terminal is too narrow.
+pub fn generate_qr_code_for_terminal(
+    payload: &str,
+    term_width: u16,
+) -> Result<(String, bool), String> {
     let code = QrCode::new(payload.as_bytes())
         .map_err(|e| format!("Failed to generate QR Code: {}", e))?;
 

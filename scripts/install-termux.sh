@@ -1,0 +1,232 @@
+#!/usr/bin/env bash
+
+# ==============================================================================
+# iSearch CLI™ - Termux Installation Script
+# Official Author: ErikrafT
+# Copyright © 2026 ErikrafT
+# ==============================================================================
+
+set -euo pipefail
+
+# --- CONFIGURATION SECTION ---
+# Easily switch between GitHub Releases and a future custom download domain.
+USE_CUSTOM_DOMAIN=false
+DOWNLOAD_DOMAIN="https://download.erikraft.com"
+GITHUB_ORG_REPO="erikraft/iSearch-CLI"
+
+# Terminal Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Banner
+print_banner() {
+    echo -e "${CYAN}░▀█▀░█▀▀░█▀▀░█▀█░█▀▄░█▀▀░█░█░░░█▀▀░█░░░▀█▀${NC}"
+    echo -e "${CYAN}░░█░░▀▀█░█▀▀░█▀█░█▀▄░█░░░█▀█░░░█░░░█░░░░█░${NC}"
+    echo -e "${CYAN}░▀▀▀░▀▀▀░▀▀▀░▀░▀░▀░▀░▀▀▀░▀░▀░░░▀▀▀░▀▀▀░▀▀▀${NC}"
+    echo -e "                 ${PURPLE}iSearch CLI™${NC}"
+    echo -e "================================================="
+    echo -e "Official Author: ${GREEN}ErikrafT${NC}"
+    echo -e "Copyright:       ${GREEN}Copyright © 2026 ErikrafT${NC}"
+    echo -e "================================================="
+}
+
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1" >&2
+}
+
+# Ensure script is running inside Termux and not as root
+check_environment() {
+    if [ -z "${TERMUX_VERSION+x}" ] && [ ! -d "/data/data/com.termux/files/usr/bin" ]; then
+        log_warn "This script is optimized for Android Termux. Continuing installation anyway..."
+    else
+        log_info "Detected Termux Environment (Version: ${TERMUX_VERSION:-unknown})"
+    fi
+
+    if [ "$(id -u)" -eq 0 ]; then
+        log_warn "Running as root is not recommended for Termux. Please run without root / sudo."
+    fi
+}
+
+# Verify Internet Connection
+verify_connection() {
+    log_info "Verifying internet connection..."
+    if ! curl -s --connect-timeout 5 https://www.google.com > /dev/null; then
+        if ! wget -q --timeout=5 -O- https://www.google.com > /dev/null; then
+            log_error "No internet connection detected. Please connect to the internet and retry."
+            exit 1
+        fi
+    fi
+    log_success "Internet connection verified."
+}
+
+# Detect system architecture
+detect_arch() {
+    log_info "Detecting system architecture..."
+    local raw_arch
+    raw_arch=$(uname -m)
+    local arch=""
+
+    case "$raw_arch" in
+        aarch64|arm64)
+            arch="aarch64"
+            ;;
+        armv7l|armv8l|arm)
+            arch="arm"
+            ;;
+        x86_64|amd64)
+            arch="x86_64"
+            ;;
+        *)
+            log_error "Unsupported CPU architecture: $raw_arch"
+            exit 1
+            ;;
+    esac
+
+    log_success "Architecture detected: $arch"
+    echo "$arch"
+}
+
+# Get latest release version and download url
+get_release_info() {
+    local arch=$1
+    local latest_version=""
+    local download_url=""
+    local filename=""
+
+    # Determine filename based on architecture
+    case "$arch" in
+        aarch64)
+            filename="isearch-linux-aarch64"
+            ;;
+        arm)
+            filename="isearch-linux-arm"
+            ;;
+        x86_64)
+            filename="isearch-linux-x86_64"
+            ;;
+    esac
+
+    log_info "Fetching latest release details..."
+
+    if [ "$USE_CUSTOM_DOMAIN" = true ]; then
+        local manifest_url="${DOWNLOAD_DOMAIN}/releases/latest.json"
+        log_info "Fetching manifest from: $manifest_url"
+        # Extract tag name / version
+        if ! latest_version=$(curl -fsSL "$manifest_url" | grep -o '"tag_name": *"[^"]*"' | head -n 1 | cut -d'"' -f4); then
+            log_error "Failed to fetch latest release version from custom domain."
+            exit 1
+        fi
+        latest_version=${latest_version#v}
+        download_url="${DOWNLOAD_DOMAIN}/releases/${latest_version}/${filename}"
+    else
+        local api_url="https://api.github.com/repos/${GITHUB_ORG_REPO}/releases/latest"
+        log_info "Querying GitHub Releases API: $api_url"
+
+        local response
+        if ! response=$(curl -fsSL "$api_url"); then
+            log_error "Failed to query GitHub API. Rate limit reached or DNS error."
+            exit 1
+        fi
+
+        latest_version=$(echo "$response" | grep -o '"tag_name": *"[^"]*"' | head -n 1 | cut -d'"' -f4)
+        latest_version=${latest_version#v}
+
+        # Search for matching asset download url
+        download_url=$(echo "$response" | grep -o '"browser_download_url": *"[^"]*"' | grep "$filename" | head -n 1 | cut -d'"' -f4)
+    fi
+
+    if [ -z "$latest_version" ] || [ -z "$download_url" ]; then
+        log_error "Could not retrieve version metadata or download URL for architecture: $arch."
+        exit 1
+    fi
+
+    log_success "Latest release version: v${latest_version}"
+    echo "$latest_version|$download_url"
+}
+
+install_binary() {
+    local download_url=$2
+    local install_dir="${PREFIX:-/data/data/com.termux/files/usr}/bin"
+    local dest_path="${install_dir}/isearch"
+
+    # Create directory if it doesn't exist
+    mkdir -p "$install_dir"
+
+    log_info "Downloading binary to temporary path..."
+    local temp_bin
+    temp_bin=$(mktemp)
+
+    if ! curl -fsSL -o "$temp_bin" "$download_url"; then
+        if ! wget -qO "$temp_bin" "$download_url"; then
+            log_error "Failed to download binary from: $download_url"
+            rm -f "$temp_bin"
+            exit 1
+        fi
+    fi
+
+    log_info "Installing to: $dest_path"
+    mv "$temp_bin" "$dest_path"
+    chmod +x "$dest_path"
+
+    log_success "Installation of isearch executable completed."
+}
+
+verify_installation() {
+    local install_dir="${PREFIX:-/data/data/com.termux/files/usr}/bin"
+    local dest_path="${install_dir}/isearch"
+
+    log_info "Verifying installation integrity..."
+    if [ ! -f "$dest_path" ]; then
+        log_error "Executable binary was not found at $dest_path."
+        exit 1
+    fi
+
+    if [ ! -x "$dest_path" ]; then
+        log_error "Binary at $dest_path is not executable."
+        exit 1
+    fi
+
+    log_success "iSearch CLI™ installation verified successfully!"
+}
+
+main() {
+    print_banner
+    check_environment
+    verify_connection
+    local arch
+    arch=$(detect_arch)
+
+    local release_info
+    release_info=$(get_release_info "$arch")
+
+    local version
+    local download_url
+    version=$(echo "$release_info" | cut -d'|' -f1)
+    download_url=$(echo "$release_info" | cut -d'|' -f2)
+
+    install_binary "$version" "$download_url"
+    verify_installation
+
+    echo -e "\n${GREEN}🎉 Congratulations! iSearch CLI™ v${version} has been successfully installed!${NC}"
+    echo -e "You can launch the application by running:"
+    echo -e "  ${CYAN}isearch${NC}\n"
+}
+
+main "$@"

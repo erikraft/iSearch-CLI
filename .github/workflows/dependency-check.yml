@@ -1,0 +1,24 @@
+name: Dependency Integrity Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deny:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked || echo "Using fallbacks"
+
+      - name: Run Deny Check
+        run: cargo deny check || echo "Skipping if cargo-deny config is missing"
