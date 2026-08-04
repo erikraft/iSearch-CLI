@@ -1,34 +1,5 @@
 //! Module for PIX payload generation according to the Banco Central do Brasil specifications.
-//!
-//! # Purpose
-//! This module provides the capability to generate valid, compliant EMV Co static PIX QR code
-//! payloads. These payloads can be parsed by banking apps in Brazil to perform instantaneous
-//! donations or payments.
-//!
-//! # Architecture and Interactions
-//! The primary functionality centers around [generate_pix_payload], which parses configuration input
-//! and validates it using [validate_amount]. The resulting string is subsequently rendered into a QR
-//! code using rendering mechanisms defined in [crate::utils].
 
-/// Calculates the CRC-16 CCITT checksum (polynomial `0x1021`, initial value `0xFFFF`) for a given data slice.
-///
-/// This specific variant is used for standardizing EMV Co and PIX payloads to ensure checksum integrity.
-///
-/// # Arguments
-///
-/// * `data` - The byte slice of the string input to verify.
-///
-/// # Returns
-///
-/// Returns the calculated `u16` checksum.
-///
-/// # Examples
-///
-/// ```
-/// use isearch_cli::pix::crc16_ccitt;
-/// let crc = crc16_ccitt(b"123456789");
-/// assert_eq!(crc, 0x29B1);
-/// ```
 pub fn crc16_ccitt(data: &[u8]) -> u16 {
     let mut crc = 0xFFFFu16;
     for &byte in data {
@@ -44,52 +15,12 @@ pub fn crc16_ccitt(data: &[u8]) -> u16 {
     crc
 }
 
-/// Formats a Tag-Length-Value (TLV) block according to EMV specifications.
-///
-/// Ensures both the tag and the length are padded to exactly 2 digits, left-padded with zeros.
-///
-/// # Arguments
-///
-/// * `tag` - The string slice representing the field identifier.
-/// * `value` - The string slice representing the value of the field.
-///
-/// # Returns
-///
-/// Returns the formatted TLV string.
+/// Formats a TLV (Tag-Length-Value) string.
 fn format_tlv(tag: &str, value: &str) -> String {
     format!("{:0>2}{:0>2}{}", tag, value.len(), value)
 }
 
-/// Validates, sanitizes, and parses a user-entered donation amount string.
-///
-/// The function supports both period (`.`) and comma (`,`) decimal separators.
-/// It verifies that the amount is greater than zero, is numeric, and has a maximum of two decimal places.
-///
-/// # Arguments
-///
-/// * `amount_str` - A string slice containing the transaction amount input.
-///
-/// # Returns
-///
-/// Returns `Ok(f64)` containing the parsed amount on success, or `Err(String)` explaining why validation failed.
-///
-/// # Errors
-///
-/// This function returns an error if:
-/// * The amount string is empty or contains non-numeric characters.
-/// * The amount is less than or equal to zero.
-/// * The input has more than two decimal places.
-///
-/// # Examples
-///
-/// ```
-/// use isearch_cli::pix::validate_amount;
-/// let amt = validate_amount("10,50").unwrap();
-/// assert_eq!(amt, 10.50);
-///
-/// assert!(validate_amount("-5.00").is_err());
-/// assert!(validate_amount("10.123").is_err());
-/// ```
+/// Validates and parses the amount.
 pub fn validate_amount(amount_str: &str) -> Result<f64, String> {
     let trimmed = amount_str.trim().replace(',', ".");
     if trimmed.is_empty() {
@@ -115,41 +46,7 @@ pub fn validate_amount(amount_str: &str) -> Result<f64, String> {
     Ok(val)
 }
 
-/// Generates a compliant EMV Co / Banco Central do Brasil static PIX payload string.
-///
-/// This string is suitable for encoding as a QR code and scanning with any Brazilian banking application.
-/// It handles formatting fields like Merchant Account Info, Currency Code (BRL/986), Merchant Name, City,
-/// and includes a calculated CRC16 checksum appended at the end of the payload.
-///
-/// # Arguments
-///
-/// * `pix_key` - The recipient's PIX key identifier.
-/// * `amount` - Optional transaction amount in BRL. If `None`, the user will enter the value in their banking app.
-/// * `merchant_name` - The primary name of the recipient merchant (up to 25 characters are kept).
-/// * `merchant_city` - The city of the recipient merchant (up to 15 characters are kept).
-/// * `message` - An optional message or transaction identifier/description (up to 72 characters).
-///
-/// # Returns
-///
-/// Returns a `Result<String, String>` containing the full payload ready for QR rendering, or an error message if inputs are invalid.
-///
-/// # Errors
-///
-/// Returns an error if the PIX key is empty or whitespace.
-///
-/// # Examples
-///
-/// ```
-/// use isearch_cli::pix::generate_pix_payload;
-/// let payload = generate_pix_payload(
-///     "11925416678",
-///     Some(15.00),
-///     "Developer",
-///     "Sao Paulo",
-///     Some("Thanks")
-/// ).unwrap();
-/// assert!(payload.contains("11925416678"));
-/// ```
+/// Generates the PIX payload according to the EMV Co and Banco Central do Brasil standards.
 pub fn generate_pix_payload(
     pix_key: &str,
     amount: Option<f64>,
