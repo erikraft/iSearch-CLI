@@ -1,33 +1,76 @@
+//! Dynamic terminal graphics and visual media renderer.
+//!
+//! # Purpose
+//! This module parses standard image binaries and renders them inside the terminal workspace.
+//! It detects color capabilities and graphics protocols (such as Kitty, Sixel, iTerm2, or Unicode block fallbacks)
+//! to render layouts responsively.
+//!
+//! # Architecture
+//! * [TerminalCapabilities] probes terminal environment variables and outputs color/graphic configurations.
+//! * [TerminalGraphicsProtocol] catalogs available graphic formats.
+//! * [render_image_to_lines] processes raw files into structured TUI-ready text lines.
+
 use std::env;
 use image::{DynamicImage, GenericImageView};
 use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
 use base64::Engine;
 
+/// Enum of supported graphics render protocols.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TerminalGraphicsProtocol {
+    /// Native Kitty Graphics Protocol with base64 chunks.
     Kitty,
+    /// Sixel bitmap graphics.
     Sixel,
+    /// Native iTerm2 base64 inline image rendering.
     ITerm2,
+    /// Unicode half-block true-color characters (portable, compact).
     HalfBlocks,
+    /// Braille dots binary map characters.
     Braille,
+    /// Pure ASCII character density mapping.
     Ascii,
 }
 
+/// Dynamic capabilities detector tracking terminal colors and protocols.
+///
+/// # Fields
+/// * `color_support` - Depth of color supported by the shell (None up to 24-bit TrueColor).
+/// * `graphics_protocol` - Highest fidelity rendering method supported.
 pub struct TerminalCapabilities {
+    /// Depth of terminal color output.
     pub color_support: ColorSupport,
+    /// Target graphic formatting protocol.
     pub graphics_protocol: TerminalGraphicsProtocol,
 }
 
+/// Enum representing the color depth support of the terminal emulator.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorSupport {
-    TrueColor, // 24-bit
+    /// 24-bit RGB TrueColor.
+    TrueColor,
+    /// 256 indexed color palettes.
     Ansi256,
+    /// Basic 16 color maps.
     Ansi16,
+    /// Monochrome / No color output.
     None,
 }
 
 impl TerminalCapabilities {
+    /// Probes environment variables and queries capabilities to return a [TerminalCapabilities].
+    ///
+    /// # Returns
+    ///
+    /// Returns the detected [TerminalCapabilities].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use isearch_cli::browser::terminal_media::TerminalCapabilities;
+    /// let caps = TerminalCapabilities::detect();
+    /// ```
     pub fn detect() -> Self {
         let color_support = Self::detect_color_support();
         let graphics_protocol = Self::detect_graphics_protocol();
@@ -37,6 +80,7 @@ impl TerminalCapabilities {
         }
     }
 
+    /// Checks variables like `COLORTERM` or `TERM_PROGRAM` to decide the maximum colors supported.
     fn detect_color_support() -> ColorSupport {
         if let Ok(colorterm) = env::var("COLORTERM") {
             if colorterm == "truecolor" || colorterm == "24bit" {
@@ -67,6 +111,7 @@ impl TerminalCapabilities {
         ColorSupport::Ansi16 // fallback default
     }
 
+    /// Identifies the best supported image protocol based on target terminal names and variables.
     fn detect_graphics_protocol() -> TerminalGraphicsProtocol {
         let term = env::var("TERM").unwrap_or_default().to_lowercase();
         let term_program = env::var("TERM_PROGRAM").unwrap_or_default().to_lowercase();
@@ -91,12 +136,31 @@ impl TerminalCapabilities {
     }
 }
 
+/// Helper function to output the name of the active graphics protocol as a string.
+///
+/// # Returns
+///
+/// Returns a debug formatted string specifying the active [TerminalGraphicsProtocol].
 pub fn detect_graphics_support() -> String {
     let caps = TerminalCapabilities::detect();
     format!("{:?}", caps.graphics_protocol)
 }
 
-// Render an image into terminal Lines based on protocol capability
+/// Renders a raw image slice into structured `Line` vectors compatible with terminal widget frames.
+///
+/// Processes raw bytes, decodes them into an in-memory bitmap, and converts them to the highest-fidelity format
+/// matching terminal graphic capacities (Sixel, Kitty, iTerm, Unicode, or ASCII).
+///
+/// # Arguments
+///
+/// * `image_bytes` - Byte slice containing the image binary format (JPEG, PNG, etc).
+/// * `term_width` - Output target character columns.
+/// * `term_height` - Output target character rows.
+/// * `caps` - Probed terminal capabilities configuration.
+///
+/// # Returns
+///
+/// Returns a vector of [Line] representing the formatted image rows.
 pub fn render_image_to_lines(
     image_bytes: &[u8],
     term_width: u32,
@@ -143,7 +207,15 @@ pub fn render_image_to_lines(
     }
 }
 
-// Unicode Half-Blocks Renderer (true-color 24-bit representation on terminal)
+/// Unicode Half-Blocks Renderer (true-color 24-bit representation on terminal)
+///
+/// Couples vertical pairs of pixels into single characters to preserve correct aspect ratios.
+///
+/// # Arguments
+///
+/// * `img` - Source image reference.
+/// * `target_w` - Scaled column width.
+/// * `target_h` - Scaled row height.
 fn render_half_blocks(img: &DynamicImage, target_w: u32, target_h: u32) -> Vec<Line<'static>> {
     let resized = img.resize_exact(target_w, target_h * 2, image::imageops::FilterType::Nearest);
     let mut lines = Vec::new();
@@ -170,6 +242,13 @@ fn render_half_blocks(img: &DynamicImage, target_w: u32, target_h: u32) -> Vec<L
     lines
 }
 
+/// Renders images as high-density Braille dot characters.
+///
+/// # Arguments
+///
+/// * `img` - Source image reference.
+/// * `target_w` - Target width.
+/// * `target_h` - Target height.
 fn render_braille(img: &DynamicImage, target_w: u32, target_h: u32) -> Vec<Line<'static>> {
     let resized = img.grayscale().resize_exact(target_w * 2, target_h * 4, image::imageops::FilterType::Nearest);
     let mut lines = Vec::new();
@@ -198,6 +277,13 @@ fn render_braille(img: &DynamicImage, target_w: u32, target_h: u32) -> Vec<Line<
     lines
 }
 
+/// Renders images using standard low-fidelity ASCII brightness density character lines.
+///
+/// # Arguments
+///
+/// * `img` - Source image reference.
+/// * `target_w` - Target width.
+/// * `target_h` - Target height.
 fn render_ascii(img: &DynamicImage, target_w: u32, target_h: u32) -> Vec<Line<'static>> {
     let resized = img.grayscale().resize_exact(target_w, target_h, image::imageops::FilterType::Nearest);
     let chars = b" .:-=+*#%@";
