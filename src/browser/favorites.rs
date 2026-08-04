@@ -2,64 +2,24 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-/// Individual bookmark item.
-///
-/// Holds the descriptive text, destination address, and visual folder categories.
-///
-/// # Fields
-/// * `title` - Short name of the bookmarked resource.
-/// * `url` - Address link of the bookmarked resource.
-/// * `folder` - Categorization folder label.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct FavoriteItem {
-    /// Friendly bookmark title.
     pub title: String,
-    /// Destination web or offline URL.
     pub url: String,
-    /// Categorization folder for visual grouping.
     pub folder: String,
 }
 
-/// Serialized collection container wrapping a list of [FavoriteItem] nodes.
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct FavoritesList {
-    /// Dynamic collection of bookmarks.
     pub items: Vec<FavoriteItem>,
 }
 
-/// Service managing persistent actions, loading, saving, and grouping bookmarks.
-///
-/// # Fields
-/// * `list` - Dynamic RAM-cached container for bookmarks.
-/// * `file_path` - Location of persistent storage file (typically `favorites.json`).
 pub struct FavoritesManager {
-    /// In-memory collection list.
     pub list: FavoritesList,
-    /// File path to save/load JSON records.
     pub file_path: String,
 }
 
 impl FavoritesManager {
-    /// Initializes a new manager, loading records from specified path.
-    ///
-    /// If the path does not exist, defaults are populated and persisted automatically.
-    ///
-    /// # Arguments
-    ///
-    /// * `file_path` - The target JSON storage path.
-    ///
-    /// # Returns
-    ///
-    /// Returns an operational [FavoritesManager].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use isearch_cli::browser::favorites::FavoritesManager;
-    /// let mgr = FavoritesManager::new("temp_favs.json");
-    /// assert!(mgr.list.items.len() >= 3);
-    /// # std::fs::remove_file("temp_favs.json").unwrap();
-    /// ```
     pub fn new(file_path: &str) -> Self {
         let mut mgr = Self {
             list: FavoritesList::default(),
@@ -69,17 +29,6 @@ impl FavoritesManager {
         mgr
     }
 
-    /// Loads favorites records from local storage.
-    ///
-    /// Falls back to seeding initial standard default items if the JSON file is missing.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on success, or `Err(String)` containing the disk/parsing warning.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if file permissions prevent reads or if contents are malformed JSON.
     pub fn load(&mut self) -> Result<(), String> {
         let path = Path::new(&self.file_path);
         if path.exists() {
@@ -109,15 +58,6 @@ impl FavoritesManager {
         Ok(())
     }
 
-    /// Persists current list of bookmarks as JSON structure to disk.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on successful write, or an error description.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the directory is unwritable or disk space is exhausted.
     pub fn save(&self) -> Result<(), String> {
         let path = Path::new(&self.file_path);
         let data = serde_json::to_string_pretty(&self.list).map_err(|e| e.to_string())?;
@@ -125,21 +65,6 @@ impl FavoritesManager {
         Ok(())
     }
 
-    /// Adds a new bookmark, clean folder categories, and immediately saves to disk.
-    ///
-    /// # Arguments
-    ///
-    /// * `title` - Label for the item.
-    /// * `url` - Hyperlink target.
-    /// * `folder` - Grouping folder. If blank, defaults to "General".
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the disk persistence write fails.
     pub fn add(&mut self, title: &str, url: &str, folder: &str) -> Result<(), String> {
         let clean_folder = if folder.trim().is_empty() {
             "General".to_string()
@@ -154,37 +79,11 @@ impl FavoritesManager {
         self.save()
     }
 
-    /// Deletes any bookmarks containing the matching URL and updates storage.
-    ///
-    /// # Arguments
-    ///
-    /// * `url` - Target URL string slice to prune.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if serialization/write fails.
     pub fn remove(&mut self, url: &str) -> Result<(), String> {
         self.list.items.retain(|item| item.url != url);
         self.save()
     }
 
-    /// Prunes a bookmark item located at a specific index.
-    ///
-    /// # Arguments
-    ///
-    /// * `index` - Position inside the dynamic list to remove.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if index was in bounds but disk serialization failed.
     pub fn remove_at(&mut self, index: usize) -> Result<(), String> {
         if index < self.list.items.len() {
             self.list.items.remove(index);
@@ -193,15 +92,6 @@ impl FavoritesManager {
         Ok(())
     }
 
-    /// Searches active title and URL buffers case-insensitively.
-    ///
-    /// # Arguments
-    ///
-    /// * `query` - Search criteria string slice.
-    ///
-    /// # Returns
-    ///
-    /// Returns a vector of matching clones [FavoriteItem].
     pub fn search(&self, query: &str) -> Vec<FavoriteItem> {
         let q = query.to_lowercase();
         self.list
@@ -214,11 +104,6 @@ impl FavoritesManager {
             .collect()
     }
 
-    /// Lists all unique folder categories currently tracked across bookmarks.
-    ///
-    /// # Returns
-    ///
-    /// Returns a sorted list of unique folder strings starting with "All" and "General".
     pub fn folders(&self) -> Vec<String> {
         let mut f = vec!["All".to_string(), "General".to_string()];
         for item in &self.list.items {
@@ -229,38 +114,12 @@ impl FavoritesManager {
         f
     }
 
-    /// Exports bookmarks JSON representation to an external file.
-    ///
-    /// # Arguments
-    ///
-    /// * `path_str` - Path target to save exported configuration.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on success, or `Err(String)` on write failures.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if permissions prevent file creation or writing.
     pub fn export_to_file(&self, path_str: &str) -> Result<(), String> {
         let data = serde_json::to_string_pretty(&self.list).map_err(|e| e.to_string())?;
         fs::write(path_str, data).map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    /// Imports external bookmark lists, skipping duplicate URLs, and saves changes.
-    ///
-    /// # Arguments
-    ///
-    /// * `path_str` - Path string reference to read JSON structure from.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` if successful, or an error.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the target file is missing, unreadable, or contains invalid bookmarks schemas.
     pub fn import_from_file(&mut self, path_str: &str) -> Result<(), String> {
         let path = Path::new(path_str);
         if !path.exists() {
