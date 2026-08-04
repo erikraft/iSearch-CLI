@@ -1,3 +1,16 @@
+//! Native terminal document parsing, HTML/CSS styles extraction, and 3D graphics mesh engine.
+//!
+//! # Purpose
+//! This module implements high-performance, offline-capable parsing of local and remote documents. It decodes
+//! raw HTML structures using `tl`, styles them by interpreting inline CSS variables, compiles Markdown text
+//! with `pulldown-cmark`, renders binary datasets as interactive hex-dumps, extracts metadata and structures from PDFs,
+//! browses inside compressed ZIP collections, and renders interactive rotating 3D meshes inside raw terminal coordinates.
+//!
+//! # Architecture
+//! * [HtmlNode] acts as the parsed tree representation.
+//! * [NativeEngine] implements the [BrowserEngine] trait, handling local file system routes, ZIP offsets (`::`), and web requests.
+//! * [Mesh3D] implements an interactive orthographic projection engine that rotates and projects vectors onto character matrices.
+
 use crate::browser::core::{BrowserEngine, BrowserError, PageContent};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -10,29 +23,55 @@ use syntect::easy::HighlightLines;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
 
+/// Represents a parsed HTML element node or leaf text block.
 #[derive(Debug, Clone)]
 pub enum HtmlNode {
+    /// Text leaf node holding a sanitized content string.
     Text(String),
+    /// Standard tag element containing key-value attributes and lists of children.
     Element {
+        /// Element tag identifier (e.g. `p`, `div`, etc.).
         tag: String,
+        /// Extracted list of paired attributes.
         attributes: Vec<(String, String)>,
+        /// Children html nodes nested inside the tag.
         children: Vec<HtmlNode>,
     },
 }
 
+/// The offline native parsing engine which handles requests without executing JavaScript.
 pub struct NativeEngine {}
 
 impl Default for NativeEngine {
+    /// Generates the default [NativeEngine].
+    ///
+    /// # Returns
+    ///
+    /// Returns default [NativeEngine] context.
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl NativeEngine {
+    /// Creates a new instance of [NativeEngine].
+    ///
+    /// # Returns
+    ///
+    /// Returns [NativeEngine].
     pub fn new() -> Self {
         Self {}
     }
 
+    /// Parses raw HTML strings into structured [HtmlNode] arrays using `tl`.
+    ///
+    /// # Arguments
+    ///
+    /// * `html` - Raw document body text.
+    ///
+    /// # Returns
+    ///
+    /// Returns a vector of [HtmlNode] trees.
     pub fn parse_html(html: &str) -> Vec<HtmlNode> {
         let dom = match tl::parse(html, tl::ParserOptions::default()) {
             Ok(dom) => dom,
@@ -51,6 +90,7 @@ impl NativeEngine {
         roots
     }
 
+    /// Recursively processes individual `tl::Node` references into corresponding [HtmlNode] types.
     fn parse_node(node: &Node, parser: &tl::Parser) -> Option<HtmlNode> {
         match node {
             Node::Tag(tag) => {
@@ -90,6 +130,18 @@ impl NativeEngine {
     }
 }
 
+/// Generates a structured multi-column hex-dump view representing binary payload bytes.
+///
+/// Columns map absolute hex offset addresses on the left, hexadecimal values in the middle, and ascii prints on the right.
+///
+/// # Arguments
+///
+/// * `bytes` - Raw byte array to visualize.
+/// * `width` - Active layout column dimension constraints.
+///
+/// # Returns
+///
+/// Returns a vector of styled [Line] blocks suitable for display.
 pub fn render_hex_dump(bytes: &[u8], width: usize) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
     let chunk_size = if width > 80 { 16 } else { 8 };
@@ -130,20 +182,49 @@ pub fn render_hex_dump(bytes: &[u8], width: usize) -> Vec<Line<'static>> {
     lines
 }
 
-// Simple CSS property parsing
+/// Extracted styling rules corresponding to custom parsed inline stylesheet rules.
+///
+/// # Fields
+/// * `fg` - Custom foreground text color.
+/// * `bg` - Custom background container color.
+/// * `bold` - Font weight bold parameter.
+/// * `underline` - Underline decoration parameter.
+/// * `border` - Border visual frame parameter.
+/// * `rounded` - Rounded visual layout border parameters.
+/// * `margin_left` - Left margin character padding.
+/// * `padding_left` - Left padding character padding.
+/// * `progress_value` - Formatted numeric value mapped from HTML progress components.
 #[derive(Debug, Default, Clone)]
 pub struct CssStyle {
+    /// Target text foreground color.
     pub fg: Option<Color>,
+    /// Target background color.
     pub bg: Option<Color>,
+    /// Font bold flag.
     pub bold: bool,
+    /// Font underline decoration flag.
     pub underline: bool,
+    /// Box border outline flag.
     pub border: bool,
+    /// Box border curved corner outline flag.
     pub rounded: bool,
+    /// Left margin space offset columns.
     pub margin_left: usize,
+    /// Left padding space offset columns.
     pub padding_left: usize,
+    /// Evaluated progress float representing percentage ratios.
     pub progress_value: Option<f32>,
 }
 
+/// Resolves standard text color names or hex hashes into compatible [Color] formats.
+///
+/// # Arguments
+///
+/// * `color_str` - Input CSS color string slice.
+///
+/// # Returns
+///
+/// Returns `Some(Color)` if mapped successfully, otherwise `None`.
 fn parse_color(color_str: &str) -> Option<Color> {
     let clean = color_str.trim().to_lowercase();
     match clean.as_str() {
@@ -174,6 +255,25 @@ fn parse_color(color_str: &str) -> Option<Color> {
     }
 }
 
+/// Parses inline HTML CSS style attributes into a structured [CssStyle].
+///
+/// Support targets include colors, background-colors, font-weights, borders, text-decorations, and left spacing properties.
+///
+/// # Arguments
+///
+/// * `style_str` - Raw style attribute string value (e.g. `"color: red; font-weight: bold;"`).
+///
+/// # Returns
+///
+/// Returns parsed [CssStyle] values.
+///
+/// # Examples
+///
+/// ```
+/// use isearch_cli::browser::native::parse_style_attribute;
+/// let css = parse_style_attribute("color: red; margin-left: 16px;");
+/// assert!(css.fg.is_some());
+/// ```
 pub fn parse_style_attribute(style_str: &str) -> CssStyle {
     let mut style = CssStyle::default();
     for part in style_str.split(';') {
@@ -610,10 +710,21 @@ fn render_node_to_lines(
     }
 }
 
+/// Converts syntect colors into native Ratatui formatting values.
 fn to_ratatui_color(c: syntect::highlighting::Color) -> Color {
     Color::Rgb(c.r, c.g, c.b)
 }
 
+/// Highlights blocks of programming code using the Oceanic-dark theme inside the `syntect` engine.
+///
+/// # Arguments
+///
+/// * `code` - Plain-text block of programming source.
+/// * `lang` - Target syntax alias name (e.g. `rust` or `python`).
+///
+/// # Returns
+///
+/// Returns a vector of [Line] elements mapped with color syntax tokens.
 pub fn highlight_code_block(code: &str, lang: &str) -> Vec<Line<'static>> {
     let ps = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
@@ -652,6 +763,16 @@ pub fn highlight_code_block(code: &str, lang: &str) -> Vec<Line<'static>> {
     lines
 }
 
+/// Parses and compiles markdown strings using `pulldown-cmark`, styling list items and fenced code blocks.
+///
+/// # Arguments
+///
+/// * `md` - Raw markdown string slice.
+/// * `_width` - Available width.
+///
+/// # Returns
+///
+/// Returns a vector of styled [Line] elements.
 pub fn render_markdown_to_lines(md: &str, _width: usize) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
     let parser = Parser::new(md);
@@ -787,13 +908,25 @@ pub fn render_markdown_to_lines(md: &str, _width: usize) -> Vec<Line<'static>> {
     lines
 }
 
+/// Dynamic structure managing vectors of vertices and edges representing 3D wireframe mesh objects.
+///
+/// # Fields
+/// * `vertices` - Points on the 3D grid space.
+/// * `edges` - Paired coordinate indices representing mesh edges.
 #[derive(Debug, Clone)]
 pub struct Mesh3D {
+    /// List of point vectors.
     pub vertices: Vec<[f32; 3]>,
+    /// Mapped index indices connecting vertices.
     pub edges: Vec<(usize, usize)>,
 }
 
 impl Mesh3D {
+    /// Factory builder pre-populating standard coordinates of a symmetric 3D wireframe cube.
+    ///
+    /// # Returns
+    ///
+    /// Returns initialized [Mesh3D].
     pub fn new_cube() -> Self {
         Self {
             vertices: vec![
@@ -823,6 +956,11 @@ impl Mesh3D {
         }
     }
 
+    /// Performs trigonometric rotation offsets along the vertical Y-axis.
+    ///
+    /// # Arguments
+    ///
+    /// * `angle` - Radial offset in radians.
     pub fn rotate_y(&mut self, angle: f32) {
         let cos_a = angle.cos();
         let sin_a = angle.sin();
@@ -834,6 +972,11 @@ impl Mesh3D {
         }
     }
 
+    /// Performs trigonometric rotation offsets along the horizontal X-axis.
+    ///
+    /// # Arguments
+    ///
+    /// * `angle` - Radial offset in radians.
     pub fn rotate_x(&mut self, angle: f32) {
         let cos_a = angle.cos();
         let sin_a = angle.sin();
@@ -845,6 +988,18 @@ impl Mesh3D {
         }
     }
 
+    /// Projects 3D wires into 2D character-grid structures and outputs them as styled terminal lines.
+    ///
+    /// Uses Bresenham's line algorithm mapped to local cells.
+    ///
+    /// # Arguments
+    ///
+    /// * `width` - Target cell column dimension.
+    /// * `height` - Target cell row dimension.
+    ///
+    /// # Returns
+    ///
+    /// Returns lines displaying wire characters.
     pub fn render_to_lines(&self, width: usize, height: usize) -> Vec<Line<'static>> {
         let mut grid = vec![vec![' '; width]; height];
 
@@ -917,6 +1072,19 @@ fn draw_line_on_grid(
 }
 
 impl BrowserEngine for NativeEngine {
+    /// Navigates to local resources (folders, ZIPs, PDFs, meshes) or requests HTTP document bodies.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - Full destination URL or system filepath structure.
+    ///
+    /// # Returns
+    ///
+    /// Returns [PageContent] structures.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [BrowserError] if network downloads, file reads, or format parsing fails.
     fn navigate(&mut self, url: &str) -> Result<PageContent, BrowserError> {
         // Handle zip inner file format: /path/to/archive.zip::filename.txt
         if url.contains("::") {
@@ -1113,6 +1281,19 @@ impl BrowserEngine for NativeEngine {
         }
     }
 
+    /// Standard Google query router.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - Text to search.
+    ///
+    /// # Returns
+    ///
+    /// Returns [PageContent] structures.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if navigation fails.
     fn search(&mut self, query: &str) -> Result<PageContent, BrowserError> {
         let url = format!(
             "https://www.google.com/search?q={}",
