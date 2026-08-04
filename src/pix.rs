@@ -173,7 +173,7 @@ mod tests {
             "11925416678",
             Some(10.0),
             "Erik Rodrigues Balisa",
-            "SAO PAULO",
+            "PERUIBE",
             Some("Supporting iSearch"),
         );
         assert!(payload_res.is_ok());
