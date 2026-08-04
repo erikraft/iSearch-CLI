@@ -21,15 +21,37 @@ use ratatui::{
 };
 use std::io;
 
+/// Individual tab instance tracking independent URLs, titles, and localized navigation records.
+///
+/// # Fields
+/// * `url` - Currently active tab address.
+/// * `title` - Loaded tab header/title.
+/// * `content` - Parsed tab page body cache.
+/// * `history` - Vector tracking navigated links in sequential order.
+/// * `history_idx` - Current position offset inside the localized history array.
 pub struct BrowserTab {
+    /// Absolute URL representing current page.
     pub url: String,
+    /// Header/Title representing current page.
     pub title: String,
+    /// Loaded parsed page body contents.
     pub content: Option<PageContent>,
+    /// Array tracking sequentially navigated addresses.
     pub history: Vec<String>,
+    /// Index position representing active page inside tab's history.
     pub history_idx: usize,
 }
 
 impl BrowserTab {
+    /// Initializes a new [BrowserTab] starting with the specified URL.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - Starting tab URL.
+    ///
+    /// # Returns
+    ///
+    /// Returns initialized [BrowserTab].
     pub fn new(url: &str) -> Self {
         Self {
             url: url.to_string(),
@@ -41,73 +63,175 @@ impl BrowserTab {
     }
 }
 
+/// Catalog of installer layout screens shown during Chromium guided installations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InstallerStep {
+    /// Main informational warning pane.
     Main,
+    /// List of official browser download websites.
     DownloadPage,
+    /// Platform command sequences to install.
     InstallCommands,
+    /// Input prompt to override standard path targets.
     ConfigurePath,
 }
 
+/// Dynamic application workspace managing multiple states, tabs, scroll offsets, bookmarks, and histories.
+///
+/// # Fields
+/// * `core` - Shared browser routing backend coordinator.
+/// * `tabs` - Active open tab lists.
+/// * `active_tab_idx` - Pointer to currently displayed tab.
+/// * `show_help` - Toggle flag displaying global keybindings layout.
+/// * `input_mode` - Toggle flag capturing text entries inside the address bar.
+/// * `address_buffer` - Keyboard buffer holding address-bar text entries.
+/// * `scroll_offset` - Current vertical line scroll position.
+/// * `status_message` - Short informational message shown in the footer.
+/// * `term_caps` - Probed terminal rendering capabilities.
+/// * `show_installer` - Toggle flag overlaying chromium assistant screens.
+/// * `installer_step` - Pointer to active installer sub-navigation steps.
+/// * `custom_path_input` - Overridden chromium binary file path.
+/// * `installer_status` - Custom path verification status message.
+/// * `theme` - Active color style mappings.
+/// * `theme_preset` - Currently applied preset configuration flag.
+/// * `downloads` - Active downloads in standard mode.
+/// * `download_active` - Specifies if downloads are actively progressing.
+/// * `favorites_mgr` - Bookmark collector service.
+/// * `history_mgr` - Database historical record service.
+/// * `private_mode` - Toggle flag triggering secure/private browsing modes.
+/// * `show_favorites` - Toggle flag displaying bookmark collections pane.
+/// * `show_history_mgr` - Toggle flag displaying history queries pane.
+/// * `fav_search_buffer` - Keyboard buffer filtering favorites lists.
+/// * `fav_input_mode` - Specifies if a user is configuring/importing favorites.
+/// * `fav_input_field` - Current focused input field inside favorites pane.
+/// * `fav_title_input` - Keyboard buffer defining bookmark title name.
+/// * `fav_url_input` - Keyboard buffer defining bookmark URL target.
+/// * `fav_folder_input` - Keyboard buffer defining folder name.
+/// * `fav_path_input` - Keyboard buffer tracking import/export files.
+/// * `fav_selected_idx` - Pointer to highlighted favorite element inside arrays.
+/// * `fav_folder_filter` - String filtering visible favorites by folder.
+/// * `hist_search_buffer` - Keyboard buffer filtering historical items.
+/// * `hist_domain_filter` - Keyboard buffer filtering historical items by domain.
+/// * `hist_sort_by` - Historical items sorting ordering key.
+/// * `hist_group_by` - Historical items aggregation key.
+/// * `hist_selected_idx` - Pointer to highlighted historical item inside arrays.
+/// * `hist_input_mode` - Specifies if a user is typing inside history filter bars.
+/// * `hist_input_field` - Current focused input field inside history manager pane.
+/// * `temp_downloads` - Active downloads in private mode (isolated in RAM).
 pub struct BrowserApp {
+    /// Shared core browser engine coordinator.
     pub core: BrowserCore,
+    /// Vector tracking all active open tabs.
     pub tabs: Vec<BrowserTab>,
+    /// Index position specifying active focused tab.
     pub active_tab_idx: usize,
+    /// Flag indicating if standard keyboard help is visible.
     pub show_help: bool,
+    /// Flag indicating if the user is typing an address inside the address bar.
     pub input_mode: bool,
+    /// Current address bar text buffer.
     pub address_buffer: String,
+    /// Target vertical offset used to scroll pages.
     pub scroll_offset: usize,
+    /// Short description status message.
     pub status_message: String,
+    /// Detected capabilities.
     pub term_caps: TerminalCapabilities,
+    /// Flag indicating if the Chromium guided installation overlay is active.
     pub show_installer: bool,
+    /// Current navigation step inside the guided installation assistant.
     pub installer_step: InstallerStep,
+    /// Custom path entry keyboard workspace.
     pub custom_path_input: String,
+    /// Status description specifying custom path results.
     pub installer_status: String,
+    /// Active theme specifications.
     pub theme: crate::browser::theme::AppTheme,
+    /// Current theme preset.
     pub theme_preset: crate::browser::theme::ThemePreset,
+    /// Vector of registered downloads.
     pub downloads: Vec<(String, f32, String)>, // (filename, progress, status)
+    /// Specifies if background downloads are currently active.
     pub download_active: bool,
 
     // New additions
+    /// Favorites collector service.
     pub favorites_mgr: FavoritesManager,
+    /// SQLite history database service.
     pub history_mgr: HistoryManager,
+    /// Flag indicating if Private/Anonymous mode is enabled.
     pub private_mode: bool,
 
     // UI Panels
+    /// Flag indicating if the Favorites panel overlay is visible.
     pub show_favorites: bool,
+    /// Flag indicating if the History Manager panel overlay is visible.
     pub show_history_mgr: bool,
 
     // Favorites state
+    /// Favorites filtering search buffer.
     pub fav_search_buffer: String,
+    /// Specifies if input overrides are active inside favorites screens.
     pub fav_input_mode: bool,
+    /// Active focused text element index inside favorites overlays.
     pub fav_input_field: usize, // 0 = Title, 1 = URL, 2 = Folder, 3 = Search, 4 = ImportPath, 5 = ExportPath
+    /// Favorites creation title buffer.
     pub fav_title_input: String,
+    /// Favorites creation URL buffer.
     pub fav_url_input: String,
+    /// Favorites creation folder category buffer.
     pub fav_folder_input: String,
+    /// File path buffer for imports and exports.
     pub fav_path_input: String,
+    /// Currently highlighted index position of favorite entries.
     pub fav_selected_idx: usize,
+    /// Categorization folder filter.
     pub fav_folder_filter: String, // "All" or folder name
 
     // History state
+    /// History filtering search buffer.
     pub hist_search_buffer: String,
+    /// History domain filter buffer.
     pub hist_domain_filter: String,
     pub hist_sort_by: String,  // "date" or "visits"
     pub hist_group_by: String, // "none", "date", or "domain"
+    /// Currently highlighted index position of history entries.
     pub hist_selected_idx: usize,
+    /// Specifies if inputs are active inside history screens.
     pub hist_input_mode: bool,
+    /// Active focused text element index inside history overlays.
     pub hist_input_field: usize, // 0 = Search, 1 = Domain Filter, 2 = ImportPath, 3 = ExportPath
 
     // Temporary list for downloads in private mode
+    /// Isolated temporary downloads list for Private mode sessions.
     pub temp_downloads: Vec<(String, f32, String)>,
 }
 
 impl Default for BrowserApp {
+    /// Generates default [BrowserApp].
+    ///
+    /// # Returns
+    ///
+    /// Returns default [BrowserApp] with initialized tab pointing to Google.
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl BrowserApp {
+    /// Instantiates and configures a new TUI browser application context.
+    ///
+    /// # Returns
+    ///
+    /// Returns initialized [BrowserApp].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use isearch_cli::browser::ui::BrowserApp;
+    /// let app = BrowserApp::new();
+    /// assert_eq!(app.tabs.len(), 1);
+    /// ```
     pub fn new() -> Self {
         let mut app = Self {
             core: BrowserCore::new(),
@@ -160,6 +284,17 @@ impl BrowserApp {
         app
     }
 
+    /// Triggers browser navigation for the active tab's configured URL.
+    ///
+    /// Handles fallback engine routing, incognito session overrides, and records history visits.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on successful load, or [BrowserError].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the engine falls back, network routes fail, or parsing warnings occur.
     pub fn load_current_page(&mut self) -> Result<(), BrowserError> {
         self.scroll_offset = 0;
         let url = self.tabs[self.active_tab_idx].url.clone();
@@ -227,6 +362,11 @@ impl BrowserApp {
         }
     }
 
+    /// Evaluates search buffers and folder criteria to fetch corresponding matching favorites.
+    ///
+    /// # Returns
+    ///
+    /// Returns lists of cloned [FavoriteItem].
     pub fn get_favorites_filtered(&self) -> Vec<FavoriteItem> {
         let items = if self.fav_search_buffer.is_empty() {
             self.favorites_mgr.list.items.clone()
@@ -244,6 +384,11 @@ impl BrowserApp {
         }
     }
 
+    /// Evaluates history database search criteria to retrieve matching history rows.
+    ///
+    /// # Returns
+    ///
+    /// Returns matching [HistoryItem] collections.
     pub fn get_history_filtered(&self) -> Vec<HistoryItem> {
         self.history_mgr
             .get_all(
@@ -255,6 +400,17 @@ impl BrowserApp {
     }
 }
 
+/// Sets up the crossterm terminal backend, enters raw mode and alternative buffers, and executes the TUI browser loop.
+///
+/// Ensures proper restoration of terminal properties upon completion or failure.
+///
+/// # Returns
+///
+/// Returns `Ok(())` on successful termination, or a boxed dynamic error if initialization fails.
+///
+/// # Errors
+///
+/// Returns an error if terminal setup fails.
 pub fn run_browser_tui() -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -279,6 +435,20 @@ pub fn run_browser_tui() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Dynamic event listener, download progress tracker, and frame render execution loop.
+///
+/// # Arguments
+///
+/// * `terminal` - Mutable reference to the terminal renderer.
+/// * `app` - Mutable reference to the active [BrowserApp] state.
+///
+/// # Returns
+///
+/// Returns `io::Result<()>` indicating success or failure.
+///
+/// # Errors
+///
+/// Returns an error if crossterm key captures or stdout flushes fail.
 fn run_loop<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut BrowserApp,
@@ -1020,10 +1190,17 @@ fn run_loop<B: ratatui::backend::Backend>(
     }
 }
 
+/// Reset scroll offset values to 0 when loading tab targets.
 fn self_render_viewport(app: &mut BrowserApp) {
     app.scroll_offset = 0;
 }
 
+/// Formats, styles, and draws browser panes, favorites lists, database tables, and content screens.
+///
+/// # Arguments
+///
+/// * `f` - Mutable reference to the `Frame` utilized by `ratatui`.
+/// * `app` - Pointer to the active [BrowserApp] configurations.
 pub fn ui(f: &mut Frame, app: &mut BrowserApp) {
     let size = f.area();
 

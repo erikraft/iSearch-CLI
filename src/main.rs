@@ -9,7 +9,8 @@ use std::env;
 use std::io::{self, Write};
 use ui::run_donation_tui;
 
-fn print_help() {
+/// Formats and outputs the global list of interactive commands.
+pub fn print_help() {
     println!("iSearch CLI™ - Version 0.1.0");
     println!("Available commands:");
     println!("  browse         - Open the premium multi-engine interactive terminal browser");
@@ -21,7 +22,8 @@ fn print_help() {
     println!("  exit / quit    - Exit the interactive CLI");
 }
 
-fn start_interactive_cli() {
+/// Initiates the primary interactive prompt loop when the executable is launched without arguments.
+pub fn start_interactive_cli() {
     println!("░▀█▀░█▀▀░█▀▀░█▀█░█▀▄░█▀▀░█░█░░░█▀▀░█░░░▀█▀");
     println!("░░█░░▀▀█░█▀▀░█▀█░█▀▄░█░░░█▀█░░░█░░░█░░░░█░");
     println!("░▀▀▀░▀▀▀░▀▀▀░▀░▀░▀░▀░▀▀▀░▀░▀░░░▀▀▀░▀▀▀░▀▀▀");
