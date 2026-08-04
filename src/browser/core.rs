@@ -86,7 +86,12 @@ pub enum PageContent {
 pub trait BrowserEngine {
     fn navigate(&mut self, url: &str) -> Result<PageContent, BrowserError>;
     fn search(&mut self, query: &str) -> Result<PageContent, BrowserError>;
-    fn capture_screenshot(&mut self, url: &str, width: u32, height: u32) -> Result<Vec<u8>, BrowserError>;
+    fn capture_screenshot(
+        &mut self,
+        url: &str,
+        width: u32,
+        height: u32,
+    ) -> Result<Vec<u8>, BrowserError>;
 }
 
 pub struct BrowserCore {
@@ -120,7 +125,10 @@ impl BrowserCore {
         if self.adblocker.is_blocked(url) {
             return Ok(PageContent::AnsiText {
                 title: "Ad Blocked".to_string(),
-                content: format!("The request to '{}' was blocked by the integrated iSearch AdBlocker plugin.", url),
+                content: format!(
+                    "The request to '{}' was blocked by the integrated iSearch AdBlocker plugin.",
+                    url
+                ),
             });
         }
         match self.current_engine {
@@ -135,13 +143,29 @@ impl BrowserCore {
         }
     }
 
-    pub fn search(&mut self, query: &str, alias: Option<&str>) -> Result<PageContent, BrowserError> {
+    pub fn search(
+        &mut self,
+        query: &str,
+        alias: Option<&str>,
+    ) -> Result<PageContent, BrowserError> {
         let engine = alias.unwrap_or("google");
         let url = match engine {
-            "google" | "g" => format!("https://www.google.com/search?q={}", percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)),
-            "duckduckgo" | "ddg" => format!("https://duckduckgo.com/html/?q={}", percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)),
-            "bing" | "b" => format!("https://www.bing.com/search?q={}", percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)),
-            _ => format!("https://www.google.com/search?q={}", percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)),
+            "google" | "g" => format!(
+                "https://www.google.com/search?q={}",
+                percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)
+            ),
+            "duckduckgo" | "ddg" => format!(
+                "https://duckduckgo.com/html/?q={}",
+                percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)
+            ),
+            "bing" | "b" => format!(
+                "https://www.bing.com/search?q={}",
+                percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)
+            ),
+            _ => format!(
+                "https://www.google.com/search?q={}",
+                percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)
+            ),
         };
         self.navigate(&url)
     }

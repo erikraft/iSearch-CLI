@@ -1,12 +1,12 @@
+pub mod browser;
 pub mod config;
 pub mod pix;
-pub mod utils;
 pub mod ui;
-pub mod browser;
+pub mod utils;
 
+use config::load_config;
 use std::env;
 use std::io::{self, Write};
-use config::load_config;
 use ui::run_donation_tui;
 
 fn print_help() {
@@ -55,7 +55,10 @@ fn start_interactive_cli() {
                     if let Err(e) = run_donation_tui(config) {
                         eprintln!("Error launching donation screen: {}", e);
                     }
-                } else if trimmed == "browse" || trimmed == "isearch browse" || trimmed.starts_with("browse ") {
+                } else if trimmed == "browse"
+                    || trimmed == "isearch browse"
+                    || trimmed.starts_with("browse ")
+                {
                     if let Err(e) = browser::ui::run_browser_tui() {
                         eprintln!("Error launching browser: {}", e);
                     }
@@ -93,14 +96,20 @@ fn main() {
                 eprintln!("Error launching donation screen: {}", e);
                 std::process::exit(1);
             }
-        } else if joined_args == "browse" || joined_args == "isearch browse" || joined_args.starts_with("browse ") {
+        } else if joined_args == "browse"
+            || joined_args == "isearch browse"
+            || joined_args.starts_with("browse ")
+        {
             if let Err(e) = browser::ui::run_browser_tui() {
                 eprintln!("Error launching browser: {}", e);
                 std::process::exit(1);
             }
         } else if joined_args == "version" || joined_args == "isearch version" {
             browser::updater::print_version(false);
-        } else if joined_args == "version --check" || joined_args == "isearch version --check" || joined_args == "--check" {
+        } else if joined_args == "version --check"
+            || joined_args == "isearch version --check"
+            || joined_args == "--check"
+        {
             browser::updater::print_version(true);
         } else if joined_args == "self-update" || joined_args == "isearch self-update" {
             if let Err(e) = browser::updater::perform_self_update() {

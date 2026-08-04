@@ -1,8 +1,8 @@
 use crate::browser::core::{BrowserEngine, BrowserError, PageContent};
-use std::path::PathBuf;
 use std::env;
 use std::fs;
 use std::io::{self, Read, Write};
+use std::path::PathBuf;
 use std::process::Command;
 
 pub struct ChromiumEngine {
@@ -18,7 +18,10 @@ impl Default for ChromiumEngine {
 
 impl ChromiumEngine {
     pub fn new() -> Self {
-        let mut engine = Self { executable_path: None, incognito_mode: false };
+        let mut engine = Self {
+            executable_path: None,
+            incognito_mode: false,
+        };
         engine.executable_path = engine.detect_chromium_path();
         engine
     }
@@ -52,30 +55,27 @@ impl ChromiumEngine {
     pub fn get_guided_install_instructions(&self) -> String {
         let os = env::consts::OS;
         match os {
-            "linux" => {
-                "Guided installation for Linux:\n\
+            "linux" => "Guided installation for Linux:\n\
                  - Ubuntu/Debian: sudo apt update && sudo apt install -y chromium-browser\n\
                  - Fedora: sudo dnf install -y chromium\n\
                  - Arch Linux: sudo pacman -S chromium\n\
                  - Flatpak: flatpak install flathub org.chromium.Chromium\n\
-                 - Snap: sudo snap install chromium".to_string()
-            }
-            "macos" => {
-                "Guided installation for macOS:\n\
+                 - Snap: sudo snap install chromium"
+                .to_string(),
+            "macos" => "Guided installation for macOS:\n\
                  - Using Homebrew: brew install --cask google-chrome\n\
-                 - Or download official Google Chrome dmg package from google.com/chrome".to_string()
-            }
-            "windows" => {
-                "Guided installation for Windows:\n\
+                 - Or download official Google Chrome dmg package from google.com/chrome"
+                .to_string(),
+            "windows" => "Guided installation for Windows:\n\
                  - Using winget: winget install Google.Chrome\n\
-                 - Or download and run ChromeStandaloneSetup64.exe from google.com/chrome".to_string()
-            }
-            "android" => {
-                "Android (Termux) detected:\n\
+                 - Or download and run ChromeStandaloneSetup64.exe from google.com/chrome"
+                .to_string(),
+            "android" => "Android (Termux) detected:\n\
                  - Chromium Headless is not supported on Android Termux.\n\
-                 - Please use the Native Rendering Engine (default) which is fully optimized!".to_string()
-            }
-            _ => "Please install Google Chrome or Chromium using your system's package manager.".to_string(),
+                 - Please use the Native Rendering Engine (default) which is fully optimized!"
+                .to_string(),
+            _ => "Please install Google Chrome or Chromium using your system's package manager."
+                .to_string(),
         }
     }
 
@@ -85,7 +85,9 @@ impl ChromiumEngine {
     {
         #[cfg(target_os = "android")]
         {
-            return Err(BrowserError::UnsupportedPlatform("Chromium is not supported on Android Termux.".to_string()));
+            return Err(BrowserError::UnsupportedPlatform(
+                "Chromium is not supported on Android Termux.".to_string(),
+            ));
         }
 
         let os = env::consts::OS;
@@ -100,7 +102,9 @@ impl ChromiumEngine {
             _ => return Err(BrowserError::UnsupportedPlatform(format!("No automated pre-built Chromium binary for {} {}", os, arch))),
         };
 
-        let cache_dir = self.get_cache_directory().ok_or_else(|| BrowserError::IoError("Failed to get cache directory".to_string()))?;
+        let cache_dir = self
+            .get_cache_directory()
+            .ok_or_else(|| BrowserError::IoError("Failed to get cache directory".to_string()))?;
         fs::create_dir_all(&cache_dir).map_err(|e| BrowserError::IoError(e.to_string()))?;
 
         let zip_path = cache_dir.join("chrome.zip");
@@ -108,40 +112,53 @@ impl ChromiumEngine {
 
         // Download via ureq
         let agent = ureq::Agent::new_with_defaults();
-        let response = agent.get(download_url).call()
-            .map_err(|e| BrowserError::DownloadError(format!("Network download failed: {:?}", e)))?;
+        let response = agent.get(download_url).call().map_err(|e| {
+            BrowserError::DownloadError(format!("Network download failed: {:?}", e))
+        })?;
 
-        let total_size = response.headers().get("content-length")
+        let total_size = response
+            .headers()
+            .get("content-length")
             .and_then(|val| val.to_str().ok())
             .and_then(|val| val.parse::<u64>().ok())
             .unwrap_or(150_000_000); // approx size
 
         let mut body_obj = response.into_body();
         let mut reader = body_obj.as_reader();
-        let mut file = fs::File::create(&zip_path).map_err(|e| BrowserError::IoError(e.to_string()))?;
+        let mut file =
+            fs::File::create(&zip_path).map_err(|e| BrowserError::IoError(e.to_string()))?;
 
         let mut buffer = vec![0; 16384];
         let mut downloaded: u64 = 0;
 
         loop {
-            let bytes_read = reader.read(&mut buffer).map_err(|e| BrowserError::DownloadError(e.to_string()))?;
+            let bytes_read = reader
+                .read(&mut buffer)
+                .map_err(|e| BrowserError::DownloadError(e.to_string()))?;
             if bytes_read == 0 {
                 break;
             }
-            file.write_all(&buffer[..bytes_read]).map_err(|e| BrowserError::IoError(e.to_string()))?;
+            file.write_all(&buffer[..bytes_read])
+                .map_err(|e| BrowserError::IoError(e.to_string()))?;
             downloaded += bytes_read as u64;
             let progress = (downloaded as f32 / total_size as f32).min(1.0);
-            on_progress(progress * 0.7, &format!("Downloading Chromium... {:.1}%", progress * 100.0));
+            on_progress(
+                progress * 0.7,
+                &format!("Downloading Chromium... {:.1}%", progress * 100.0),
+            );
         }
 
         on_progress(0.7, "Extracting zip archive...");
         // Extract ZIP
         let file = fs::File::open(&zip_path).map_err(|e| BrowserError::IoError(e.to_string()))?;
-        let mut archive = zip::ZipArchive::new(file).map_err(|e| BrowserError::DownloadError(format!("Failed to parse zip: {}", e)))?;
+        let mut archive = zip::ZipArchive::new(file)
+            .map_err(|e| BrowserError::DownloadError(format!("Failed to parse zip: {}", e)))?;
         let total_files = archive.len();
 
         for i in 0..total_files {
-            let mut file = archive.by_index(i).map_err(|e| BrowserError::DownloadError(e.to_string()))?;
+            let mut file = archive
+                .by_index(i)
+                .map_err(|e| BrowserError::DownloadError(e.to_string()))?;
             let outpath = match file.enclosed_name() {
                 Some(path) => cache_dir.join(path),
                 None => continue,
@@ -155,15 +172,21 @@ impl ChromiumEngine {
                         fs::create_dir_all(p).map_err(|e| BrowserError::IoError(e.to_string()))?;
                     }
                 }
-                let mut outfile = fs::File::create(&outpath).map_err(|e| BrowserError::IoError(e.to_string()))?;
-                io::copy(&mut file, &mut outfile).map_err(|e| BrowserError::IoError(e.to_string()))?;
+                let mut outfile =
+                    fs::File::create(&outpath).map_err(|e| BrowserError::IoError(e.to_string()))?;
+                io::copy(&mut file, &mut outfile)
+                    .map_err(|e| BrowserError::IoError(e.to_string()))?;
             }
 
             // Set executable permission on Unix
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
-                if outpath.file_name().and_then(|n| n.to_str()) == Some("chrome") || outpath.to_string_lossy().contains("Google Chrome.app/Contents/MacOS/") {
+                if outpath.file_name().and_then(|n| n.to_str()) == Some("chrome")
+                    || outpath
+                        .to_string_lossy()
+                        .contains("Google Chrome.app/Contents/MacOS/")
+                {
                     fs::set_permissions(&outpath, fs::Permissions::from_mode(0o755)).unwrap_or(());
                 }
             }
@@ -182,7 +205,9 @@ impl ChromiumEngine {
             self.executable_path = Some(found_path.clone());
             Ok(found_path)
         } else {
-            Err(BrowserError::DownloadError("Failed to locate Chromium after extraction".to_string()))
+            Err(BrowserError::DownloadError(
+                "Failed to locate Chromium after extraction".to_string(),
+            ))
         }
     }
 
@@ -212,9 +237,16 @@ impl ChromiumEngine {
             #[cfg(target_os = "windows")]
             let relative_paths = ["chrome-win64/chrome.exe", "chrome.exe"];
             #[cfg(target_os = "macos")]
-            let relative_paths = ["chrome-mac/Google Chrome.app/Contents/MacOS/Google Chrome", "Google Chrome.app/Contents/MacOS/Google Chrome"];
+            let relative_paths = [
+                "chrome-mac/Google Chrome.app/Contents/MacOS/Google Chrome",
+                "Google Chrome.app/Contents/MacOS/Google Chrome",
+            ];
             #[cfg(target_os = "linux")]
-            let relative_paths = ["chrome-linux64/chrome", "chrome/chrome", "chrome-linux64/google-chrome"];
+            let relative_paths = [
+                "chrome-linux64/chrome",
+                "chrome/chrome",
+                "chrome-linux64/google-chrome",
+            ];
 
             for rel in &relative_paths {
                 let test_path = cache_dir.join(rel);
@@ -279,25 +311,49 @@ impl ChromiumEngine {
 
         #[cfg(target_os = "windows")]
         {
-            let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
-            let program_files_x86 = env::var("ProgramFiles(x86)").unwrap_or_else(|_| "C:\\Program Files (x86)".to_string());
-            let local_app_data = env::var("LocalAppData").unwrap_or_else(|_| "C:\\Users\\Default\\AppData\\Local".to_string());
+            let program_files =
+                env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
+            let program_files_x86 = env::var("ProgramFiles(x86)")
+                .unwrap_or_else(|_| "C:\\Program Files (x86)".to_string());
+            let local_app_data = env::var("LocalAppData")
+                .unwrap_or_else(|_| "C:\\Users\\Default\\AppData\\Local".to_string());
 
             let win_paths = [
                 // Google Chrome
                 format!("{}\\Google\\Chrome\\Application\\chrome.exe", program_files),
-                format!("{}\\Google\\Chrome\\Application\\chrome.exe", program_files_x86),
-                format!("{}\\Google\\Chrome\\Application\\chrome.exe", local_app_data),
+                format!(
+                    "{}\\Google\\Chrome\\Application\\chrome.exe",
+                    program_files_x86
+                ),
+                format!(
+                    "{}\\Google\\Chrome\\Application\\chrome.exe",
+                    local_app_data
+                ),
                 // Chromium
                 format!("{}\\Chromium\\Application\\chrome.exe", program_files),
                 format!("{}\\Chromium\\Application\\chrome.exe", program_files_x86),
                 // Microsoft Edge
-                format!("{}\\Microsoft\\Edge\\Application\\msedge.exe", program_files),
-                format!("{}\\Microsoft\\Edge\\Application\\msedge.exe", program_files_x86),
+                format!(
+                    "{}\\Microsoft\\Edge\\Application\\msedge.exe",
+                    program_files
+                ),
+                format!(
+                    "{}\\Microsoft\\Edge\\Application\\msedge.exe",
+                    program_files_x86
+                ),
                 // Brave
-                format!("{}\\BraveSoftware\\Brave-Browser\\Application\\brave.exe", program_files),
-                format!("{}\\BraveSoftware\\Brave-Browser\\Application\\brave.exe", program_files_x86),
-                format!("{}\\BraveSoftware\\Brave-Browser\\Application\\brave.exe", local_app_data),
+                format!(
+                    "{}\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+                    program_files
+                ),
+                format!(
+                    "{}\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+                    program_files_x86
+                ),
+                format!(
+                    "{}\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+                    local_app_data
+                ),
                 // Vivaldi
                 format!("{}\\Vivaldi\\Application\\vivaldi.exe", program_files),
                 format!("{}\\Vivaldi\\Application\\vivaldi.exe", program_files_x86),
@@ -321,8 +377,11 @@ impl ChromiumEngine {
 
 impl BrowserEngine for ChromiumEngine {
     fn navigate(&mut self, url: &str) -> Result<PageContent, BrowserError> {
-        let exec_path = self.executable_path.as_ref()
-            .ok_or_else(|| BrowserError::ChromiumNotAvailable("No Chrome or Chromium executable found. Please download first.".to_string()))?;
+        let exec_path = self.executable_path.as_ref().ok_or_else(|| {
+            BrowserError::ChromiumNotAvailable(
+                "No Chrome or Chromium executable found. Please download first.".to_string(),
+            )
+        })?;
 
         // Format clean URL
         let mut clean_url = url.to_string();
@@ -332,23 +391,27 @@ impl BrowserEngine for ChromiumEngine {
 
         // Run Chrome Headless to fetch DOM after modern JS execution
         let mut cmd = Command::new(exec_path);
-        cmd.arg("--headless=new")
-           .arg("--disable-gpu");
+        cmd.arg("--headless=new").arg("--disable-gpu");
 
         if self.incognito_mode {
             cmd.arg("--incognito");
-            let temp_dir = std::env::temp_dir().join(format!("isearch_chrome_profile_{}", rand_string()));
+            let temp_dir =
+                std::env::temp_dir().join(format!("isearch_chrome_profile_{}", rand_string()));
             cmd.arg(format!("--user-data-dir={}", temp_dir.display()));
         }
 
-        let output = cmd.arg("--dump-dom")
+        let output = cmd
+            .arg("--dump-dom")
             .arg(&clean_url)
             .output()
             .map_err(|e| BrowserError::IoError(format!("Failed to execute Chromium: {}", e)))?;
 
         if !output.status.success() {
             let err_msg = String::from_utf8_lossy(&output.stderr).to_string();
-            return Err(BrowserError::NetworkError(format!("Chromium failed to render page: {}", err_msg)));
+            return Err(BrowserError::NetworkError(format!(
+                "Chromium failed to render page: {}",
+                err_msg
+            )));
         }
 
         let body = String::from_utf8_lossy(&output.stdout).to_string();
@@ -369,17 +432,32 @@ impl BrowserEngine for ChromiumEngine {
         };
 
         let parsed = crate::browser::native::NativeEngine::parse_html(&body);
-        Ok(PageContent::Html { title, raw_html: body, parsed_nodes: parsed })
+        Ok(PageContent::Html {
+            title,
+            raw_html: body,
+            parsed_nodes: parsed,
+        })
     }
 
     fn search(&mut self, query: &str) -> Result<PageContent, BrowserError> {
-        let url = format!("https://www.google.com/search?q={}", percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC));
+        let url = format!(
+            "https://www.google.com/search?q={}",
+            percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC)
+        );
         self.navigate(&url)
     }
 
-    fn capture_screenshot(&mut self, url: &str, width: u32, height: u32) -> Result<Vec<u8>, BrowserError> {
-        let exec_path = self.executable_path.as_ref()
-            .ok_or_else(|| BrowserError::ChromiumNotAvailable("No Chrome or Chromium executable found. Please download first.".to_string()))?;
+    fn capture_screenshot(
+        &mut self,
+        url: &str,
+        width: u32,
+        height: u32,
+    ) -> Result<Vec<u8>, BrowserError> {
+        let exec_path = self.executable_path.as_ref().ok_or_else(|| {
+            BrowserError::ChromiumNotAvailable(
+                "No Chrome or Chromium executable found. Please download first.".to_string(),
+            )
+        })?;
 
         // Format clean URL
         let mut clean_url = url.to_string();
@@ -387,20 +465,22 @@ impl BrowserEngine for ChromiumEngine {
             clean_url = format!("https://{}", clean_url);
         }
 
-        let temp_screenshot = env::temp_dir().join(format!("isearch_screenshot_{}.png", rand_string()));
+        let temp_screenshot =
+            env::temp_dir().join(format!("isearch_screenshot_{}.png", rand_string()));
 
         // Run Chrome to capture screenshot
         let mut cmd = Command::new(exec_path);
-        cmd.arg("--headless=new")
-           .arg("--disable-gpu");
+        cmd.arg("--headless=new").arg("--disable-gpu");
 
         if self.incognito_mode {
             cmd.arg("--incognito");
-            let temp_dir = std::env::temp_dir().join(format!("isearch_chrome_profile_{}", rand_string()));
+            let temp_dir =
+                std::env::temp_dir().join(format!("isearch_chrome_profile_{}", rand_string()));
             cmd.arg(format!("--user-data-dir={}", temp_dir.display()));
         }
 
-        let output = cmd.arg(format!("--screenshot={}", temp_screenshot.display()))
+        let output = cmd
+            .arg(format!("--screenshot={}", temp_screenshot.display()))
             .arg(format!("--window-size={},{}", width, height))
             .arg(&clean_url)
             .output()
@@ -408,28 +488,39 @@ impl BrowserEngine for ChromiumEngine {
 
         if !output.status.success() {
             let err_msg = String::from_utf8_lossy(&output.stderr).to_string();
-            return Err(BrowserError::NetworkError(format!("Chromium screenshot failed: {}", err_msg)));
+            return Err(BrowserError::NetworkError(format!(
+                "Chromium screenshot failed: {}",
+                err_msg
+            )));
         }
 
         if temp_screenshot.exists() {
-            let bytes = fs::read(&temp_screenshot).map_err(|e| BrowserError::IoError(e.to_string()))?;
+            let bytes =
+                fs::read(&temp_screenshot).map_err(|e| BrowserError::IoError(e.to_string()))?;
             let _ = fs::remove_file(&temp_screenshot);
             Ok(bytes)
         } else {
-            Err(BrowserError::IoError("Screenshot was not generated by Chromium".to_string()))
+            Err(BrowserError::IoError(
+                "Screenshot was not generated by Chromium".to_string(),
+            ))
         }
     }
 }
 
 fn rand_string() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
     format!("{:x}", nanos)
 }
 
 mod dirs_next {
     use std::path::PathBuf;
     pub fn cache_dir() -> Option<PathBuf> {
-        std::env::var("HOME").map(|h| PathBuf::from(h).join(".cache")).ok()
+        std::env::var("HOME")
+            .map(|h| PathBuf::from(h).join(".cache"))
+            .ok()
     }
 }

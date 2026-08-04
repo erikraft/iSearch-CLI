@@ -1,5 +1,5 @@
-use serde::Deserialize;
 use ratatui::style::Color;
+use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize, Copy)]
 pub enum ThemePreset {
@@ -63,12 +63,12 @@ impl AppTheme {
             },
             ThemePreset::Monokai => Self {
                 name: "Monokai".to_string(),
-                primary: Color::Rgb(102, 217, 239),   // Cyan
-                highlight: Color::Rgb(249, 38, 114),  // Pink
-                border: Color::Rgb(117, 113, 94),     // Gray
-                background: Color::Rgb(39, 40, 34),    // Dark gray
-                text: Color::Rgb(248, 248, 242),      // White
-                success: Color::Rgb(166, 226, 46),    // Green
+                primary: Color::Rgb(102, 217, 239),  // Cyan
+                highlight: Color::Rgb(249, 38, 114), // Pink
+                border: Color::Rgb(117, 113, 94),    // Gray
+                background: Color::Rgb(39, 40, 34),  // Dark gray
+                text: Color::Rgb(248, 248, 242),     // White
+                success: Color::Rgb(166, 226, 46),   // Green
             },
             ThemePreset::Light => Self {
                 name: "Light".to_string(),

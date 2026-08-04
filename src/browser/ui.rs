@@ -1,11 +1,13 @@
-use crate::browser::core::{BrowserCore, EngineType, PageContent, BrowserError};
+use crate::browser::core::{BrowserCore, BrowserError, EngineType, PageContent};
+use crate::browser::favorites::{FavoriteItem, FavoritesManager};
+use crate::browser::history::{group_by_date, group_by_domain, HistoryItem, HistoryManager};
 use crate::browser::native::{render_html_to_lines, render_markdown_to_lines, CssStyle};
 use crate::browser::terminal_media::TerminalCapabilities;
-use crate::browser::favorites::{FavoritesManager, FavoriteItem};
-use crate::browser::history::{HistoryManager, HistoryItem, group_by_date, group_by_domain};
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseButton, MouseEventKind},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseButton, MouseEventKind,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -14,8 +16,8 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, BorderType, Paragraph, Wrap},
-    Terminal, Frame,
+    widgets::{Block, BorderType, Borders, Paragraph, Wrap},
+    Frame, Terminal,
 };
 use std::io;
 
@@ -89,7 +91,7 @@ pub struct BrowserApp {
     // History state
     pub hist_search_buffer: String,
     pub hist_domain_filter: String,
-    pub hist_sort_by: String, // "date" or "visits"
+    pub hist_sort_by: String,  // "date" or "visits"
     pub hist_group_by: String, // "none", "date", or "domain"
     pub hist_selected_idx: usize,
     pub hist_input_mode: bool,
@@ -121,7 +123,9 @@ impl BrowserApp {
             installer_step: InstallerStep::Main,
             custom_path_input: String::new(),
             installer_status: "Ready".to_string(),
-            theme: crate::browser::theme::AppTheme::from_preset(crate::browser::theme::ThemePreset::Default),
+            theme: crate::browser::theme::AppTheme::from_preset(
+                crate::browser::theme::ThemePreset::Default,
+            ),
             theme_preset: crate::browser::theme::ThemePreset::Default,
             downloads: Vec::new(),
             download_active: false,
@@ -165,7 +169,9 @@ impl BrowserApp {
             self.core.current_engine = EngineType::Native;
         }
 
-        if self.core.current_engine == EngineType::Chromium && !self.core.chromium_engine.is_available() {
+        if self.core.current_engine == EngineType::Chromium
+            && !self.core.chromium_engine.is_available()
+        {
             #[cfg(target_os = "android")]
             {
                 self.core.current_engine = EngineType::Native;
@@ -175,7 +181,9 @@ impl BrowserApp {
                 self.show_installer = true;
                 self.installer_step = InstallerStep::Main;
                 self.status_message = "Chromium required but not available.".to_string();
-                return Err(BrowserError::ChromiumNotAvailable("Chromium not found".to_string()));
+                return Err(BrowserError::ChromiumNotAvailable(
+                    "Chromium not found".to_string(),
+                ));
             }
         }
 
@@ -192,8 +200,12 @@ impl BrowserApp {
                     PageContent::Directory { path, .. } => path.to_string_lossy().to_string(),
                     PageContent::FilePreview { path, .. } => path.to_string_lossy().to_string(),
                     PageContent::PdfPreview { title, .. } => title.clone(),
-                    PageContent::ArchivePreview { path, .. } => format!("Archive: {}", path.to_string_lossy()),
-                    PageContent::ImagePreview { path, .. } => format!("Image: {}", path.to_string_lossy()),
+                    PageContent::ArchivePreview { path, .. } => {
+                        format!("Archive: {}", path.to_string_lossy())
+                    }
+                    PageContent::ImagePreview { path, .. } => {
+                        format!("Image: {}", path.to_string_lossy())
+                    }
                     PageContent::AnsiText { title, .. } => title.clone(),
                     PageContent::Mesh3DPreview { title, .. } => format!("3D Model: {}", title),
                 };
@@ -225,18 +237,21 @@ impl BrowserApp {
         if self.fav_folder_filter == "All" {
             items
         } else {
-            items.into_iter()
+            items
+                .into_iter()
                 .filter(|item| item.folder == self.fav_folder_filter)
                 .collect()
         }
     }
 
     pub fn get_history_filtered(&self) -> Vec<HistoryItem> {
-        self.history_mgr.get_all(
-            &self.hist_search_buffer,
-            &self.hist_domain_filter,
-            &self.hist_sort_by
-        ).unwrap_or_default()
+        self.history_mgr
+            .get_all(
+                &self.hist_search_buffer,
+                &self.hist_domain_filter,
+                &self.hist_sort_by,
+            )
+            .unwrap_or_default()
     }
 }
 
@@ -271,7 +286,11 @@ fn run_loop<B: ratatui::backend::Backend>(
     loop {
         // Handle download progress
         if app.download_active {
-            let active_list = if app.private_mode { &mut app.temp_downloads } else { &mut app.downloads };
+            let active_list = if app.private_mode {
+                &mut app.temp_downloads
+            } else {
+                &mut app.downloads
+            };
             for d in active_list.iter_mut() {
                 if d.1 < 1.0 {
                     d.1 += 0.2;
@@ -299,60 +318,64 @@ fn run_loop<B: ratatui::backend::Backend>(
 
                     if app.show_installer {
                         match app.installer_step {
-                            InstallerStep::Main => {
-                                match key.code {
-                                    KeyCode::Char('1') => {
-                                        app.installer_step = InstallerStep::DownloadPage;
-                                    }
-                                    KeyCode::Char('2') => {
-                                        app.installer_step = InstallerStep::InstallCommands;
-                                    }
-                                    KeyCode::Char('3') => {
-                                        app.installer_step = InstallerStep::ConfigurePath;
-                                        app.custom_path_input = String::new();
-                                    }
-                                    KeyCode::Char('4') | KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('Q') => {
-                                        app.show_installer = false;
-                                        app.core.set_engine(EngineType::Native);
-                                        app.status_message = "Using Native Rendering Mode".to_string();
-                                        let _ = app.load_current_page();
-                                    }
-                                    _ => {}
+                            InstallerStep::Main => match key.code {
+                                KeyCode::Char('1') => {
+                                    app.installer_step = InstallerStep::DownloadPage;
                                 }
-                            }
+                                KeyCode::Char('2') => {
+                                    app.installer_step = InstallerStep::InstallCommands;
+                                }
+                                KeyCode::Char('3') => {
+                                    app.installer_step = InstallerStep::ConfigurePath;
+                                    app.custom_path_input = String::new();
+                                }
+                                KeyCode::Char('4')
+                                | KeyCode::Esc
+                                | KeyCode::Char('q')
+                                | KeyCode::Char('Q') => {
+                                    app.show_installer = false;
+                                    app.core.set_engine(EngineType::Native);
+                                    app.status_message = "Using Native Rendering Mode".to_string();
+                                    let _ = app.load_current_page();
+                                }
+                                _ => {}
+                            },
                             InstallerStep::DownloadPage | InstallerStep::InstallCommands => {
                                 match key.code {
-                                    KeyCode::Esc | KeyCode::Backspace | KeyCode::Char('b') | KeyCode::Char('B') => {
+                                    KeyCode::Esc
+                                    | KeyCode::Backspace
+                                    | KeyCode::Char('b')
+                                    | KeyCode::Char('B') => {
                                         app.installer_step = InstallerStep::Main;
                                     }
                                     _ => {}
                                 }
                             }
-                            InstallerStep::ConfigurePath => {
-                                match key.code {
-                                    KeyCode::Esc => {
-                                        app.installer_step = InstallerStep::Main;
-                                    }
-                                    KeyCode::Enter => {
-                                        let path = std::path::PathBuf::from(app.custom_path_input.trim());
-                                        if path.exists() {
-                                            app.core.chromium_engine.set_manual_path(path);
-                                            app.show_installer = false;
-                                            app.installer_status = "Custom path configured!".to_string();
-                                            let _ = app.load_current_page();
-                                        } else {
-                                            app.installer_status = "Path does not exist!".to_string();
-                                        }
-                                    }
-                                    KeyCode::Char(c) => {
-                                        app.custom_path_input.push(c);
-                                    }
-                                    KeyCode::Backspace => {
-                                        app.custom_path_input.pop();
-                                    }
-                                    _ => {}
+                            InstallerStep::ConfigurePath => match key.code {
+                                KeyCode::Esc => {
+                                    app.installer_step = InstallerStep::Main;
                                 }
-                            }
+                                KeyCode::Enter => {
+                                    let path =
+                                        std::path::PathBuf::from(app.custom_path_input.trim());
+                                    if path.exists() {
+                                        app.core.chromium_engine.set_manual_path(path);
+                                        app.show_installer = false;
+                                        app.installer_status =
+                                            "Custom path configured!".to_string();
+                                        let _ = app.load_current_page();
+                                    } else {
+                                        app.installer_status = "Path does not exist!".to_string();
+                                    }
+                                }
+                                KeyCode::Char(c) => {
+                                    app.custom_path_input.push(c);
+                                }
+                                KeyCode::Backspace => {
+                                    app.custom_path_input.pop();
+                                }
+                                _ => {}
+                            },
                         }
                     } else if app.show_favorites {
                         if app.fav_input_mode {
@@ -369,33 +392,59 @@ fn run_loop<B: ratatui::backend::Backend>(
                                         app.fav_input_field = (app.fav_input_field + 1) % 4;
                                     }
                                 }
-                                KeyCode::Backspace => {
-                                    match app.fav_input_field {
-                                        0 => { app.fav_title_input.pop(); }
-                                        1 => { app.fav_url_input.pop(); }
-                                        2 => { app.fav_folder_input.pop(); }
-                                        3 => { app.fav_search_buffer.pop(); }
-                                        4 | 5 => { app.fav_path_input.pop(); }
-                                        _ => {}
+                                KeyCode::Backspace => match app.fav_input_field {
+                                    0 => {
+                                        app.fav_title_input.pop();
                                     }
-                                }
-                                KeyCode::Char(c) => {
-                                    match app.fav_input_field {
-                                        0 => { app.fav_title_input.push(c); }
-                                        1 => { app.fav_url_input.push(c); }
-                                        2 => { app.fav_folder_input.push(c); }
-                                        3 => { app.fav_search_buffer.push(c); }
-                                        4 | 5 => { app.fav_path_input.push(c); }
-                                        _ => {}
+                                    1 => {
+                                        app.fav_url_input.pop();
                                     }
-                                }
+                                    2 => {
+                                        app.fav_folder_input.pop();
+                                    }
+                                    3 => {
+                                        app.fav_search_buffer.pop();
+                                    }
+                                    4 | 5 => {
+                                        app.fav_path_input.pop();
+                                    }
+                                    _ => {}
+                                },
+                                KeyCode::Char(c) => match app.fav_input_field {
+                                    0 => {
+                                        app.fav_title_input.push(c);
+                                    }
+                                    1 => {
+                                        app.fav_url_input.push(c);
+                                    }
+                                    2 => {
+                                        app.fav_folder_input.push(c);
+                                    }
+                                    3 => {
+                                        app.fav_search_buffer.push(c);
+                                    }
+                                    4 | 5 => {
+                                        app.fav_path_input.push(c);
+                                    }
+                                    _ => {}
+                                },
                                 KeyCode::Enter => {
                                     match app.fav_input_field {
-                                        0 | 1 | 2 => {
+                                        0..=2 => {
                                             if !app.fav_url_input.trim().is_empty() {
-                                                let title = if app.fav_title_input.trim().is_empty() { "Untitled" } else { &app.fav_title_input };
-                                                let _ = app.favorites_mgr.add(title, &app.fav_url_input, &app.fav_folder_input);
-                                                app.status_message = "Favorite added successfully!".to_string();
+                                                let title = if app.fav_title_input.trim().is_empty()
+                                                {
+                                                    "Untitled"
+                                                } else {
+                                                    &app.fav_title_input
+                                                };
+                                                let _ = app.favorites_mgr.add(
+                                                    title,
+                                                    &app.fav_url_input,
+                                                    &app.fav_folder_input,
+                                                );
+                                                app.status_message =
+                                                    "Favorite added successfully!".to_string();
                                             }
                                             app.fav_input_mode = false;
                                         }
@@ -404,17 +453,35 @@ fn run_loop<B: ratatui::backend::Backend>(
                                         }
                                         4 => {
                                             // Import
-                                            match app.favorites_mgr.import_from_file(app.fav_path_input.trim()) {
-                                                Ok(_) => { app.status_message = "Favorites imported!".to_string(); }
-                                                Err(e) => { app.status_message = format!("Import failed: {}", e); }
+                                            match app
+                                                .favorites_mgr
+                                                .import_from_file(app.fav_path_input.trim())
+                                            {
+                                                Ok(_) => {
+                                                    app.status_message =
+                                                        "Favorites imported!".to_string();
+                                                }
+                                                Err(e) => {
+                                                    app.status_message =
+                                                        format!("Import failed: {}", e);
+                                                }
                                             }
                                             app.fav_input_mode = false;
                                         }
                                         5 => {
                                             // Export
-                                            match app.favorites_mgr.export_to_file(app.fav_path_input.trim()) {
-                                                Ok(_) => { app.status_message = "Favorites exported!".to_string(); }
-                                                Err(e) => { app.status_message = format!("Export failed: {}", e); }
+                                            match app
+                                                .favorites_mgr
+                                                .export_to_file(app.fav_path_input.trim())
+                                            {
+                                                Ok(_) => {
+                                                    app.status_message =
+                                                        "Favorites exported!".to_string();
+                                                }
+                                                Err(e) => {
+                                                    app.status_message =
+                                                        format!("Export failed: {}", e);
+                                                }
                                             }
                                             app.fav_input_mode = false;
                                         }
@@ -452,7 +519,8 @@ fn run_loop<B: ratatui::backend::Backend>(
                                         let selected_url = items[app.fav_selected_idx].url.clone();
                                         let _ = app.favorites_mgr.remove(&selected_url);
                                         app.status_message = "Favorite removed.".to_string();
-                                        app.fav_selected_idx = app.fav_selected_idx.saturating_sub(1);
+                                        app.fav_selected_idx =
+                                            app.fav_selected_idx.saturating_sub(1);
                                     }
                                 }
                                 KeyCode::Char('/') | KeyCode::Char('s') | KeyCode::Char('S') => {
@@ -463,7 +531,9 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 KeyCode::Char('f') | KeyCode::Char('F') => {
                                     // Cycle folder filter
                                     let folders = app.favorites_mgr.folders();
-                                    if let Some(pos) = folders.iter().position(|f| f == &app.fav_folder_filter) {
+                                    if let Some(pos) =
+                                        folders.iter().position(|f| f == &app.fav_folder_filter)
+                                    {
                                         let next_pos = (pos + 1) % folders.len();
                                         app.fav_folder_filter = folders[next_pos].clone();
                                     } else {
@@ -476,7 +546,10 @@ fn run_loop<B: ratatui::backend::Backend>(
                                     app.fav_input_field = 4;
                                     app.fav_path_input = "favorites_import.json".to_string();
                                 }
-                                KeyCode::Char('x') | KeyCode::Char('X') | KeyCode::Char('e') | KeyCode::Char('E') => {
+                                KeyCode::Char('x')
+                                | KeyCode::Char('X')
+                                | KeyCode::Char('e')
+                                | KeyCode::Char('E') => {
                                     app.fav_input_mode = true;
                                     app.fav_input_field = 5;
                                     app.fav_path_input = "favorites_export.json".to_string();
@@ -502,20 +575,24 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 KeyCode::Tab => {
                                     app.hist_input_field = (app.hist_input_field + 1) % 2;
                                 }
-                                KeyCode::Backspace => {
-                                    match app.hist_input_field {
-                                        0 => { app.hist_search_buffer.pop(); }
-                                        1 => { app.hist_domain_filter.pop(); }
-                                        _ => {}
+                                KeyCode::Backspace => match app.hist_input_field {
+                                    0 => {
+                                        app.hist_search_buffer.pop();
                                     }
-                                }
-                                KeyCode::Char(c) => {
-                                    match app.hist_input_field {
-                                        0 => { app.hist_search_buffer.push(c); }
-                                        1 => { app.hist_domain_filter.push(c); }
-                                        _ => {}
+                                    1 => {
+                                        app.hist_domain_filter.pop();
                                     }
-                                }
+                                    _ => {}
+                                },
+                                KeyCode::Char(c) => match app.hist_input_field {
+                                    0 => {
+                                        app.hist_search_buffer.push(c);
+                                    }
+                                    1 => {
+                                        app.hist_domain_filter.push(c);
+                                    }
+                                    _ => {}
+                                },
                                 KeyCode::Enter => {
                                     app.hist_input_mode = false;
                                 }
@@ -570,8 +647,10 @@ fn run_loop<B: ratatui::backend::Backend>(
                                     if !items.is_empty() && app.hist_selected_idx < items.len() {
                                         if let Some(id) = items[app.hist_selected_idx].id {
                                             let _ = app.history_mgr.delete_selected(id);
-                                            app.status_message = "History item deleted.".to_string();
-                                            app.hist_selected_idx = app.hist_selected_idx.saturating_sub(1);
+                                            app.status_message =
+                                                "History item deleted.".to_string();
+                                            app.hist_selected_idx =
+                                                app.hist_selected_idx.saturating_sub(1);
                                         }
                                     }
                                 }
@@ -583,14 +662,27 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 }
                                 KeyCode::Char('i') | KeyCode::Char('I') => {
                                     match app.history_mgr.import_from_file("history_import.json") {
-                                        Ok(_) => { app.status_message = "History imported!".to_string(); }
-                                        Err(e) => { app.status_message = format!("Import failed: {}", e); }
+                                        Ok(_) => {
+                                            app.status_message = "History imported!".to_string();
+                                        }
+                                        Err(e) => {
+                                            app.status_message = format!("Import failed: {}", e);
+                                        }
                                     }
                                 }
-                                KeyCode::Char('x') | KeyCode::Char('X') | KeyCode::Char('e') | KeyCode::Char('E') => {
+                                KeyCode::Char('x')
+                                | KeyCode::Char('X')
+                                | KeyCode::Char('e')
+                                | KeyCode::Char('E') => {
                                     match app.history_mgr.export_to_file("history_export.json") {
-                                        Ok(_) => { app.status_message = "History exported to history_export.json!".to_string(); }
-                                        Err(e) => { app.status_message = format!("Export failed: {}", e); }
+                                        Ok(_) => {
+                                            app.status_message =
+                                                "History exported to history_export.json!"
+                                                    .to_string();
+                                        }
+                                        Err(e) => {
+                                            app.status_message = format!("Export failed: {}", e);
+                                        }
                                     }
                                 }
                                 KeyCode::Enter => {
@@ -667,7 +759,9 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 self_render_viewport(app);
                             }
                             KeyCode::Char('w') | KeyCode::Char('W') => {
-                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) =
+                                    &mut app.tabs[app.active_tab_idx].content
+                                {
                                     mesh.rotate_x(0.1);
                                 } else {
                                     if app.tabs.len() > 1 {
@@ -675,23 +769,30 @@ fn run_loop<B: ratatui::backend::Backend>(
                                         if app.active_tab_idx >= app.tabs.len() {
                                             app.active_tab_idx = app.tabs.len() - 1;
                                         }
-                                        app.address_buffer = app.tabs[app.active_tab_idx].url.clone();
+                                        app.address_buffer =
+                                            app.tabs[app.active_tab_idx].url.clone();
                                         self_render_viewport(app);
                                     }
                                 }
                             }
                             KeyCode::Char('s') | KeyCode::Char('S') => {
-                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) =
+                                    &mut app.tabs[app.active_tab_idx].content
+                                {
                                     mesh.rotate_x(-0.1);
                                 }
                             }
                             KeyCode::Char('a') | KeyCode::Char('A') => {
-                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) =
+                                    &mut app.tabs[app.active_tab_idx].content
+                                {
                                     mesh.rotate_y(-0.1);
                                 }
                             }
                             KeyCode::Char('d') | KeyCode::Char('D') => {
-                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) =
+                                    &mut app.tabs[app.active_tab_idx].content
+                                {
                                     mesh.rotate_y(0.1);
                                 }
                             }
@@ -699,7 +800,9 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 let current_idx = app.tabs[app.active_tab_idx].history_idx;
                                 if current_idx > 0 {
                                     app.tabs[app.active_tab_idx].history_idx -= 1;
-                                    let prev_url = app.tabs[app.active_tab_idx].history[current_idx - 1].clone();
+                                    let prev_url = app.tabs[app.active_tab_idx].history
+                                        [current_idx - 1]
+                                        .clone();
                                     app.tabs[app.active_tab_idx].url = prev_url;
                                     let _ = app.load_current_page();
                                 } else {
@@ -711,7 +814,9 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 let hist_len = app.tabs[app.active_tab_idx].history.len();
                                 if current_idx + 1 < hist_len {
                                     app.tabs[app.active_tab_idx].history_idx += 1;
-                                    let next_url = app.tabs[app.active_tab_idx].history[current_idx + 1].clone();
+                                    let next_url = app.tabs[app.active_tab_idx].history
+                                        [current_idx + 1]
+                                        .clone();
                                     app.tabs[app.active_tab_idx].url = next_url;
                                     let _ = app.load_current_page();
                                 } else {
@@ -734,66 +839,110 @@ fn run_loop<B: ratatui::backend::Backend>(
                             KeyCode::Char('g') | KeyCode::Char('G') => {
                                 let current_url = app.tabs[app.active_tab_idx].url.clone();
                                 let current_title = app.tabs[app.active_tab_idx].title.clone();
-                                let _ = app.favorites_mgr.add(&current_title, &current_url, "General");
+                                let _ =
+                                    app.favorites_mgr
+                                        .add(&current_title, &current_url, "General");
                                 app.status_message = "Added current page to favorites!".to_string();
                             }
                             KeyCode::Char('p') | KeyCode::Char('P') => {
-                                let filename = app.tabs[app.active_tab_idx].url.split('/').next_back().unwrap_or("index.html").to_string();
-                                let clean_filename = if filename.is_empty() || filename.contains('?') { "index.html".to_string() } else { filename };
+                                let filename = app.tabs[app.active_tab_idx]
+                                    .url
+                                    .split('/')
+                                    .next_back()
+                                    .unwrap_or("index.html")
+                                    .to_string();
+                                let clean_filename =
+                                    if filename.is_empty() || filename.contains('?') {
+                                        "index.html".to_string()
+                                    } else {
+                                        filename
+                                    };
                                 if app.private_mode {
-                                    app.temp_downloads.push((clean_filename.clone(), 0.0, "Initiating private download...".to_string()));
+                                    app.temp_downloads.push((
+                                        clean_filename.clone(),
+                                        0.0,
+                                        "Initiating private download...".to_string(),
+                                    ));
                                 } else {
-                                    app.downloads.push((clean_filename.clone(), 0.0, "Initiating download...".to_string()));
+                                    app.downloads.push((
+                                        clean_filename.clone(),
+                                        0.0,
+                                        "Initiating download...".to_string(),
+                                    ));
                                 }
                                 app.download_active = true;
                                 app.status_message = format!("Downloading {}...", clean_filename);
                             }
                             KeyCode::Char('k') | KeyCode::Char('K') => {
                                 let next_preset = match app.theme_preset {
-                                    crate::browser::theme::ThemePreset::Default => crate::browser::theme::ThemePreset::Dracula,
-                                    crate::browser::theme::ThemePreset::Dracula => crate::browser::theme::ThemePreset::Nord,
-                                    crate::browser::theme::ThemePreset::Nord => crate::browser::theme::ThemePreset::Ocean,
-                                    crate::browser::theme::ThemePreset::Ocean => crate::browser::theme::ThemePreset::Monokai,
-                                    crate::browser::theme::ThemePreset::Monokai => crate::browser::theme::ThemePreset::Light,
-                                    crate::browser::theme::ThemePreset::Light => crate::browser::theme::ThemePreset::Default,
+                                    crate::browser::theme::ThemePreset::Default => {
+                                        crate::browser::theme::ThemePreset::Dracula
+                                    }
+                                    crate::browser::theme::ThemePreset::Dracula => {
+                                        crate::browser::theme::ThemePreset::Nord
+                                    }
+                                    crate::browser::theme::ThemePreset::Nord => {
+                                        crate::browser::theme::ThemePreset::Ocean
+                                    }
+                                    crate::browser::theme::ThemePreset::Ocean => {
+                                        crate::browser::theme::ThemePreset::Monokai
+                                    }
+                                    crate::browser::theme::ThemePreset::Monokai => {
+                                        crate::browser::theme::ThemePreset::Light
+                                    }
+                                    crate::browser::theme::ThemePreset::Light => {
+                                        crate::browser::theme::ThemePreset::Default
+                                    }
                                 };
                                 app.theme_preset = next_preset;
-                                app.theme = crate::browser::theme::AppTheme::from_preset(next_preset);
-                                app.status_message = format!("Switched theme to {}", app.theme.name);
+                                app.theme =
+                                    crate::browser::theme::AppTheme::from_preset(next_preset);
+                                app.status_message =
+                                    format!("Switched theme to {}", app.theme.name);
                             }
                             KeyCode::Char('v') | KeyCode::Char('V') => {
                                 // Toggle Private Mode (Anonymous mode)
                                 app.private_mode = !app.private_mode;
                                 if app.private_mode {
-                                    app.status_message = "ANONYMOUS BROWSING MODE ACTIVE".to_string();
+                                    app.status_message =
+                                        "ANONYMOUS BROWSING MODE ACTIVE".to_string();
                                 } else {
                                     app.temp_downloads.clear();
-                                    app.status_message = "Returned to standard browsing mode".to_string();
+                                    app.status_message =
+                                        "Returned to standard browsing mode".to_string();
                                 }
                                 let _ = app.load_current_page();
                             }
                             KeyCode::Up => {
-                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) =
+                                    &mut app.tabs[app.active_tab_idx].content
+                                {
                                     mesh.rotate_x(0.1);
                                 } else if app.scroll_offset > 0 {
                                     app.scroll_offset -= 1;
                                 }
                             }
                             KeyCode::Down => {
-                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) =
+                                    &mut app.tabs[app.active_tab_idx].content
+                                {
                                     mesh.rotate_x(-0.1);
                                 } else {
                                     app.scroll_offset += 1;
                                 }
                             }
                             KeyCode::Left => {
-                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) =
+                                    &mut app.tabs[app.active_tab_idx].content
+                                {
                                     mesh.rotate_y(-0.1);
                                 } else {
                                     let current_idx = app.tabs[app.active_tab_idx].history_idx;
                                     if current_idx > 0 {
                                         app.tabs[app.active_tab_idx].history_idx -= 1;
-                                        let prev_url = app.tabs[app.active_tab_idx].history[current_idx - 1].clone();
+                                        let prev_url = app.tabs[app.active_tab_idx].history
+                                            [current_idx - 1]
+                                            .clone();
                                         app.tabs[app.active_tab_idx].url = prev_url;
                                         let _ = app.load_current_page();
                                     } else {
@@ -802,14 +951,18 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 }
                             }
                             KeyCode::Right => {
-                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) = &mut app.tabs[app.active_tab_idx].content {
+                                if let Some(PageContent::Mesh3DPreview { mesh, .. }) =
+                                    &mut app.tabs[app.active_tab_idx].content
+                                {
                                     mesh.rotate_y(0.1);
                                 } else {
                                     let current_idx = app.tabs[app.active_tab_idx].history_idx;
                                     let hist_len = app.tabs[app.active_tab_idx].history.len();
                                     if current_idx + 1 < hist_len {
                                         app.tabs[app.active_tab_idx].history_idx += 1;
-                                        let next_url = app.tabs[app.active_tab_idx].history[current_idx + 1].clone();
+                                        let next_url = app.tabs[app.active_tab_idx].history
+                                            [current_idx + 1]
+                                            .clone();
                                         app.tabs[app.active_tab_idx].url = next_url;
                                         let _ = app.load_current_page();
                                     } else {
@@ -818,10 +971,16 @@ fn run_loop<B: ratatui::backend::Backend>(
                                 }
                             }
                             KeyCode::Enter => {
-                                if let Some(PageContent::ArchivePreview { path, files }) = &app.tabs[app.active_tab_idx].content {
+                                if let Some(PageContent::ArchivePreview { path, files }) =
+                                    &app.tabs[app.active_tab_idx].content
+                                {
                                     if app.scroll_offset < files.len() {
                                         let selected_file = &files[app.scroll_offset];
-                                        let archive_url = format!("{}::{}", path.to_string_lossy(), selected_file);
+                                        let archive_url = format!(
+                                            "{}::{}",
+                                            path.to_string_lossy(),
+                                            selected_file
+                                        );
                                         app.tabs[app.active_tab_idx].url = archive_url.clone();
                                         let mut hist = app.tabs[app.active_tab_idx].history.clone();
                                         hist.push(archive_url);
@@ -835,24 +994,24 @@ fn run_loop<B: ratatui::backend::Backend>(
                         }
                     }
                 }
-                Event::Mouse(mouse_event) => {
-                    if mouse_event.kind == MouseEventKind::Down(MouseButton::Left) {
-                        let r = mouse_event.row;
-                        let c = mouse_event.column;
+                Event::Mouse(mouse_event)
+                    if mouse_event.kind == MouseEventKind::Down(MouseButton::Left) =>
+                {
+                    let r = mouse_event.row;
+                    let c = mouse_event.column;
 
-                        if r == 1 {
-                            if (20..=80).contains(&c) {
-                                let click_idx = ((c - 20) / 18) as usize;
-                                if click_idx < app.tabs.len() {
-                                    app.active_tab_idx = click_idx;
-                                    app.address_buffer = app.tabs[app.active_tab_idx].url.clone();
-                                    self_render_viewport(app);
-                                }
+                    if r == 1 {
+                        if (20..=80).contains(&c) {
+                            let click_idx = ((c - 20) / 18) as usize;
+                            if click_idx < app.tabs.len() {
+                                app.active_tab_idx = click_idx;
+                                app.address_buffer = app.tabs[app.active_tab_idx].url.clone();
+                                self_render_viewport(app);
                             }
-                        } else if (3..=5).contains(&r) {
-                            app.input_mode = true;
-                            app.address_buffer = app.tabs[app.active_tab_idx].url.clone();
                         }
+                    } else if (3..=5).contains(&r) {
+                        app.input_mode = true;
+                        app.address_buffer = app.tabs[app.active_tab_idx].url.clone();
                     }
                 }
                 _ => {}
@@ -870,12 +1029,18 @@ pub fn ui(f: &mut Frame, app: &mut BrowserApp) {
 
     // Theme and style settings
     let primary_style = if app.private_mode {
-        Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(Color::Magenta)
+            .add_modifier(Modifier::BOLD)
     } else {
-        Style::default().fg(app.theme.primary).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(app.theme.primary)
+            .add_modifier(Modifier::BOLD)
     };
 
-    let highlight_style = Style::default().fg(app.theme.highlight).add_modifier(Modifier::BOLD);
+    let highlight_style = Style::default()
+        .fg(app.theme.highlight)
+        .add_modifier(Modifier::BOLD);
     let border_style = if app.private_mode {
         Style::default().fg(Color::Magenta)
     } else {
@@ -896,27 +1061,53 @@ pub fn ui(f: &mut Frame, app: &mut BrowserApp) {
     let mut tabs_spans = Vec::new();
     for (i, tab) in app.tabs.iter().enumerate() {
         let style = if i == app.active_tab_idx {
-            Style::default().fg(Color::Yellow).bg(Color::DarkGray).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(Color::Yellow)
+                .bg(Color::DarkGray)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(Color::Gray)
         };
-        tabs_spans.push(Span::styled(format!(" [ Tab {}: {} ] ", i + 1, tab.title), style));
+        tabs_spans.push(Span::styled(
+            format!(" [ Tab {}: {} ] ", i + 1, tab.title),
+            style,
+        ));
     }
     let engine_mode = format!(" Engine: {:?} ", app.core.current_engine);
     let mut top_spans = vec![
-        Span::styled(if app.private_mode { " iSearch CLI™ [PRIVATE] " } else { " iSearch Browser™ " }, primary_style),
+        Span::styled(
+            if app.private_mode {
+                " iSearch CLI™ [PRIVATE] "
+            } else {
+                " iSearch Browser™ "
+            },
+            primary_style,
+        ),
         Span::raw(" │ "),
     ];
     top_spans.extend(tabs_spans);
     top_spans.push(Span::raw(" │ "));
-    top_spans.push(Span::styled(engine_mode, Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
+    top_spans.push(Span::styled(
+        engine_mode,
+        Style::default()
+            .fg(Color::Green)
+            .add_modifier(Modifier::BOLD),
+    ));
 
-    let top_bar = Paragraph::new(Line::from(top_spans))
-        .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).border_style(border_style));
+    let top_bar = Paragraph::new(Line::from(top_spans)).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(border_style),
+    );
     f.render_widget(top_bar, chunks[0]);
 
     // 2. Address bar
-    let addr_border_style = if app.input_mode { highlight_style } else { border_style };
+    let addr_border_style = if app.input_mode {
+        highlight_style
+    } else {
+        border_style
+    };
     let addr_text = if app.input_mode {
         format!("{}█", app.address_buffer)
     } else {
@@ -926,7 +1117,12 @@ pub fn ui(f: &mut Frame, app: &mut BrowserApp) {
         Span::styled(" URL: ", Style::default().fg(Color::Gray)),
         Span::raw(addr_text),
     ]))
-    .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).border_style(addr_border_style));
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(addr_border_style),
+    );
     f.render_widget(addr_bar, chunks[1]);
 
     // 3. Main content
@@ -940,8 +1136,7 @@ pub fn ui(f: &mut Frame, app: &mut BrowserApp) {
 
     if app.show_installer {
         let installer_content = match app.installer_step {
-            InstallerStep::Main => {
-                "\
+            InstallerStep::Main => "\
 Chromium-compatible browser not found.\n\n\
 Modern JavaScript websites require a Chromium-compatible rendering backend.\n\n\
 Supported browsers:\n\
@@ -956,10 +1151,9 @@ Choose:\n\
 [1] Open the official download page\n\
 [2] Show installation commands (when available)\n\
 [3] Configure an existing executable\n\
-[4] Continue using Native Rendering Mode".to_string()
-            }
-            InstallerStep::DownloadPage => {
-                "\
+[4] Continue using Native Rendering Mode"
+                .to_string(),
+            InstallerStep::DownloadPage => "\
 Official Browser Download Pages:\n\n\
 - Google Chrome: https://www.google.com/chrome/\n\
 - Chromium: https://www.chromium.org/getting-involved/download-chromium/\n\
@@ -967,10 +1161,11 @@ Official Browser Download Pages:\n\n\
 - Brave: https://brave.com/\n\
 - Vivaldi: https://vivaldi.com/\n\
 - Opera: https://www.opera.com/\n\n\
-Press [Backspace] or [B] to go back.".to_string()
-            }
+Press [Backspace] or [B] to go back."
+                .to_string(),
             InstallerStep::InstallCommands => {
-                app.core.chromium_engine.get_guided_install_instructions() + "\n\nPress [Backspace] or [B] to go back."
+                app.core.chromium_engine.get_guided_install_instructions()
+                    + "\n\nPress [Backspace] or [B] to go back."
             }
             InstallerStep::ConfigurePath => {
                 format!(
@@ -997,9 +1192,13 @@ Press [Backspace] or [B] to go back.".to_string()
 ░█▀▀░█▀█░▀▄▀░█░█░█▀▄░░█░░░█░░█▀▀░▀▀█
 ░▀░░░▀░▀░░▀░░▀▀▀░▀░▀░▀▀▀░░▀░░▀▀▀░▀▀▀
                  iSearch CLI™ FAVORITES PANEL
-\n".to_string();
+\n"
+        .to_string();
 
-        bookmark_content.push_str(&format!("  [ Filter Folder: {} ]  [ Search: {} ]\n\n", app.fav_folder_filter, app.fav_search_buffer));
+        bookmark_content.push_str(&format!(
+            "  [ Filter Folder: {} ]  [ Search: {} ]\n\n",
+            app.fav_folder_filter, app.fav_search_buffer
+        ));
 
         if app.fav_input_mode {
             bookmark_content.push_str("  --- ENTER NEW FAVORITE DETAILS ---\n");
@@ -1018,12 +1217,20 @@ Press [Backspace] or [B] to go back.".to_string()
                     bookmark_content.push_str(&format!("  {}\n", field));
                 }
             }
-            bookmark_content.push_str("\n  Press [Tab] to cycle, [Enter] to save/confirm, [Esc] to cancel.\n");
+            bookmark_content
+                .push_str("\n  Press [Tab] to cycle, [Enter] to save/confirm, [Esc] to cancel.\n");
         } else {
             let items = app.get_favorites_filtered();
             for (idx, item) in items.iter().enumerate() {
-                let indicator = if idx == app.fav_selected_idx { "➔  " } else { "   " };
-                let line_str = format!("{} [{}] {} - {}", indicator, item.folder, item.title, item.url);
+                let indicator = if idx == app.fav_selected_idx {
+                    "➔  "
+                } else {
+                    "   "
+                };
+                let line_str = format!(
+                    "{} [{}] {} - {}",
+                    indicator, item.folder, item.title, item.url
+                );
                 bookmark_content.push_str(&format!("{}\n", line_str));
             }
             if items.is_empty() {
@@ -1047,10 +1254,13 @@ Press [Backspace] or [B] to go back.".to_string()
 ░█▀█░░█░░▀▀█░░█░░█░█░█▀▄░░█░
 ░▀░▀░▀▀▀░▀▀▀░░▀░░▀▀▀░▀░▀░░▀░
                 iSearch CLI™ HISTORY MANAGER
-\n".to_string();
+\n"
+        .to_string();
 
-        history_content.push_str(&format!("  [ Search: {} ]  [ Filter Domain: {} ]  [ Sort: {} ]  [ Group: {} ]\n\n",
-            app.hist_search_buffer, app.hist_domain_filter, app.hist_sort_by, app.hist_group_by));
+        history_content.push_str(&format!(
+            "  [ Search: {} ]  [ Filter Domain: {} ]  [ Sort: {} ]  [ Group: {} ]\n\n",
+            app.hist_search_buffer, app.hist_domain_filter, app.hist_sort_by, app.hist_group_by
+        ));
 
         if app.hist_input_mode {
             history_content.push_str("  --- ENTER FILTER DETAILS ---\n");
@@ -1065,7 +1275,8 @@ Press [Backspace] or [B] to go back.".to_string()
                     history_content.push_str(&format!("  {}\n", field));
                 }
             }
-            history_content.push_str("\n  Press [Tab] to cycle, [Enter] to submit, [Esc] to cancel.\n");
+            history_content
+                .push_str("\n  Press [Tab] to cycle, [Enter] to submit, [Esc] to cancel.\n");
         } else {
             let items = app.get_history_filtered();
             if items.is_empty() {
@@ -1077,8 +1288,15 @@ Press [Backspace] or [B] to go back.".to_string()
                         for (date, grp_items) in groups {
                             history_content.push_str(&format!("  📅 Date: {}\n", date));
                             for (orig_idx, item) in grp_items {
-                                let indicator = if orig_idx == app.hist_selected_idx { "➔ " } else { "  " };
-                                history_content.push_str(&format!("    {} - [{}] {} ({})\n", indicator, item.visited_at, item.title, item.url));
+                                let indicator = if orig_idx == app.hist_selected_idx {
+                                    "➔ "
+                                } else {
+                                    "  "
+                                };
+                                history_content.push_str(&format!(
+                                    "    {} - [{}] {} ({})\n",
+                                    indicator, item.visited_at, item.title, item.url
+                                ));
                             }
                         }
                     }
@@ -1087,16 +1305,30 @@ Press [Backspace] or [B] to go back.".to_string()
                         for (domain, grp_items) in groups {
                             history_content.push_str(&format!("  🌐 Domain: {}\n", domain));
                             for (orig_idx, item) in grp_items {
-                                let indicator = if orig_idx == app.hist_selected_idx { "➔ " } else { "  " };
-                                history_content.push_str(&format!("    {} - [{}] {} ({})\n", indicator, item.visited_at, item.title, item.url));
+                                let indicator = if orig_idx == app.hist_selected_idx {
+                                    "➔ "
+                                } else {
+                                    "  "
+                                };
+                                history_content.push_str(&format!(
+                                    "    {} - [{}] {} ({})\n",
+                                    indicator, item.visited_at, item.title, item.url
+                                ));
                             }
                         }
                     }
                     _ => {
                         // Standard list
                         for (idx, item) in items.iter().enumerate() {
-                            let indicator = if idx == app.hist_selected_idx { "➔  " } else { "   " };
-                            let line_str = format!("{} [{}] {} - {} (visits: {})", indicator, item.visited_at, item.title, item.url, item.visit_count);
+                            let indicator = if idx == app.hist_selected_idx {
+                                "➔  "
+                            } else {
+                                "   "
+                            };
+                            let line_str = format!(
+                                "{} [{}] {} - {} (visits: {})",
+                                indicator, item.visited_at, item.title, item.url, item.visit_count
+                            );
                             history_content.push_str(&format!("{}\n", line_str));
                         }
                     }
@@ -1105,8 +1337,11 @@ Press [Backspace] or [B] to go back.".to_string()
 
             history_content.push_str("\n  Keyboard Shortcuts:\n");
             history_content.push_str("    [/ / S] Search  [F] Domain Filter  [R] Toggle Sort  [G] Toggle Group (Date/Domain)\n");
-            history_content.push_str("    [D / Del] Delete selected  [C / Backspace] Clear ALL history\n");
-            history_content.push_str("    [I] Import history_import.json  [E / X] Export history_export.json\n");
+            history_content
+                .push_str("    [D / Del] Delete selected  [C / Backspace] Clear ALL history\n");
+            history_content.push_str(
+                "    [I] Import history_import.json  [E / X] Export history_export.json\n",
+            );
             history_content.push_str("    [Esc / Y] Close panel  [Enter] Go to History URL\n");
         }
 
@@ -1153,40 +1388,74 @@ Under the hood:\n\
     // If private mode is toggled but we have no tabs yet, render private browsing ASCII banner!
     if app.private_mode && app.tabs[app.active_tab_idx].content.is_none() {
         display_lines.push(Line::raw(""));
-        display_lines.push(Line::from(vec![
-            Span::styled("░█▀█░█▀█░█▀█░█▀█░█░█░█▄█░█▀█░█░█░█▀▀░░░█▀▄░█▀▄░█▀█░█░█░█▀▀░▀█▀░█▀█░█▀▀", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD))
-        ]));
-        display_lines.push(Line::from(vec![
-            Span::styled("░█▀█░█░█░█░█░█░█░░█░░█░█░█░█░█░█░▀▀█░░░█▀▄░█▀▄░█░█░█▄█░▀▀█░░█░░█░█░█░█", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD))
-        ]));
-        display_lines.push(Line::from(vec![
-            Span::styled("░▀░▀░▀░▀░▀▀▀░▀░▀░░▀░░▀░▀░▀▀▀░▀▀▀░▀▀▀░░░▀▀░░▀░▀░▀▀▀░▀░▀░▀▀▀░▀▀▀░▀░▀░▀▀▀", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD))
-        ]));
+        display_lines.push(Line::from(vec![Span::styled(
+            "░█▀█░█▀█░█▀█░█▀█░█░█░█▄█░█▀█░█░█░█▀▀░░░█▀▄░█▀▄░█▀█░█░█░█▀▀░▀█▀░█▀█░█▀▀",
+            Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
+        )]));
+        display_lines.push(Line::from(vec![Span::styled(
+            "░█▀█░█░█░█░█░█░█░░█░░█░█░█░█░█░█░▀▀█░░░█▀▄░█▀▄░█░█░█▄█░▀▀█░░█░░█░█░█░█",
+            Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
+        )]));
+        display_lines.push(Line::from(vec![Span::styled(
+            "░▀░▀░▀░▀░▀▀▀░▀░▀░░▀░░▀░▀░▀▀▀░▀▀▀░▀▀▀░░░▀▀░░▀░▀░▀▀▀░▀░▀░▀▀▀░▀▀▀░▀░▀░▀▀▀",
+            Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
+        )]));
         display_lines.push(Line::raw(""));
-        display_lines.push(Line::raw("  🕵️ You are now in Private / Anonymous Browsing Mode."));
+        display_lines.push(Line::raw(
+            "  🕵️ You are now in Private / Anonymous Browsing Mode.",
+        ));
         display_lines.push(Line::raw("  - No history is written or recorded."));
-        display_lines.push(Line::raw("  - Cookies and caches are isolated and automatically deleted when you close."));
-        display_lines.push(Line::raw("  - No bookmark suggestions or session states are restored."));
-        display_lines.push(Line::raw("  - Downloads are stored in a temporary, in-memory list only."));
+        display_lines.push(Line::raw(
+            "  - Cookies and caches are isolated and automatically deleted when you close.",
+        ));
+        display_lines.push(Line::raw(
+            "  - No bookmark suggestions or session states are restored.",
+        ));
+        display_lines.push(Line::raw(
+            "  - Downloads are stored in a temporary, in-memory list only.",
+        ));
         display_lines.push(Line::raw(""));
-        display_lines.push(Line::raw("  Press [L] to search or visit any web page or local file!"));
+        display_lines.push(Line::raw(
+            "  Press [L] to search or visit any web page or local file!",
+        ));
     } else if let Some(content) = &app.tabs[app.active_tab_idx].content {
         match content {
             PageContent::Html { parsed_nodes, .. } => {
-                display_lines = render_html_to_lines(parsed_nodes, content_area.width as usize, CssStyle::default());
+                display_lines = render_html_to_lines(
+                    parsed_nodes,
+                    content_area.width as usize,
+                    CssStyle::default(),
+                );
             }
             PageContent::Markdown { raw_md, .. } => {
                 display_lines = render_markdown_to_lines(raw_md, content_area.width as usize);
             }
             PageContent::Directory { path, entries } => {
                 display_lines.push(Line::from(vec![
-                    Span::styled("Directory Listing: ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "Directory Listing: ",
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::raw(path.to_string_lossy().to_string()),
                 ]));
                 display_lines.push(Line::raw(""));
                 for (name, is_dir) in entries {
                     let icon = if *is_dir { "📁 " } else { "📄 " };
-                    let name_style = if *is_dir { Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD) } else { Style::default() };
+                    let name_style = if *is_dir {
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default()
+                    };
                     display_lines.push(Line::from(vec![
                         Span::raw(icon),
                         Span::styled(name.clone(), name_style),
@@ -1198,10 +1467,15 @@ Under the hood:\n\
                     display_lines.push(Line::raw(line.to_string()));
                 }
             }
-            PageContent::PdfPreview { metadata, text_preview, .. } => {
-                display_lines.push(Line::from(vec![
-                    Span::styled("PDF Document Preview", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))
-                ]));
+            PageContent::PdfPreview {
+                metadata,
+                text_preview,
+                ..
+            } => {
+                display_lines.push(Line::from(vec![Span::styled(
+                    "PDF Document Preview",
+                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                )]));
                 display_lines.push(Line::raw(""));
                 for (k, v) in metadata {
                     display_lines.push(Line::from(vec![
@@ -1213,14 +1487,23 @@ Under the hood:\n\
                 display_lines.push(Line::raw(text_preview.clone()));
             }
             PageContent::ArchivePreview { files, .. } => {
-                display_lines.push(Line::from(vec![
-                    Span::styled("Archive Contents (ZIP) - Scroll and Press [Enter] to open file:", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
-                ]));
+                display_lines.push(Line::from(vec![Span::styled(
+                    "Archive Contents (ZIP) - Scroll and Press [Enter] to open file:",
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                )]));
                 display_lines.push(Line::raw(""));
                 for (idx, file) in files.iter().enumerate() {
-                    let indicator = if idx == app.scroll_offset { "➔ 📦 " } else { "  📦 " };
+                    let indicator = if idx == app.scroll_offset {
+                        "➔ 📦 "
+                    } else {
+                        "  📦 "
+                    };
                     let style = if idx == app.scroll_offset {
-                        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD)
                     } else {
                         Style::default().fg(Color::Cyan)
                     };
@@ -1239,14 +1522,17 @@ Under the hood:\n\
                 );
             }
             PageContent::Mesh3DPreview { mesh, .. } => {
-                display_lines = mesh.render_to_lines(content_area.width as usize, content_area.height as usize);
+                display_lines =
+                    mesh.render_to_lines(content_area.width as usize, content_area.height as usize);
             }
             _ => {
                 display_lines.push(Line::raw("Preview not supported for this media type."));
             }
         }
     } else {
-        display_lines.push(Line::raw("No content loaded. Press [L] and enter a URL to start browsing."));
+        display_lines.push(Line::raw(
+            "No content loaded. Press [L] and enter a URL to start browsing.",
+        ));
     }
 
     // Scroll handling
@@ -1259,23 +1545,46 @@ Under the hood:\n\
     app.scroll_offset = offset;
 
     // Render downloads lists (normal and private)
-    let active_downloads = if app.private_mode { &app.temp_downloads } else { &app.downloads };
+    let active_downloads = if app.private_mode {
+        &app.temp_downloads
+    } else {
+        &app.downloads
+    };
     if !active_downloads.is_empty() {
         display_lines.push(Line::raw(""));
-        display_lines.push(Line::from(vec![
-            Span::styled(if app.private_mode { "--- Temporary Private Downloads ---" } else { "--- Active Downloads ---" }, Style::default().fg(app.theme.primary).add_modifier(Modifier::BOLD))
-        ]));
+        display_lines.push(Line::from(vec![Span::styled(
+            if app.private_mode {
+                "--- Temporary Private Downloads ---"
+            } else {
+                "--- Active Downloads ---"
+            },
+            Style::default()
+                .fg(app.theme.primary)
+                .add_modifier(Modifier::BOLD),
+        )]));
         for d in active_downloads {
             let filled = (d.1 * 10.0) as usize;
-            let bar = format!("  [ {}{} ]  {}", "█".repeat(filled), "░".repeat(10 - filled), d.2);
+            let bar = format!(
+                "  [ {}{} ]  {}",
+                "█".repeat(filled),
+                "░".repeat(10 - filled),
+                d.2
+            );
             display_lines.push(Line::from(vec![
-                Span::styled(format!("📁 File: {}  ", d.0), Style::default().fg(app.theme.text)),
+                Span::styled(
+                    format!("📁 File: {}  ", d.0),
+                    Style::default().fg(app.theme.text),
+                ),
                 Span::styled(bar, Style::default().fg(app.theme.success)),
             ]));
         }
     }
 
-    let scrolled_lines: Vec<Line<'_>> = display_lines.into_iter().skip(offset).take(content_area.height as usize).collect();
+    let scrolled_lines: Vec<Line<'_>> = display_lines
+        .into_iter()
+        .skip(offset)
+        .take(content_area.height as usize)
+        .collect();
     let viewport_p = Paragraph::new(scrolled_lines);
     f.render_widget(viewport_p, content_area);
 
@@ -1286,11 +1595,17 @@ Under the hood:\n\
         Span::styled(" [E: Switch Engine] ", Style::default().fg(Color::Gray)),
         Span::styled(" [T: New Tab] ", Style::default().fg(Color::Gray)),
         Span::styled(" [Tab: Next Tab] ", Style::default().fg(Color::Gray)),
-        Span::styled(" [V: Toggle Private Mode] ", Style::default().fg(Color::Gray)),
+        Span::styled(
+            " [V: Toggle Private Mode] ",
+            Style::default().fg(Color::Gray),
+        ),
         Span::styled(" [K: Cycle Theme] ", Style::default().fg(Color::Gray)),
         Span::styled(" [H: Toggle Help] ", Style::default().fg(Color::Gray)),
         Span::raw(" │ Status: "),
-        Span::styled(app.status_message.clone(), Style::default().fg(app.theme.highlight)),
+        Span::styled(
+            app.status_message.clone(),
+            Style::default().fg(app.theme.highlight),
+        ),
     ]))
     .style(Style::default().bg(Color::Black).fg(app.theme.text));
     f.render_widget(status_bar, chunks[3]);

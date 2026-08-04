@@ -1,8 +1,8 @@
-use std::env;
+use base64::Engine;
 use image::{DynamicImage, GenericImageView};
 use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
-use base64::Engine;
+use std::env;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TerminalGraphicsProtocol {
@@ -53,7 +53,12 @@ impl TerminalCapabilities {
         }
 
         if let Ok(term) = env::var("TERM") {
-            if term.contains("truecolor") || term.contains("24bit") || term.contains("kitty") || term.contains("alacritty") || term.contains("ghostty") {
+            if term.contains("truecolor")
+                || term.contains("24bit")
+                || term.contains("kitty")
+                || term.contains("alacritty")
+                || term.contains("ghostty")
+            {
                 return ColorSupport::TrueColor;
             }
             if term.contains("256color") {
@@ -77,7 +82,10 @@ impl TerminalCapabilities {
         }
 
         // 2. iTerm2 image protocol detection (iTerm2, WezTerm, Ghostty all support this)
-        if term_program.contains("iterm") || term_program.contains("wezterm") || term_program.contains("ghostty") {
+        if term_program.contains("iterm")
+            || term_program.contains("wezterm")
+            || term_program.contains("ghostty")
+        {
             return TerminalGraphicsProtocol::ITerm2;
         }
 
@@ -131,15 +139,9 @@ pub fn render_image_to_lines(
             // Sixel generation or half blocks fallback (half blocks is extremely fast and portable)
             render_half_blocks(&img, term_width, term_height)
         }
-        TerminalGraphicsProtocol::HalfBlocks => {
-            render_half_blocks(&img, term_width, term_height)
-        }
-        TerminalGraphicsProtocol::Braille => {
-            render_braille(&img, term_width, term_height)
-        }
-        TerminalGraphicsProtocol::Ascii => {
-            render_ascii(&img, term_width, term_height)
-        }
+        TerminalGraphicsProtocol::HalfBlocks => render_half_blocks(&img, term_width, term_height),
+        TerminalGraphicsProtocol::Braille => render_braille(&img, term_width, term_height),
+        TerminalGraphicsProtocol::Ascii => render_ascii(&img, term_width, term_height),
     }
 }
 
@@ -171,7 +173,11 @@ fn render_half_blocks(img: &DynamicImage, target_w: u32, target_h: u32) -> Vec<L
 }
 
 fn render_braille(img: &DynamicImage, target_w: u32, target_h: u32) -> Vec<Line<'static>> {
-    let resized = img.grayscale().resize_exact(target_w * 2, target_h * 4, image::imageops::FilterType::Nearest);
+    let resized = img.grayscale().resize_exact(
+        target_w * 2,
+        target_h * 4,
+        image::imageops::FilterType::Nearest,
+    );
     let mut lines = Vec::new();
 
     // Braille offset is 0x2800
@@ -180,14 +186,51 @@ fn render_braille(img: &DynamicImage, target_w: u32, target_h: u32) -> Vec<Line<
         for x in (0..resized.width()).step_by(2) {
             let mut val = 0u8;
             // Map 2x4 subgrid to braille bits
-            if y < resized.height() && x < resized.width() && resized.get_pixel(x, y)[0] > 127 { val |= 1; }
-            if y + 1 < resized.height() && x < resized.width() && resized.get_pixel(x, y + 1)[0] > 127 { val |= 2; }
-            if y + 2 < resized.height() && x < resized.width() && resized.get_pixel(x, y + 2)[0] > 127 { val |= 4; }
-            if y < resized.height() && x + 1 < resized.width() && resized.get_pixel(x + 1, y)[0] > 127 { val |= 8; }
-            if y + 1 < resized.height() && x + 1 < resized.width() && resized.get_pixel(x + 1, y + 1)[0] > 127 { val |= 16; }
-            if y + 2 < resized.height() && x + 1 < resized.width() && resized.get_pixel(x + 1, y + 2)[0] > 127 { val |= 32; }
-            if y + 3 < resized.height() && x < resized.width() && resized.get_pixel(x, y + 3)[0] > 127 { val |= 64; }
-            if y + 3 < resized.height() && x + 1 < resized.width() && resized.get_pixel(x + 1, y + 3)[0] > 127 { val |= 128; }
+            if y < resized.height() && x < resized.width() && resized.get_pixel(x, y)[0] > 127 {
+                val |= 1;
+            }
+            if y + 1 < resized.height()
+                && x < resized.width()
+                && resized.get_pixel(x, y + 1)[0] > 127
+            {
+                val |= 2;
+            }
+            if y + 2 < resized.height()
+                && x < resized.width()
+                && resized.get_pixel(x, y + 2)[0] > 127
+            {
+                val |= 4;
+            }
+            if y < resized.height()
+                && x + 1 < resized.width()
+                && resized.get_pixel(x + 1, y)[0] > 127
+            {
+                val |= 8;
+            }
+            if y + 1 < resized.height()
+                && x + 1 < resized.width()
+                && resized.get_pixel(x + 1, y + 1)[0] > 127
+            {
+                val |= 16;
+            }
+            if y + 2 < resized.height()
+                && x + 1 < resized.width()
+                && resized.get_pixel(x + 1, y + 2)[0] > 127
+            {
+                val |= 32;
+            }
+            if y + 3 < resized.height()
+                && x < resized.width()
+                && resized.get_pixel(x, y + 3)[0] > 127
+            {
+                val |= 64;
+            }
+            if y + 3 < resized.height()
+                && x + 1 < resized.width()
+                && resized.get_pixel(x + 1, y + 3)[0] > 127
+            {
+                val |= 128;
+            }
 
             let char_val = std::char::from_u32(0x2800 + val as u32).unwrap_or(' ');
             line_str.push(char_val);
@@ -199,7 +242,9 @@ fn render_braille(img: &DynamicImage, target_w: u32, target_h: u32) -> Vec<Line<
 }
 
 fn render_ascii(img: &DynamicImage, target_w: u32, target_h: u32) -> Vec<Line<'static>> {
-    let resized = img.grayscale().resize_exact(target_w, target_h, image::imageops::FilterType::Nearest);
+    let resized =
+        img.grayscale()
+            .resize_exact(target_w, target_h, image::imageops::FilterType::Nearest);
     let chars = b" .:-=+*#%@";
     let mut lines = Vec::new();
 

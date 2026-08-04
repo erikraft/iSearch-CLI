@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
@@ -94,8 +94,12 @@ impl FavoritesManager {
 
     pub fn search(&self, query: &str) -> Vec<FavoriteItem> {
         let q = query.to_lowercase();
-        self.list.items.iter()
-            .filter(|item| item.title.to_lowercase().contains(&q) || item.url.to_lowercase().contains(&q))
+        self.list
+            .items
+            .iter()
+            .filter(|item| {
+                item.title.to_lowercase().contains(&q) || item.url.to_lowercase().contains(&q)
+            })
             .cloned()
             .collect()
     }

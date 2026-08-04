@@ -1,10 +1,11 @@
-use qrcode::{QrCode, Color};
-use std::process::{Command, Stdio};
+use qrcode::{Color, QrCode};
 use std::io::Write;
+use std::process::{Command, Stdio};
 
 /// Detects if the current environment is Termux.
 pub fn is_termux() -> bool {
-    std::env::var("TERMUX_VERSION").is_ok() || std::path::Path::new("/data/data/com.termux").exists()
+    std::env::var("TERMUX_VERSION").is_ok()
+        || std::path::Path::new("/data/data/com.termux").exists()
 }
 
 /// Runs a command with input via stdin and returns if it succeeded.
@@ -18,7 +19,9 @@ fn run_command_with_input(cmd: &str, args: &[&str], input: &str) -> Result<(), S
         .map_err(|e| e.to_string())?;
 
     if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(input.as_bytes()).map_err(|e| e.to_string())?;
+        stdin
+            .write_all(input.as_bytes())
+            .map_err(|e| e.to_string())?;
     }
 
     let status = child.wait().map_err(|e| e.to_string())?;
@@ -53,7 +56,18 @@ pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         // Try PowerShell clipboard command
-        if run_command_with_input("powershell", &["-Command", "Set-Clipboard", "-Value", &format!("'{}'", text.replace("'", "''"))], "").is_ok() {
+        if run_command_with_input(
+            "powershell",
+            &[
+                "-Command",
+                "Set-Clipboard",
+                "-Value",
+                &format!("'{}'", text.replace("'", "''")),
+            ],
+            "",
+        )
+        .is_ok()
+        {
             return Ok(());
         }
         // Try clip.exe
@@ -102,11 +116,12 @@ pub fn render_qr_half_blocks(code: &QrCode) -> String {
                 code[(x - qz, y_top - qz)] == Color::Light
             };
 
-            let bottom_is_light = if y_bottom < qz || y_bottom >= width + qz || x < qz || x >= width + qz {
-                true
-            } else {
-                code[(x - qz, y_bottom - qz)] == Color::Light
-            };
+            let bottom_is_light =
+                if y_bottom < qz || y_bottom >= width + qz || x < qz || x >= width + qz {
+                    true
+                } else {
+                    code[(x - qz, y_bottom - qz)] == Color::Light
+                };
 
             let ch = match (top_is_light, bottom_is_light) {
                 (true, true) => '█',
@@ -153,7 +168,10 @@ pub fn render_qr_pure_ascii(code: &QrCode) -> String {
 
 /// Generates the QR Code for the terminal.
 /// Automatically detects terminal width and handles fallback if terminal is too narrow.
-pub fn generate_qr_code_for_terminal(payload: &str, term_width: u16) -> Result<(String, bool), String> {
+pub fn generate_qr_code_for_terminal(
+    payload: &str,
+    term_width: u16,
+) -> Result<(String, bool), String> {
     let code = QrCode::new(payload.as_bytes())
         .map_err(|e| format!("Failed to generate QR Code: {}", e))?;
 
