@@ -1,0 +1,42 @@
+name: Build macOS
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build macOS Binaries (Intel & Apple Silicon)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin, aarch64-apple-darwin
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build macOS Intel Binary
+        run: cargo build --release --target x86_64-apple-darwin
+
+      - name: Build macOS Apple Silicon Binary
+        run: cargo build --release --target aarch64-apple-darwin
+
+      - name: Upload macOS Intel Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: isearch-macos-x86_64
+          path: target/x86_64-apple-darwin/release/isearch-cli
+
+      - name: Upload macOS Apple Silicon Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: isearch-macos-aarch64
+          path: target/aarch64-apple-darwin/release/isearch-cli

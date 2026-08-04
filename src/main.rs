@@ -14,6 +14,9 @@ fn print_help() {
     println!("Available commands:");
     println!("  browse         - Open the premium multi-engine interactive terminal browser");
     println!("  donate         - Open the premium terminal donation screen");
+    println!("  version        - Display version information");
+    println!("  version --check- Check for updates online");
+    println!("  self-update    - Upgrade to the latest premium release automatically");
     println!("  help           - Display this help message");
     println!("  exit / quit    - Exit the interactive CLI");
 }
@@ -56,10 +59,18 @@ fn start_interactive_cli() {
                     if let Err(e) = browser::ui::run_browser_tui() {
                         eprintln!("Error launching browser: {}", e);
                     }
+                } else if trimmed == "version" || trimmed == "isearch version" {
+                    browser::updater::print_version(false);
+                } else if trimmed == "version --check" || trimmed == "isearch version --check" {
+                    browser::updater::print_version(true);
+                } else if trimmed == "self-update" || trimmed == "isearch self-update" {
+                    if let Err(e) = browser::updater::perform_self_update() {
+                        eprintln!("Error performing self-update: {}", e);
+                    }
                 } else if trimmed.is_empty() {
                     // Do nothing
                 } else {
-                    println!("Unknown command: '{}'. Type 'help', 'browse' or 'donate'.", trimmed);
+                    println!("Unknown command: '{}'. Type 'help', 'browse', 'version', 'self-update' or 'donate'.", trimmed);
                 }
             }
             Err(e) => {
@@ -75,7 +86,6 @@ fn main() {
 
     // Parse commands
     if args.len() > 1 {
-        // Handle "isearch donate" or "donate"
         let joined_args = args[1..].join(" ");
         if joined_args == "donate" || joined_args == "isearch donate" {
             let config = load_config();
@@ -86,6 +96,15 @@ fn main() {
         } else if joined_args == "browse" || joined_args == "isearch browse" || joined_args.starts_with("browse ") {
             if let Err(e) = browser::ui::run_browser_tui() {
                 eprintln!("Error launching browser: {}", e);
+                std::process::exit(1);
+            }
+        } else if joined_args == "version" || joined_args == "isearch version" {
+            browser::updater::print_version(false);
+        } else if joined_args == "version --check" || joined_args == "isearch version --check" || joined_args == "--check" {
+            browser::updater::print_version(true);
+        } else if joined_args == "self-update" || joined_args == "isearch self-update" {
+            if let Err(e) = browser::updater::perform_self_update() {
+                eprintln!("Error performing self-update: {}", e);
                 std::process::exit(1);
             }
         } else if joined_args == "help" || joined_args == "--help" || joined_args == "-h" {
