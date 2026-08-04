@@ -2,40 +2,13 @@ use qrcode::{Color, QrCode};
 use std::io::Write;
 use std::process::{Command, Stdio};
 
-/// Detects if the current running environment is Termux on Android.
-///
-/// Looks up standard environment variables and local paths used by Termux.
-///
-/// # Returns
-///
-/// Returns `true` if the environment is determined to be Termux, otherwise `false`.
-///
-/// # Examples
-///
-/// ```
-/// use isearch_cli::utils::is_termux;
-/// let termux = is_termux();
-/// ```
+/// Detects if the current environment is Termux.
 pub fn is_termux() -> bool {
     std::env::var("TERMUX_VERSION").is_ok()
         || std::path::Path::new("/data/data/com.termux").exists()
 }
 
-/// Runs an OS command with standard input piped into it.
-///
-/// # Arguments
-///
-/// * `cmd` - The system command name or path to execute.
-/// * `args` - Arguments passed to the command.
-/// * `input` - The string contents to write into the spawned process's stdin.
-///
-/// # Returns
-///
-/// Returns `Ok(())` on success, or `Err(String)` containing an error description.
-///
-/// # Errors
-///
-/// Returns an error if spawning the process fails or if writing to standard input fails.
+/// Runs a command with input via stdin and returns if it succeeded.
 fn run_command_with_input(cmd: &str, args: &[&str], input: &str) -> Result<(), String> {
     let mut child = Command::new(cmd)
         .args(args)
@@ -316,26 +289,7 @@ pub fn render_qr_half_blocks(code: &QrCode) -> String {
     qr_str
 }
 
-/// Renders a QR code into a terminal-compatible string using ASCII characters (`##` for dark, spaces for light).
-///
-/// This handles terminals that lack proper Unicode rendering capabilities.
-///
-/// # Arguments
-///
-/// * `code` - Reference to the generated [QrCode] instance.
-///
-/// # Returns
-///
-/// Returns the rendered ASCII string.
-///
-/// # Examples
-///
-/// ```
-/// use qrcode::QrCode;
-/// use isearch_cli::utils::render_qr_pure_ascii;
-/// let code = QrCode::new(b"Hello").unwrap();
-/// let rendered = render_qr_pure_ascii(&code);
-/// ```
+/// Renders a QR code using pure ASCII characters (# for dark, space for light) with aspect ratio formatting.
 pub fn render_qr_pure_ascii(code: &QrCode) -> String {
     let width = code.width();
     let mut qr_str = String::new();
