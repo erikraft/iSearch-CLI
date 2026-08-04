@@ -7,9 +7,9 @@
 //! browses inside compressed ZIP collections, and renders interactive rotating 3D meshes inside raw terminal coordinates.
 //!
 //! # Architecture
-//! * [HtmlNode] acts as the parsed tree representation.
-//! * [NativeEngine] implements the [BrowserEngine] trait, handling local file system routes, ZIP offsets (`::`), and web requests.
-//! * [Mesh3D] implements an interactive orthographic projection engine that rotates and projects vectors onto character matrices.
+//! * [HtmlNode](crate::browser::native::HtmlNode) acts as the parsed tree representation.
+//! * [NativeEngine](crate::browser::native::NativeEngine) implements the [BrowserEngine](crate::browser::core::BrowserEngine) trait, handling local file system routes, ZIP offsets (`::`), and web requests.
+//! * [Mesh3D](crate::browser::native::Mesh3D) implements an interactive orthographic projection engine that rotates and projects vectors onto character matrices.
 
 use crate::browser::core::{BrowserEngine, BrowserError, PageContent};
 use ratatui::style::{Color, Modifier, Style};

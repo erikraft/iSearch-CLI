@@ -59,6 +59,30 @@ fn run_command_with_input(cmd: &str, args: &[&str], input: &str) -> Result<(), S
     }
 }
 
+/// Runs an OS command and returns its standard output.
+///
+/// # Arguments
+///
+/// * `cmd` - The system command name or path to execute.
+/// * `args` - Arguments passed to the command.
+///
+/// # Returns
+///
+/// Returns the standard output on success, or `Err(String)` containing an error description.
+#[cfg(target_os = "android")]
+fn run_command_get_stdout(cmd: &str, args: &[&str]) -> Result<String, String> {
+    let output = Command::new(cmd)
+        .args(args)
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    } else {
+        Err(format!("Command {} exited with non-zero status", cmd))
+    }
+}
+
 /// Copies the provided text slice to the user's system clipboard.
 ///
 /// This function attempts multiple methods:
@@ -84,6 +108,7 @@ fn run_command_with_input(cmd: &str, args: &[&str], input: &str) -> Result<(), S
 /// use isearch_cli::utils::copy_to_clipboard;
 /// copy_to_clipboard("test-text-to-clipboard").unwrap();
 /// ```
+#[cfg(not(target_os = "android"))]
 pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
     // 1. Try native clipboard via arboard first
     if let Ok(mut clipboard) = arboard::Clipboard::new() {
@@ -144,6 +169,89 @@ pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
     }
 
     Err("Clipboard fallback failed. Please copy the code manually.".to_string())
+}
+
+/// Copies the provided text slice to the user's system clipboard on Android.
+///
+/// On Android, this utilizes the Termux `termux-clipboard-set` command if available.
+///
+/// # Arguments
+///
+/// * `text` - The string slice that will be placed onto the system clipboard.
+///
+/// # Returns
+///
+/// Returns `Ok(())` if successfully copied, otherwise `Err(String)` with an error.
+///
+/// # Errors
+///
+/// Returns an error if the platform is not Termux or if the copy tool fails.
+///
+/// # Examples
+///
+/// ```no_run
+/// use isearch_cli::utils::copy_to_clipboard;
+/// copy_to_clipboard("test-text-to-clipboard").unwrap();
+/// ```
+#[cfg(target_os = "android")]
+pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
+    if is_termux() && run_command_with_input("termux-clipboard-set", &[], text).is_ok() {
+        return Ok(());
+    }
+    Err("Clipboard copy is not supported on Android without Termux clipboard tools.".to_string())
+}
+
+/// Reads the current text from the user's system clipboard.
+///
+/// # Returns
+///
+/// Returns `Ok(String)` containing the clipboard text if successfully retrieved, otherwise `Err(String)`.
+///
+/// # Errors
+///
+/// Returns an error if reading from the clipboard fails or if the clipboard backend is unavailable.
+///
+/// # Examples
+///
+/// ```no_run
+/// use isearch_cli::utils::get_from_clipboard;
+/// let text = get_from_clipboard().unwrap();
+/// ```
+#[cfg(not(target_os = "android"))]
+pub fn get_from_clipboard() -> Result<String, String> {
+    if let Ok(mut clipboard) = arboard::Clipboard::new() {
+        if let Ok(text) = clipboard.get_text() {
+            return Ok(text);
+        }
+    }
+    Err("Failed to read from clipboard.".to_string())
+}
+
+/// Reads the current text from the user's system clipboard on Android.
+///
+/// On Android, this utilizes the Termux `termux-clipboard-get` command if available.
+///
+/// # Returns
+///
+/// Returns `Ok(String)` containing the clipboard text if successfully retrieved, otherwise `Err(String)`.
+///
+/// # Errors
+///
+/// Returns an error if the platform is not Termux or if the get tool fails.
+///
+/// # Examples
+///
+/// ```no_run
+/// use isearch_cli::utils::get_from_clipboard;
+/// let text = get_from_clipboard().unwrap();
+/// ```
+#[cfg(target_os = "android")]
+pub fn get_from_clipboard() -> Result<String, String> {
+    if is_termux() {
+        run_command_get_stdout("termux-clipboard-get", &[])
+    } else {
+        Err("Clipboard is not available on Android outside of Termux.".to_string())
+    }
 }
 
 /// Renders a QR code into a terminal-compatible string using Unicode half-block characters.

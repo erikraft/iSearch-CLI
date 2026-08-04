@@ -5,7 +5,7 @@
 //! to render complex modern JavaScript web applications, extract rendered DOM structures, and generate screenshots.
 //!
 //! # Architecture
-//! * [ChromiumEngine] implements [BrowserEngine]. It handles automated OS detection of installed browsers
+//! * [ChromiumEngine](crate::browser::chromium::ChromiumEngine) implements [BrowserEngine](crate::browser::core::BrowserEngine). It handles automated OS detection of installed browsers
 //!   (Chrome, Edge, Brave, etc.), temporary profiles, and incognito parameters.
 //! * Includes a standalone zipped downloader targeting Google's Chrome for Testing public CDN packages.
 

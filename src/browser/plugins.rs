@@ -5,7 +5,7 @@
 //! such as domain-filtering AdBlocker lists to speed up loading and reduce clutter.
 //!
 //! # Architecture
-//! The module houses plugins like [AdBlocker] which check URLs before loading them.
+//! The module houses plugins like [AdBlocker](crate::browser::plugins::AdBlocker) which check URLs before loading them.
 
 /// A lightweight, customizable domain-filtering AdBlocker.
 ///

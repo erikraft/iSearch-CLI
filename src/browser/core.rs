@@ -6,7 +6,7 @@
 //!
 //! # Architecture
 //! * [BrowserCore] acts as the main system orchestrator, maintaining instances of [crate::browser::native::NativeEngine], [crate::browser::chromium::ChromiumEngine], and [crate::browser::plugins::AdBlocker].
-//! * [BrowserEngine] declares the standard navigation and screenshot capture contract implemented by backends.
+//! * [BrowserEngine](crate::browser::core::BrowserEngine) declares the standard navigation and screenshot capture contract implemented by backends.
 //! * [PageContent] describes a richly structured abstract representation of pages, folders, zip files, mesh models, and images.
 
 use std::fmt;
