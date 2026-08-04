@@ -1,3 +1,20 @@
+//! iSearch CLI™: Premium Terminal Browser & Interactive Utility Suite.
+//!
+//! # Purpose
+//! This crate implements a full-featured terminal web and offline browser with advanced capabilities
+//! including history trackers, secure/anonymous profiles, adblocking filters, customizable theme schemes,
+//! ZIP exploration, 3D interactive renders, and automated PIX donation systems.
+//!
+//! # Architecture
+//! The CLI operates primarily through an interactive command shell loop.
+//! * [config] manages parsing preferences from local config configurations.
+//! * [pix] implements static EMV Co PIX payload encoding requirements.
+//! * [utils] formats QR terminal graphics and bridges system clipboard APIs.
+//! * [ui] builds interactive ratatui screens for donation features.
+//! * [browser] manages terminal browser backend layers.
+
+#![deny(missing_docs)]
+
 pub mod config;
 pub mod pix;
 pub mod utils;
@@ -9,7 +26,8 @@ use std::io::{self, Write};
 use config::load_config;
 use ui::run_donation_tui;
 
-fn print_help() {
+/// Formats and outputs the global list of interactive commands.
+pub fn print_help() {
     println!("iSearch CLI™ - Version 0.1.0");
     println!("Available commands:");
     println!("  browse         - Open the premium multi-engine interactive terminal browser");
@@ -18,7 +36,8 @@ fn print_help() {
     println!("  exit / quit    - Exit the interactive CLI");
 }
 
-fn start_interactive_cli() {
+/// Initiates the primary interactive prompt loop when the executable is launched without arguments.
+pub fn start_interactive_cli() {
     println!("░▀█▀░█▀▀░█▀▀░█▀█░█▀▄░█▀▀░█░█░░░█▀▀░█░░░▀█▀");
     println!("░░█░░▀▀█░█▀▀░█▀█░█▀▄░█░░░█▀█░░░█░░░█░░░░█░");
     println!("░▀▀▀░▀▀▀░▀▀▀░▀░▀░▀░▀░▀▀▀░▀░▀░░░▀▀▀░▀▀▀░▀▀▀");

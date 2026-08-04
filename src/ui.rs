@@ -1,3 +1,19 @@
+//! TUI screen implementation for the premium donation system.
+//!
+//! # Purpose
+//! This module renders interactive terminal screens using `ratatui` where users can
+//! select preset values or specify custom amounts to support the developers. It generates
+//! live, scannable QR codes representing static PIX payloads.
+//!
+//! # Architecture & Responsibilities
+//! * [DonationApp] acts as the primary state holder containing details of input fields, selection focus, and QR codes.
+//! * [run_donation_tui] manages standard terminal setup (raw mode, alternative screen), main loop processing, events, and restore handlers.
+//! * [ui] formats blocks, lists, inputs, custom amounts, and QR rendering layouts.
+//!
+//! # Interactions
+//! Uses [crate::config::AppConfig] to parse keys and fallback parameters, [crate::pix::generate_pix_payload] to format raw payments,
+//! and [crate::utils::generate_qr_code_for_terminal] to render output block graphics.
+
 use crate::config::AppConfig;
 use crate::pix::{generate_pix_payload, validate_amount};
 use crate::utils::{copy_to_clipboard, generate_qr_code_for_terminal};
@@ -17,27 +33,55 @@ use ratatui::{
 };
 use std::io;
 
+/// Identifies which element has focus in the Select Amount screen.
 #[derive(Debug, Clone, PartialEq)]
 enum SelectionFocus {
+    /// Focus is currently on the preset amount choices list.
     AmountList,
+    /// Focus is currently on the optional text message input field.
     MessageInput,
+    /// Focus is currently on the "Generate PIX QR Code" submission action box.
     GenerateButton,
 }
 
+/// Identifies the active screen currently being displayed to the user.
 #[derive(Debug, Clone, PartialEq)]
 enum ActiveScreen {
+    /// Screen where users select from preset donation amounts or enter a custom path.
     SelectAmount,
+    /// Prompt overlay to key in a custom payment decimal amount.
     EnterCustomAmount,
+    /// Terminal-rendered static QR payload and address details screen.
     ShowQRCode {
+        /// The validated numeric amount being donated.
         amount: f64,
+        /// The optional message input.
         message: String,
+        /// The raw PIX static string payload.
         payload: String,
+        /// The text representing the rendered QR pattern.
         qr_code_text: String,
+        /// Tracks whether copy to clipboard has been executed.
         copied: bool,
+        /// Potential warnings or terminal width errors encountered during rendering.
         error_msg: Option<String>,
     },
 }
 
+/// Primary interactive application state manager for the donation TUI screen.
+///
+/// Keeps track of user list states, custom entries, message buffers, and focuses.
+///
+/// # Fields
+/// * `config` - Reference to loaded configuration variables.
+/// * `active_screen` - Current layout focus.
+/// * `focus` - Targeted field selection focus.
+/// * `default_amounts` - Cached list of values derived from configuration TOML.
+/// * `amount_list_state` - List index selection state.
+/// * `custom_amount` - Populated custom numeric value.
+/// * `message_input` - Raw text message to embed into the PIX transaction description.
+/// * `custom_amount_buffer` - Temporary keyboard entry workspace for specifying amounts.
+/// * `custom_amount_error` - Holds parsing/validation messages.
 pub struct DonationApp {
     config: AppConfig,
     active_screen: ActiveScreen,
@@ -57,6 +101,15 @@ pub struct DonationApp {
 }
 
 impl DonationApp {
+    /// Creates a new instance of [DonationApp] based on configuration settings.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Application config containing the required PIX key.
+    ///
+    /// # Returns
+    ///
+    /// Returns a initialized [DonationApp] structural context.
     pub fn new(config: AppConfig) -> Self {
         let default_values = config.donation.default_values.clone();
         let mut amount_list_state = ListState::default();
@@ -75,6 +128,15 @@ impl DonationApp {
         }
     }
 
+    /// Evaluates the currently selected amount based on preset choices or custom entry values.
+    ///
+    /// # Returns
+    ///
+    /// Returns the active numeric `f64` amount on success, or an error if custom input has not been populated.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the user has highlighted the custom option but hasn't configured a numeric value yet.
     fn get_selected_amount(&self) -> Result<f64, String> {
         let idx = self.amount_list_state.selected().unwrap_or(0);
         if idx < self.default_amounts.len() {
@@ -88,6 +150,21 @@ impl DonationApp {
     }
 }
 
+/// Sets up the terminal backend, initializes raw mode, and launches the donation interactive screen loop.
+///
+/// Ensures proper restoration of terminal screens and raw mode upon exit or failure.
+///
+/// # Arguments
+///
+/// * `config` - Application [AppConfig] with configured details.
+///
+/// # Returns
+///
+/// Returns `Ok(())` upon successful termination, or a boxed dynamic error if initialization fails.
+///
+/// # Errors
+///
+/// Returns an error if raw mode, alternate screen buffers, or event polling fails.
 pub fn run_donation_tui(config: AppConfig) -> Result<(), Box<dyn std::error::Error>> {
     // Setup terminal
     enable_raw_mode()?;
@@ -114,6 +191,22 @@ pub fn run_donation_tui(config: AppConfig) -> Result<(), Box<dyn std::error::Err
     Ok(())
 }
 
+/// Core event-handling and terminal-drawing loop for the interactive donation app.
+///
+/// Implements keyboard navigation, text field buffer updates, and basic mouse coordinate selection.
+///
+/// # Arguments
+///
+/// * `terminal` - Mutable reference to the terminal renderer.
+/// * `app` - Mutable reference to the active [DonationApp] state.
+///
+/// # Returns
+///
+/// Returns an `io::Result<()>` indicating success or failure.
+///
+/// # Errors
+///
+/// Returns an error if standard polling or keyboard reads encounter underlying I/O errors.
 fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut DonationApp,
@@ -319,6 +412,14 @@ fn run_app<B: ratatui::backend::Backend>(
     }
 }
 
+/// Renders the layout widgets to the frame based on screen context and application focus.
+///
+/// Implements responsive constraints, checking that the host terminal size meets minimal guidelines.
+///
+/// # Arguments
+///
+/// * `f` - Mutable reference to the `Frame` used by `ratatui`.
+/// * `app` - Reference to the current [DonationApp] context.
 fn ui(f: &mut Frame, app: &mut DonationApp) {
     let size = f.area();
 
@@ -554,7 +655,17 @@ fn ui(f: &mut Frame, app: &mut DonationApp) {
     }
 }
 
-/// Helper function to create a centered rectangle with percentages
+/// Helper function to center a bounding layout rectangle inside a larger frame with width/height constraint thresholds.
+///
+/// # Arguments
+///
+/// * `width_cols` - Minimum preferred character columns.
+/// * `height_rows` - Minimum preferred character rows.
+/// * `r` - Outer container bounds.
+///
+/// # Returns
+///
+/// Returns a centered [Rect].
 fn centered_rect(width_cols: u16, height_rows: u16, r: Rect) -> Rect {
     let x = if r.width > width_cols {
         r.x + (r.width - width_cols) / 2

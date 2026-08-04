@@ -1,3 +1,14 @@
+//! Headless Chromium automated execution engine.
+//!
+//! # Purpose
+//! This module spawns headless Chromium binaries (including downloaded Chrome for Testing standalone copies)
+//! to render complex modern JavaScript web applications, extract rendered DOM structures, and generate screenshots.
+//!
+//! # Architecture
+//! * [ChromiumEngine] implements [BrowserEngine]. It handles automated OS detection of installed browsers
+//!   (Chrome, Edge, Brave, etc.), temporary profiles, and incognito parameters.
+//! * Includes a standalone zipped downloader targeting Google's Chrome for Testing public CDN packages.
+
 use crate::browser::core::{BrowserEngine, BrowserError, PageContent};
 use std::path::PathBuf;
 use std::env;
@@ -5,24 +16,56 @@ use std::fs;
 use std::io::{self, Read, Write};
 use std::process::Command;
 
+/// Automated controller engine targeting headless Chromium environments.
+///
+/// Handles execution arguments, standalone port downloads, screenshots, and incognito profiles.
+///
+/// # Fields
+/// * `executable_path` - Discovered or manually mapped system path to Chrome.
+/// * `incognito_mode` - Activates private browsing switches (`--incognito`) and isolated directories.
 pub struct ChromiumEngine {
     executable_path: Option<PathBuf>,
+    /// Specifies whether to execute browser queries inside isolated secure sandboxes.
     pub incognito_mode: bool,
 }
 
 impl Default for ChromiumEngine {
+    /// Generates default [ChromiumEngine].
+    ///
+    /// # Returns
+    ///
+    /// Returns standard [ChromiumEngine] with probed system executables.
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl ChromiumEngine {
+    /// Discovers system browsers and initializes the engine.
+    ///
+    /// # Returns
+    ///
+    /// Returns initialized [ChromiumEngine].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use isearch_cli::browser::chromium::ChromiumEngine;
+    /// let engine = ChromiumEngine::new();
+    /// ```
     pub fn new() -> Self {
         let mut engine = Self { executable_path: None, incognito_mode: false };
         engine.executable_path = engine.detect_chromium_path();
         engine
     }
 
+    /// Evaluates if a compatible Chromium or Chrome binary is currently available.
+    ///
+    /// Always returns `false` on Termux environments where headless operations are unsupported.
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if executable is verified, otherwise `false`.
     pub fn is_available(&self) -> bool {
         #[cfg(target_os = "android")]
         {
@@ -31,16 +74,33 @@ impl ChromiumEngine {
         self.executable_path.is_some()
     }
 
+    /// Fetches the current resolved path of the browser binary.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Some(PathBuf)` if verified, otherwise `None`.
     pub fn get_executable_path(&self) -> Option<PathBuf> {
         self.executable_path.clone()
     }
 
+    /// Explicitly overrides and configures the path target for the browser.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Target system path.
     pub fn set_manual_path(&mut self, path: PathBuf) {
         if path.exists() {
             self.executable_path = Some(path);
         }
     }
 
+    /// Formulates the default user cache location where Chrome downloads are unpacked.
+    ///
+    /// Typically maps to `~/.cache/isearch/chromium`.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Some(PathBuf)` if directory variables resolve, otherwise `None`.
     pub fn get_cache_directory(&self) -> Option<PathBuf> {
         dirs_next::cache_dir().map(|mut d| {
             d.push("isearch");
@@ -49,6 +109,11 @@ impl ChromiumEngine {
         })
     }
 
+    /// Formulates OS-specific guided command lines to install Chrome when missing.
+    ///
+    /// # Returns
+    ///
+    /// Returns formatted technical instructions.
     pub fn get_guided_install_instructions(&self) -> String {
         let os = env::consts::OS;
         match os {
@@ -79,6 +144,19 @@ impl ChromiumEngine {
         }
     }
 
+    /// Connects to Google storage, downloads a Chrome for Testing standalone package, and extracts it locally.
+    ///
+    /// # Arguments
+    ///
+    /// * `on_progress` - Closure mapping values `(percentage: f32, message: &str)` to track downloads.
+    ///
+    /// # Returns
+    ///
+    /// Returns the path to the verified executable upon success, or a [BrowserError].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the operating system is unsupported, networking fails, or disk writing fails.
     pub fn download_chromium<F>(&mut self, on_progress: F) -> Result<PathBuf, BrowserError>
     where
         F: Fn(f32, &str),
@@ -186,6 +264,11 @@ impl ChromiumEngine {
         }
     }
 
+    /// Evaluates env targets, local cache structures, and platform directories to locate chromium.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Some(PathBuf)` if found, otherwise `None`.
     pub fn detect_chromium_path(&self) -> Option<PathBuf> {
         // 1. Check env var
         if let Ok(path_str) = env::var("CHROME_PATH") {
@@ -320,6 +403,19 @@ impl ChromiumEngine {
 }
 
 impl BrowserEngine for ChromiumEngine {
+    /// Opens the specified URL with a headless Chrome process, retrieves the fully resolved DOM, and parses nodes.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - Destination hyperlink.
+    ///
+    /// # Returns
+    ///
+    /// Returns [PageContent] containing HTML parsing output on success, or [BrowserError].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the executable is missing, process execution fails, or the target page fails to render.
     fn navigate(&mut self, url: &str) -> Result<PageContent, BrowserError> {
         let exec_path = self.executable_path.as_ref()
             .ok_or_else(|| BrowserError::ChromiumNotAvailable("No Chrome or Chromium executable found. Please download first.".to_string()))?;
@@ -372,11 +468,39 @@ impl BrowserEngine for ChromiumEngine {
         Ok(PageContent::Html { title, raw_html: body, parsed_nodes: parsed })
     }
 
+    /// Formats a search query through Google and retrieves the resulting rendered index.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - Text to search.
+    ///
+    /// # Returns
+    ///
+    /// Returns [PageContent] on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if navigation fails.
     fn search(&mut self, query: &str) -> Result<PageContent, BrowserError> {
         let url = format!("https://www.google.com/search?q={}", percent_encoding::utf8_percent_encode(query, percent_encoding::NON_ALPHANUMERIC));
         self.navigate(&url)
     }
 
+    /// Generates a PNG screen capture at the specified page dimensions.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - Page location to capture.
+    /// * `width` - Window capture resolution columns.
+    /// * `height` - Window capture resolution rows.
+    ///
+    /// # Returns
+    ///
+    /// Returns raw PNG image byte vectors.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if screenshot files fail to generate.
     fn capture_screenshot(&mut self, url: &str, width: u32, height: u32) -> Result<Vec<u8>, BrowserError> {
         let exec_path = self.executable_path.as_ref()
             .ok_or_else(|| BrowserError::ChromiumNotAvailable("No Chrome or Chromium executable found. Please download first.".to_string()))?;
@@ -421,6 +545,7 @@ impl BrowserEngine for ChromiumEngine {
     }
 }
 
+/// Generates a randomized string identifier based on sub-second epoch elapsed nano-time.
 fn rand_string() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
