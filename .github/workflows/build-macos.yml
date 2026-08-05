@@ -30,12 +30,14 @@ jobs:
         run: cargo build --release --target aarch64-apple-darwin
 
       - name: Upload macOS Intel Artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: isearch-macos-x86_64
           path: target/x86_64-apple-darwin/release/isearch-cli
 
       - name: Upload macOS Apple Silicon Artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: isearch-macos-aarch64

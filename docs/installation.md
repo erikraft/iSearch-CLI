@@ -114,6 +114,7 @@ If you wish to compile **iSearch CLI™** from source:
    ```bash
    git clone https://github.com/erikraft/iSearch-CLI.git
    cd iSearch-CLI
+   git checkout v1.0.0
    ```
 2. Build the executable in release mode:
    ```bash

@@ -62,6 +62,15 @@ wget -qO- https://download.erikraft.com/install-termux.sh | bash
 
 See [docs/termux.md](docs/termux.md) for detailed guidelines, security considerations, and manual methods.
 
+### 🛠️ Manual / Compile from Source
+If you wish to compile **iSearch CLI™** from source, you can clone and checkout the latest version tag:
+```bash
+git clone https://github.com/erikraft/iSearch-CLI.git
+cd iSearch-CLI
+git checkout v1.0.0
+cargo build --release
+```
+
 ---
 
 ## Quick Start

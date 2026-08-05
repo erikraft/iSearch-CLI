@@ -44,12 +44,14 @@ jobs:
           cp target/armv7-linux-androideabi/release/isearch-cli dist/isearch-linux-android-armv7
 
       - name: Upload Termux Aarch64 Artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: isearch-termux-aarch64
           path: dist/isearch-linux-android-aarch64
 
       - name: Upload Termux Armv7 Artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: isearch-termux-armv7
