@@ -27,7 +27,9 @@ iSearch CLI™ delivers a premium terminal experience with a professional intera
 - **Dual Engine Browser:** Powered by a super-fast Rust-based Native Engine for offline files/Markdown and an optional headless Chromium Engine for complex JS heavy pages.
 - **Favorites (Bookmarks) System:** Organise bookmarks into folders, search by title/URL, import/export to JSON, and manage dynamically entirely inside the terminal.
 - **SQLite History Manager:** Persistent SQL-backed browsed history database support. Group by date or domain, search and filter, sort by date or visit counts, import/export history.
-- **Private Browsing (Anonymous Mode):** Browsing with absolute privacy. No history is stored, cookies/cache are fully isolated/deleted on exit, temporary in-memory downloads lists are used, and Chromium is launched in strict incognito mode.
+- **Private Browsing (Anonymous Mode):** Browsing with absolute privacy. No history is stored, cookies/cache are fully isolated/deleted on exit, temporary in-memory downloads lists are used, and Chromium is launched in strict incognito mode (`🕵️‍♂️ [PRIVATE MODE]` indicator).
+- **3D Wireframe Rotation Engine:** Interactive 3D wireframe mesh model rendering on ANSI canvases with rotational key controls.
+- **ZIP Archive Explorer:** Directly inspect, scroll, and browse directories embedded inside ZIP folders without extraction.
 - **PIX Donation Screen:** Standard-compliant EMV Co QR Code payloads, high-quality terminal QR rendering, and cross-platform clipboard integration.
 - **Version Check & Self-Updater:** Integrated update checks and robust safe update installation directly inside the application.
 
@@ -142,7 +144,7 @@ The updater utilizes a safe rename-replace method to apply updates, preserving u
 
 ### Private / Anonymous Browsing (`V`)
 - `V` : Toggle Private Browsing Mode (Anonymous Mode)
-  - Displays a clear `🕵️ [PRIVATE]` visual indicator.
+  - Displays a clear `🕵️‍♂️ [PRIVATE MODE]` visual indicator.
   - Deletes all session profiles and isolates cache/cookies.
   - Temporarily holds downloads in an in-memory list which is cleared upon closing.
   - No database history or session logs are recorded.
@@ -198,7 +200,7 @@ default_values = [5, 10, 20, 50, 100]
 
 ## Documentation
 
-Full detailed guides are available in the `docs/` folder:
+Full detailed guides are available in the `docs/` folder and official [GitHub Wiki](https://github.com/erikraft/iSearch-CLI/wiki):
 - [docs/installation.md](docs/installation.md) - Deep multi-platform setup instructions.
 - [docs/releases.md](docs/releases.md) - Pipeline architecture and verification steps.
 - [docs/self-update.md](docs/self-update.md) - Self updating mechanisms.
