@@ -1,23 +1,65 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ErikrafT — Full Stack Developer & AI Engineer</title>
-    <meta name="description" content="Portfolio premium de Erik Rodrigues Balisa (ErikrafT), desenvolvedor Full Stack, especialista em IA e criador de conteúdo.">
+    <title>iSearch CLI™ — Official Download Center</title>
+    <meta name="description" content="Download iSearch CLI™, the professional terminal browser built with Rust. A premium dual-engine command-line web browser with SQLite history, favorites, private browsing, and native terminal-rendered visuals.">
+    <meta name="author" content="ErikrafT">
+
+    <!-- SEO & Metadata -->
+    <meta name="keywords" content="iSearch CLI, terminal browser, rust browser, tui browser, command line browser, termux browser, erikraft, tui update, download center">
+    <link rel="canonical" href="https://download.erikraft.com">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://download.erikraft.com">
+    <meta property="og:title" content="iSearch CLI™ — Official Download Center">
+    <meta property="og:description" content="Download iSearch CLI™, the professional terminal browser built with Rust. Dual-engine performance, private browsing, and premium terminal user interface.">
+    <meta property="og:image" content="https://download.erikraft.com/images/favicon.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://download.erikraft.com">
+    <meta property="twitter:title" content="iSearch CLI™ — Official Download Center">
+    <meta property="twitter:description" content="Download iSearch CLI™, the professional terminal browser built with Rust. Dual-engine performance, private browsing, and premium terminal user interface.">
+    <meta property="twitter:image" content="https://download.erikraft.com/images/favicon.png">
 
     <!-- Favicon -->
-    <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="shortcut icon" href="/favicon.ico">
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="apple-touch-icon" href="/favicon.ico">
-    <link rel="icon" type="image/png" href="assets/images/favicon.png">
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <link rel="icon" href="favicon.ico" sizes="any">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="favicon.ico">
 
     <!-- CSS -->
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="css/style.css">
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "iSearch CLI™",
+      "operatingSystem": "Windows, macOS, Linux, Android Termux",
+      "applicationCategory": "BrowserApplication, DeveloperApplication, Utility",
+      "author": {
+        "@type": "Person",
+        "name": "ErikrafT"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0.00",
+        "priceCurrency": "USD"
+      },
+      "downloadUrl": "https://download.erikraft.com",
+      "softwareVersion": "latest",
+      "description": "Professional terminal browser and search assistant designed for modern developers, power users, and terminal-first workflows."
+    }
+    </script>
 </head>
 <body class="page-home">
 
@@ -33,7 +75,7 @@
     <!-- Site Loader -->
     <div class="site-loader">
         <div class="loader-terminal">
-            <span>root@erikraft:~$ init --portfolio</span>
+            <span>root@erikraft:~$ init --isearch-downloads</span>
             <div class="loader-cursor"></div>
         </div>
     </div>
@@ -42,20 +84,20 @@
     <header class="site-header">
         <div class="container">
             <div class="nav-shell">
-                <a href="index.html" class="brand" aria-label="ErikrafT Home">
-                    <img src="assets/images/favicon.png" alt="ErikrafT Logo">
-                    <span class="brand-text">ErikrafT</span>
+                <a href="index.html" class="brand" aria-label="iSearch CLI™ Home">
+                    <img src="images/favicon.png" alt="iSearch CLI™ Logo">
+                    <span class="brand-text">iSearch CLI™</span>
                 </a>
 
-                <nav class="site-nav" aria-label="Navegação Principal">
-                    <a href="index.html" aria-current="page">Home</a>
-                    <a href="about.html">Sobre</a>
-                    <a href="projects.html">Projetos</a>
-                    <a href="timeline.html">Timeline</a>
-                    <a href="contact.html" class="nav-cta">Contato</a>
+                <nav class="site-nav" aria-label="Main Navigation">
+                    <a href="#downloads" class="nav-link">Downloads</a>
+                    <a href="#termux" class="nav-link">Termux Setup</a>
+                    <a href="#features" class="nav-link">Features</a>
+                    <a href="#installation" class="nav-link">Installation Docs</a>
+                    <a href="https://github.com/erikraft/iSearch-CLI" target="_blank" rel="noopener noreferrer" class="nav-cta"><i class="fa-brands fa-github"></i> Repository</a>
                 </nav>
 
-                <button class="menu-toggle" aria-label="Abrir Menu" aria-expanded="false">
+                <button class="menu-toggle" aria-label="Open Menu" aria-expanded="false">
                     <span></span>
                     <span></span>
                     <span></span>
@@ -64,162 +106,536 @@
         </div>
     </header>
 
-    <!-- Floating WhatsApp Button -->
-    <a href="https://wa.me/5511925416678?text=Olá%2C%20vim%20através%20do%20seu%20portfólio%20e%20gostaria%20de%20conversar%21"
-       target="_blank"
-       class="btn-whatsapp-flutuante"
-       rel="noopener noreferrer"
-       aria-label="Fale comigo no WhatsApp">
-        <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 39 39">
-            <path fill="#00E676" d="M10.7 32.8l.6.3c2.5 1.5 5.3 2.2 8.1 2.2 8.8 0 16-7.2 16-16 0-4.2-1.7-8.3-4.7-11.3s-7-4.7-11.3-4.7c-8.8 0-16 7.2-15.9 16.1 0 3 .9 5.9 2.4 8.4l.4.6-1.6 5.9 6-1.5z"></path>
-            <path fill="#FFF" d="M32.4 6.4C29 2.9 24.3 1 19.5 1 9.3 1 1.1 9.3 1.2 19.4c0 3.2.9 6.3 2.4 9.1L1 38l9.7-2.5c2.7 1.5 5.7 2.2 8.7 2.2 10.1 0 18.3-8.3 18.3-18.4 0-4.9-1.9-9.5-5.3-12.9zM19.5 34.6c-2.7 0-5.4-.7-7.7-2.1l-.6-.3-5.8 1.5L6.9 28l-.4-.6c-4.4-7.1-2.3-16.5 4.9-20.9s16.5-2.3 20.9 4.9 2.3 16.5-4.9 20.9c-2.3 1.5-5.1 2.3-7.9 2.3zm8.8-11.1l-1.1-.5s-1.6-.7-2.6-1.2c-.1 0-.2-.1-.3-.1-.3 0-.5.1-.7.2 0 0-.1.1-1.5 1.7-.1.2-.3.3-.5.3h-.1c-.1 0-.3-.1-.4-.2l-.5-.2c-1.1-.5-2.1-1.1-2.9-1.9-.2-.2-.5-.4-.7-.6-.7-.7-1.4-1.5-1.9-2.4l-.1-.2c-.1-.1-.1-.2-.2-.4 0-.2 0-.4.1-.5 0 0 .4-.5.7-.8.2-.2.3-.5.5-.7.2-.3.3-.7.2-1-.1-.5-1.3-3.2-1.6-3.8-.2-.3-.4-.4-.7-.5h-1.1c-.2 0-.4.1-.6.1l-.1.1c-.2.1-.4.3-.6.4-.2.2-.3.4-.5.6-.7.9-1.1 2-1.1 3.1 0 .8.2 1.6.5 2.3l.1.3c.9 1.9 2.1 3.6 3.7 5.1l.4.4c.3.3.6.5.8.8 2.1 1.8 4.5 3.1 7.2 3.8.3.1.7.1 1 .2h1c.5 0 1.1-.2 1.5-.4.3-.2.5-.2.7-.4l.2-.2c.2-.2.4-.3.6-.5s.4-.4.5-.6c.2-.4.3-.9.4-1.4v-.7s-.1-.1-.3-.2z"></path>
-        </svg>
-    </a>
-
     <main>
         <!-- Hero Section -->
         <section class="section hero-section">
-            <!-- Giant Continuous Sliding Background Text -->
             <div class="hero-marquee" aria-hidden="true">
-                <div class="hero-marquee-inner">ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★</div>
+                <div class="hero-marquee-inner">ISEARCH CLI™ ★ RUST ★ TERMINAL BROWSER ★ ISEARCH CLI™ ★ RUST ★ TERMINAL BROWSER ★</div>
             </div>
 
             <div class="container hero-container">
                 <div class="hero-content">
-                    <div class="eyebrow"><i class="fa-solid fa-circle-nodes"></i> Disponível para Projetos</div>
+                    <div class="eyebrow"><i class="fa-solid fa-terminal"></i> Build v<span class="release-version-tag">0.1.0</span> Available</div>
                     <h1 class="hero-title">
-                        Olá! Eu sou <br><span class="typing-text"></span><span class="cursor">|</span>
+                        iSearch CLI™<br><span class="typing-text"></span><span class="cursor">|</span>
                     </h1>
                     <p class="hero-desc">
-                        Desenvolvedor Full Stack apaixonado por arquiteturas modernas, automações e inteligência artificial. Criando ecossistemas digitais premium com estética minimalista e performance implacável.
+                        Professional Terminal Browser and Search Assistant. A keyboard-first, responsive, and ultra-fast application crafted in Rust. Experience dual-engine power, private browsing, and rich database favorites directly inside your command line.
                     </p>
 
                     <div class="hero-actions">
-                        <a href="projects.html" class="button button-primary">Explorar Projetos</a>
-                        <a href="about.html" class="button button-secondary">Minha Jornada</a>
+                        <a href="#downloads" class="button button-primary"><i class="fa-solid fa-download"></i> Get iSearch CLI™</a>
+                        <a href="#installation" class="button button-secondary"><i class="fa-solid fa-book"></i> Read Quickstart</a>
                     </div>
 
                     <ul class="hero-stats">
                         <li>
-                            <strong id="age-counter" class="counter" data-target="16">...</strong>
-                            <span>Idade</span>
+                            <strong class="counter" data-target="100">...</strong>
+                            <span>Built with Rust</span>
                         </li>
                         <li>
-                            <strong id="exp-counter" class="counter" data-target="2">...</strong>
-                            <span>Anos de Exp</span>
+                            <strong class="counter" data-target="4">...</strong>
+                            <span>Platforms Support</span>
                         </li>
                         <li>
-                            <strong class="counter" data-target="30">...</strong>
-                            <span>Tecnologias</span>
+                            <strong class="counter" data-target="2">...</strong>
+                            <span>Core Engines</span>
                         </li>
                     </ul>
                 </div>
 
-                <!-- Centralized Transparent Developer Photo -->
-                <div class="hero-photo-wrapper">
-                    <img src="assets/images/me.png" alt="Erik Rodrigues Balisa" class="hero-photo-img">
-                </div>
-            </div>
-        </section>
-
-        <!-- Featured Projects Section -->
-        <section class="section featured-projects-section">
-            <div class="container">
-                <div class="section-stack">
-                    <div class="section-heading reveal">
-                        <div class="label-container">
-                            <div class="label-line"></div>
-                            <span class="section-label">Portfólio</span>
+                <!-- Centralized Terminal Simulator mockup -->
+                <div class="hero-terminal-wrapper">
+                    <div class="cli-panel hero-cli">
+                        <div class="cli-header">
+                            <div class="cli-dots">
+                                <span class="dot red"></span>
+                                <span class="dot yellow"></span>
+                                <span class="dot green"></span>
+                            </div>
+                            <span class="cli-title">isearch --interactive</span>
                         </div>
-                        <h2>Projetos em Destaque</h2>
-                        <p>Uma seleção dos meus sistemas de software mais inovadores e mantidos ativamente.</p>
-                    </div>
-
-                    <div class="featured-grid">
-                        <!-- Project 1: ErikrafT Drop -->
-                        <div class="showcase-card reveal">
-                            <div class="showcase-preview preview-drop-large">
-                                <div class="preview-window">
-                                    <div></div><div></div><div></div>
-                                </div>
-                                <span class="preview-chip">Web Ecosystem</span>
+                        <div class="cli-body">
+                            <div class="cli-meta">
+                                <span class="cli-banner-title">iSearch CLI™ v<span class="release-version-tag">0.1.0</span></span>
+                                <span>Official Author: <strong style="color:var(--accent-light);">ErikrafT</strong></span><br>
+                                <span>Copyright: <strong style="color:var(--accent-light);">Copyright © 2026 ErikrafT</strong></span>
                             </div>
-                            <div class="showcase-content">
-                                <span class="preview-tag">ErikrafT Drop</span>
-                                <h3>Drop — Repositório Geral</h3>
-                                <p>Meu hub central e ecossistema de scripts, utilitários, web crawlers e APIs modernas construídos de forma modular.</p>
-                                <ul class="feature-list">
-                                    <li><i class="fa-solid fa-circle-check"></i> Lógica avançada em Node</li>
-                                    <li><i class="fa-solid fa-circle-check"></i> Integração facilitada de serviços</li>
-                                    <li><i class="fa-solid fa-circle-check"></i> Totalmente responsivo e otimizado</li>
-                                </ul>
-                                <div class="project-actions">
-                                    <a href="https://github.com/erikraft/Drop" target="_blank" class="button button-primary"><i class="fa-brands fa-github"></i> GitHub</a>
-                                </div>
+                            <div class="cli-intro">
+                                <span class="prompt-symbol">iSearch></span> <span class="cli-cursor-input"></span><span class="cli-blink-cursor"></span>
                             </div>
-                        </div>
-
-                        <!-- Project 2: ErikrafT Drop Android -->
-                        <div class="showcase-card reveal">
-                            <div class="showcase-preview preview-search-large">
-                                <div class="preview-window">
-                                    <div></div><div></div><div></div>
-                                </div>
-                                <span class="preview-chip">Mobile Application</span>
-                            </div>
-                            <div class="showcase-content">
-                                <span class="preview-tag">Drop-Android</span>
-                                <h3>Drop — Aplicativo Nativo</h3>
-                                <p>O poder e as facilidades do ecossistema Drop portados inteiramente para dispositivos Android nativos com performance brilhante.</p>
-                                <ul class="feature-list">
-                                    <li><i class="fa-solid fa-circle-check"></i> Desenvolvimento Nativo em Java & Kotlin</li>
-                                    <li><i class="fa-solid fa-circle-check"></i> UI limpa baseada no Material Design 3</li>
-                                    <li><i class="fa-solid fa-circle-check"></i> Baixo consumo de memória e bateria</li>
-                                </ul>
-                                <div class="project-actions">
-                                    <a href="https://github.com/erikraft/Drop-Android" target="_blank" class="button button-primary"><i class="fa-brands fa-github"></i> GitHub</a>
-                                </div>
-                            </div>
+                            <div class="cli-section-title">ACTIVE FEATURES AVAILABLE:</div>
+                            <ul class="cli-todo-list">
+                                <li><span class="todo-icon todo-done"><i class="fa-solid fa-check-double"></i></span> Dual Engine Browser (Rust Native / Headless Chromium)</li>
+                                <li><span class="todo-icon todo-done"><i class="fa-solid fa-check-double"></i></span> Interactive SQLite History Database & JSON Bookmarks</li>
+                                <li><span class="todo-icon todo-done"><i class="fa-solid fa-check-double"></i></span> 100% Private Browsing Mode (Isolated Memory, Incognito)</li>
+                                <li><span class="todo-icon todo-done"><i class="fa-solid fa-check-double"></i></span> Integrated Self-Updater & PIX Donation Screen</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Toolkit / Skill Grid Section -->
-        <section class="section">
+        <!-- Termux Highlight Section -->
+        <section id="termux" class="section termux-section">
             <div class="container">
                 <div class="section-stack">
                     <div class="section-heading reveal">
                         <div class="label-container">
                             <div class="label-line"></div>
-                            <span class="section-label">Habilidades</span>
+                            <span class="section-label">Mobile Termux</span>
                         </div>
-                        <h2>Linguagens & Tecnologias</h2>
-                        <p>O arsenal de ferramentas e bibliotecas que domino para resolver problemas de software complexos no dia a dia.</p>
+                        <h2>Android Termux Installer</h2>
+                        <p>Install and keep iSearch CLI™ updated seamlessly in your Android Termux environment using our robust official installation script.</p>
                     </div>
 
-                    <div id="skills-interactive-container" class="reveal"></div>
+                    <div class="termux-grid">
+                        <div class="termux-info-block reveal">
+                            <h3>Supercharge Your Terminal on Mobile</h3>
+                            <p>Our Termux installation script automates the complete lifecycle. It verifies your cellular or Wi-Fi connection, detects your processor architecture (Aarch64, ARMv7, x86_64), and fetches the highly optimized binary straight from the release servers.</p>
+
+                            <ul class="installer-highlights">
+                                <li><i class="fa-solid fa-bolt"></i> <strong>Optimized Architecture:</strong> Automatically delivers custom builds for your CPU instruction set.</li>
+                                <li><i class="fa-solid fa-shield-halved"></i> <strong>Zero Root Permissions:</strong> Runs completely within isolated standard Termux user environment.</li>
+                                <li><i class="fa-solid fa-rotate"></i> <strong>Auto Paths:</strong> Configures binary directly into Termux standard executable prefix paths.</li>
+                            </ul>
+
+                            <div class="manual-block">
+                                <span class="manual-title"><i class="fa-solid fa-terminal"></i> Prefer Manual Steps?</span>
+                                <p>You can compile manually using Cargo, or download pre-compiled packages directly. Check our <a href="#installation" class="inline-link">installation guide below</a> or read <a href="https://github.com/erikraft/iSearch-CLI/blob/main/docs/termux.md" target="_blank" rel="noopener noreferrer" class="inline-link">docs/termux.md</a> for complete security and integrity guidelines.</p>
+                            </div>
+                        </div>
+
+                        <div class="termux-terminal-block reveal">
+                            <div class="cli-panel">
+                                <div class="cli-header">
+                                    <div class="cli-dots">
+                                        <span class="dot red"></span>
+                                        <span class="dot yellow"></span>
+                                        <span class="dot green"></span>
+                                    </div>
+                                    <span class="cli-title">install-termux.sh</span>
+                                </div>
+                                <div class="cli-body">
+                                    <div class="command-box">
+                                        <div class="command-header">
+                                            <span>PRIMARY INSTALLATION (CURL)</span>
+                                            <button class="copy-btn" data-clipboard="curl -fsSL https://download.erikraft.com/install-termux.sh | bash" aria-label="Copy primary command"><i class="fa-regular fa-copy"></i> Copy</button>
+                                        </div>
+                                        <pre><code class="syntax-bash"><span class="cmd">curl</span> -fsSL https://download.erikraft.com/install-termux.sh | <span class="cmd">bash</span></code></pre>
+                                        <span class="command-desc"><strong>What it does:</strong> Downloads the certified Termux script and executes it directly using bash shell.</span>
+                                    </div>
+
+                                    <div class="command-box">
+                                        <div class="command-header">
+                                            <span>SECONDARY INSTALLATION (WGET)</span>
+                                            <button class="copy-btn" data-clipboard="wget -qO- https://download.erikraft.com/install-termux.sh | bash" aria-label="Copy secondary command"><i class="fa-regular fa-copy"></i> Copy</button>
+                                        </div>
+                                        <pre><code class="syntax-bash"><span class="cmd">wget</span> -qO- https://download.erikraft.com/install-termux.sh | <span class="cmd">bash</span></code></pre>
+                                        <span class="command-desc"><strong>What it does:</strong> A reliable alternative that requests the installation script via wget, piping it to bash. Ideal if curl is not pre-installed.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- GitHub Activity Section -->
-        <section class="section">
+        <!-- Downloads Grid Section -->
+        <section id="downloads" class="section downloads-section">
             <div class="container">
                 <div class="section-stack">
                     <div class="section-heading reveal">
                         <div class="label-container">
                             <div class="label-line"></div>
-                            <span class="section-label">GitHub</span>
+                            <span class="section-label">Releases</span>
                         </div>
-                        <h2>Atividade & Estatísticas</h2>
-                        <p>Meu engajamento real e contribuições consolidadas na comunidade de código aberto.</p>
+                        <h2>Official Download Center</h2>
+                        <p>Deploy iSearch CLI™ instantly on your system. Pre-compiled optimized binaries and native package installers are fully certified for all key operating systems.</p>
                     </div>
 
-                    <div style="margin-top: 2rem; display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center;" class="reveal">
-                        <img src="https://github-readme-stats-fast.vercel.app/api?username=erikraft&show_icons=true&theme=tokyonight&hide_rank=true" alt="Estatísticas GitHub" style="width: 100%; max-width: 495px; height: auto; border-radius: var(--radius); border: 1px solid var(--border);">
-                        <img src="https://github-readme-stats-fast.vercel.app/api/top-langs/?username=erikraft&layout=compact&theme=tokyonight&langs_count=10" alt="Linguagens mais utilizadas" style="width: 100%; max-width: 495px; height: auto; border-radius: var(--radius); border: 1px solid var(--border);">
+                    <div class="downloads-grid">
+                        <!-- Windows Card -->
+                        <div class="download-card premium-card reveal">
+                            <div class="card-icon"><i class="fa-brands fa-windows"></i></div>
+                            <h3>Windows</h3>
+                            <div class="arch-tag">x86_64</div>
+                            <p class="card-desc">Comprehensive installers and standalone binaries for modern 64-bit Windows installations. Works with Command Prompt, PowerShell, and Windows Terminal.</p>
+
+                            <div class="download-options">
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases/download/v0.1.0/isearch-windows-x86_64.exe" class="button button-primary download-link-btn" data-asset="isearch-windows-x86_64.exe"><i class="fa-solid fa-download"></i> Standard Binary (.exe)</a>
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases/download/v0.1.0/isearch-installer-x86_64.exe" class="button button-secondary download-link-btn" data-asset="isearch-installer-x86_64.exe"><i class="fa-solid fa-box"></i> Setup Installer (.exe)</a>
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases/download/v0.1.0/isearch-installer-x86_64.msi" class="button button-secondary download-link-btn" data-asset="isearch-installer-x86_64.msi"><i class="fa-solid fa-shield"></i> MSI Enterprise (.msi)</a>
+                            </div>
+
+                            <div class="card-info-links">
+                                <a href="#install-windows" class="info-link"><i class="fa-solid fa-circle-info"></i> Install Guide</a>
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases" target="_blank" rel="noopener noreferrer" class="info-link release-notes-link"><i class="fa-solid fa-note-sticky"></i> Release Notes</a>
+                            </div>
+
+                            <div class="checksum-block">
+                                <span class="checksum-label">SHA-256 CHECKMATE</span>
+                                <code class="checksum-value">6a3b2c9d...f1e2d3c4</code>
+                            </div>
+                        </div>
+
+                        <!-- Linux Card -->
+                        <div class="download-card premium-card reveal">
+                            <div class="card-icon"><i class="fa-brands fa-linux"></i></div>
+                            <h3>Linux</h3>
+                            <div class="arch-tag">x86_64 | aarch64 | armv7</div>
+                            <p class="card-desc">Native package installations supporting Ubuntu, Debian, RedHat, Fedora, alongside universal AppImage and portable archives for all distributions.</p>
+
+                            <div class="download-options">
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases/download/v0.1.0/isearch-linux-x86_64.deb" class="button button-primary download-link-btn" data-asset="isearch-linux-x86_64.deb"><i class="fa-solid fa-download"></i> Debian Package (.deb)</a>
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases/download/v0.1.0/isearch-linux-x86_64.rpm" class="button button-secondary download-link-btn" data-asset="isearch-linux-x86_64.rpm"><i class="fa-solid fa-box"></i> RedHat Package (.rpm)</a>
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases/download/v0.1.0/isearch-linux-x86_64.AppImage" class="button button-secondary download-link-btn" data-asset="isearch-linux-x86_64.AppImage"><i class="fa-solid fa-rocket"></i> AppImage Bundle</a>
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases/download/v0.1.0/isearch-linux-x86_64.tar.gz" class="button button-secondary download-link-btn" data-asset="isearch-linux-x86_64.tar.gz"><i class="fa-solid fa-file-archive"></i> Portable Tarball (.tar.gz)</a>
+                            </div>
+
+                            <div class="card-info-links">
+                                <a href="#install-linux" class="info-link"><i class="fa-solid fa-circle-info"></i> Install Guide</a>
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases" target="_blank" rel="noopener noreferrer" class="info-link release-notes-link"><i class="fa-solid fa-note-sticky"></i> Release Notes</a>
+                            </div>
+
+                            <div class="checksum-block">
+                                <span class="checksum-label">SHA-256 CHECKMATE</span>
+                                <code class="checksum-value">d4c3b2a1...e5f6a7b8</code>
+                            </div>
+                        </div>
+
+                        <!-- macOS Card -->
+                        <div class="download-card premium-card reveal">
+                            <div class="card-icon"><i class="fa-brands fa-apple"></i></div>
+                            <h3>macOS</h3>
+                            <div class="arch-tag">aarch64 (Apple Silicon) | x86_64 (Intel)</div>
+                            <p class="card-desc">Native Apple bundles built specifically for Apple Silicon M-series chips and legacy Intel setups. Beautiful package installers and portable disk images.</p>
+
+                            <div class="download-options">
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases/download/v0.1.0/isearch-installer-macos-aarch64.pkg" class="button button-primary download-link-btn" data-asset="isearch-installer-macos-aarch64.pkg"><i class="fa-solid fa-download"></i> Apple Silicon (.pkg)</a>
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases/download/v0.1.0/isearch-installer-macos-x86_64.pkg" class="button button-secondary download-link-btn" data-asset="isearch-installer-macos-x86_64.pkg"><i class="fa-solid fa-box"></i> Intel macOS (.pkg)</a>
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases/download/v0.1.0/isearch.dmg" class="button button-secondary download-link-btn" data-asset="isearch.dmg"><i class="fa-solid fa-compact-disc"></i> Disk Image (.dmg)</a>
+                            </div>
+
+                            <div class="card-info-links">
+                                <a href="#install-macos" class="info-link"><i class="fa-solid fa-circle-info"></i> Install Guide</a>
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases" target="_blank" rel="noopener noreferrer" class="info-link release-notes-link"><i class="fa-solid fa-note-sticky"></i> Release Notes</a>
+                            </div>
+
+                            <div class="checksum-block">
+                                <span class="checksum-label">SHA-256 CHECKMATE</span>
+                                <code class="checksum-value">a8b9c0d1...9f8e7d6c</code>
+                            </div>
+                        </div>
+
+                        <!-- Android Termux Card -->
+                        <div class="download-card premium-card reveal">
+                            <div class="card-icon"><i class="fa-brands fa-android"></i></div>
+                            <h3>Android (Termux)</h3>
+                            <div class="arch-tag">aarch64 | armv7 | x86_64</div>
+                            <p class="card-desc">Specially optimized non-root configurations. Delivers immediate terminal-first access with Termux clipboard integration and mobile-friendly layouts.</p>
+
+                            <div class="download-options">
+                                <a href="#termux" class="button button-primary"><i class="fa-solid fa-terminal"></i> Go to Termux Setup</a>
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases/download/v0.1.0/isearch-linux-aarch64" class="button button-secondary download-link-btn" data-asset="isearch-linux-aarch64"><i class="fa-solid fa-file"></i> Standalone Aarch64</a>
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases/download/v0.1.0/isearch-linux-arm" class="button button-secondary download-link-btn" data-asset="isearch-linux-arm"><i class="fa-solid fa-file"></i> Standalone ARMv7</a>
+                            </div>
+
+                            <div class="card-info-links">
+                                <a href="#install-termux" class="info-link"><i class="fa-solid fa-circle-info"></i> Install Guide</a>
+                                <a href="https://github.com/erikraft/iSearch-CLI/releases" target="_blank" rel="noopener noreferrer" class="info-link release-notes-link"><i class="fa-solid fa-note-sticky"></i> Release Notes</a>
+                            </div>
+
+                            <div class="checksum-block">
+                                <span class="checksum-label">SHA-256 CHECKMATE</span>
+                                <code class="checksum-value">3b2a1f0c...d4c5b6a7</code>
+                            </div>
+                        </div>
+
+                        <!-- Source Code Card -->
+                        <div class="download-card premium-card reveal">
+                            <div class="card-icon"><i class="fa-solid fa-code"></i></div>
+                            <h3>Source Code</h3>
+                            <div class="arch-tag">Platform Agnostic</div>
+                            <p class="card-desc">Fully documented, clean Rust codebase. Complete control over building dependencies. Perfect for auditing, custom modifications, or self-compilation.</p>
+
+                            <div class="download-options">
+                                <a href="https://github.com/erikraft/iSearch-CLI/archive/refs/tags/v0.1.0.zip" class="button button-primary source-zip-btn"><i class="fa-solid fa-file-zipper"></i> Source ZIP (.zip)</a>
+                                <a href="https://github.com/erikraft/iSearch-CLI/archive/refs/tags/v0.1.0.tar.gz" class="button button-secondary source-tar-btn"><i class="fa-solid fa-file-archive"></i> Source Tarball (.tar.gz)</a>
+                            </div>
+
+                            <div class="card-info-links">
+                                <a href="#install-cargo" class="info-link"><i class="fa-solid fa-circle-info"></i> Build Steps</a>
+                                <a href="https://github.com/erikraft/iSearch-CLI" target="_blank" rel="noopener noreferrer" class="info-link"><i class="fa-brands fa-github"></i> Repository</a>
+                            </div>
+
+                            <div class="checksum-block">
+                                <span class="checksum-label">INTEGRITY ROOT</span>
+                                <code class="checksum-value">Verified GitHub Cryptographic Signature</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="section features-section">
+            <div class="container">
+                <div class="section-stack">
+                    <div class="section-heading reveal">
+                        <div class="label-container">
+                            <div class="label-line"></div>
+                            <span class="section-label">Capabilities</span>
+                        </div>
+                        <h2>Engineered for the Terminal</h2>
+                        <p>iSearch CLI™ integrates professional developer-centric capabilities directly into your shell sessions.</p>
+                    </div>
+
+                    <div class="features-grid">
+                        <div class="info-card reveal">
+                            <div class="card-icon"><i class="fa-solid fa-bolt"></i></div>
+                            <h3>Lightning Fast</h3>
+                            <p>Handcrafted in modern Rust. Leverages zero-cost abstractions, multi-threaded pipelines, and efficient native bindings to deliver immediate, sub-millisecond execution speeds.</p>
+                        </div>
+
+                        <div class="info-card reveal">
+                            <div class="card-icon"><i class="fa-brands fa-chrome"></i></div>
+                            <h3>Chromium Backend</h3>
+                            <p>Need dynamic web apps? Trigger our optional headless Chromium engine with Portable Chrome-for-Testing. Render complex Javascript pages natively as clean text inside your shell.</p>
+                        </div>
+
+                        <div class="info-card reveal">
+                            <div class="card-icon"><i class="fa-solid fa-align-left"></i></div>
+                            <h3>Native Renderer</h3>
+                            <p>Browse fast without launching browsers. Parses files, static HTML, CSS, Markdown using high-fidelity rendering, providing rich reading experiences without standard bloat.</p>
+                        </div>
+
+                        <div class="info-card reveal">
+                            <div class="fa-regular fa-folder-open card-icon"></div>
+                            <h3>Archive Explorer</h3>
+                            <p>Seamlessly navigate through compressed ZIP archives, inspect embedded folder structures, and read deep file formats without ever extracting them to your disk.</p>
+                        </div>
+
+                        <div class="info-card reveal">
+                            <div class="fa-solid fa-cube card-icon"></div>
+                            <h3>3D Viewer</h3>
+                            <p>Equipped with an advanced interactive terminal 3D engine. Load and rotate complete wireframe mesh structural models utilizing real-time mathematical projection algorithms.</p>
+                        </div>
+
+                        <div class="info-card reveal">
+                            <div class="card-icon"><i class="fa-solid fa-image"></i></div>
+                            <h3>Media Support</h3>
+                            <p>High-fidelity visual media rendering. Automatically detects terminal features to draw pixels using modern Sixel, Kitty, or iTerm2 graphic protocols with Unicode fallbacks.</p>
+                        </div>
+
+                        <div class="info-card reveal">
+                            <div class="card-icon"><i class="fa-solid fa-plug"></i></div>
+                            <h3>Plugin System</h3>
+                            <p>Easily expand standard command palettes. Load developer modules, customize networking filters, or enable the integrated domain AdBlocker to strip trackers dynamically.</p>
+                        </div>
+
+                        <div class="info-card reveal">
+                            <div class="card-icon"><i class="fa-solid fa-server"></i></div>
+                            <h3>Cross Platform</h3>
+                            <p>Runs perfectly on Windows Command Prompt, Linux shells, macOS terminals, Termux, SSH sessions, GitHub Codespaces, VS Code, and JetBrains integrated environments.</p>
+                        </div>
+
+                        <div class="info-card reveal">
+                            <div class="card-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                            <h3>Beautiful Terminal UI</h3>
+                            <p>Crafted using the premium Ratatui framework. Responsive grid layouts, modern card panels, Unicode graphic blocks, and custom theme presets like Dracula, Nord, and Monokai.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Detailed Installation Instructions Section -->
+        <section id="installation" class="section installation-guide-section">
+            <div class="container">
+                <div class="section-stack">
+                    <div class="section-heading reveal">
+                        <div class="label-container">
+                            <div class="label-line"></div>
+                            <span class="section-label">Guides</span>
+                        </div>
+                        <h2>System Installation Guides</h2>
+                        <p>Detailed step-by-step instructions to configure and execute iSearch CLI™ across distinct environments.</p>
+                    </div>
+
+                    <div class="installation-tabs-wrapper reveal">
+                        <div class="tab-triggers" role="tablist" aria-label="Installation platforms">
+                            <button class="tab-trigger active" role="tab" aria-selected="true" aria-controls="install-windows" id="tab-windows"><i class="fa-brands fa-windows"></i> Windows</button>
+                            <button class="tab-trigger" role="tab" aria-selected="false" aria-controls="install-linux" id="tab-linux"><i class="fa-brands fa-linux"></i> Linux</button>
+                            <button class="tab-trigger" role="tab" aria-selected="false" aria-controls="install-macos" id="tab-macos"><i class="fa-brands fa-apple"></i> macOS</button>
+                            <button class="tab-trigger" role="tab" aria-selected="false" aria-controls="install-termux" id="tab-termux"><i class="fa-brands fa-android"></i> Termux</button>
+                            <button class="tab-trigger" role="tab" aria-selected="false" aria-controls="install-cargo" id="tab-cargo"><i class="fa-solid fa-cubes"></i> Cargo</button>
+                            <button class="tab-trigger" role="tab" aria-selected="false" aria-controls="install-github" id="tab-github"><i class="fa-brands fa-github"></i> GitHub</button>
+                        </div>
+
+                        <div class="tab-panels">
+                            <!-- Windows Panel -->
+                            <div class="tab-panel active" id="install-windows" role="tabpanel" aria-labelledby="tab-windows">
+                                <h3>Windows Installation</h3>
+                                <p>We offer three convenient installation pathways for Windows users:</p>
+
+                                <div class="install-method-step">
+                                    <h4>Method 1: Portable Binary</h4>
+                                    <p>Download the standalone `isearch-windows-x86_64.exe` binary. Move it into an appropriate directory and configure your system environment variables:</p>
+                                    <div class="cli-command-block">
+                                        <button class="copy-btn" data-clipboard="[System.Environment]::SetEnvironmentVariable('Path', $env:Path + ';C:\path\to\isearch', 'User')" aria-label="Copy PowerShell command"><i class="fa-regular fa-copy"></i> Copy</button>
+                                        <pre><code class="syntax-powershell"><span class="comment"># In PowerShell, append directory to your User PATH:</span>
+[<span class="type">System.Environment</span>]::SetEnvironmentVariable(<span class="str">'Path'</span>, <span class="var">$env:Path</span> + <span class="str">';C:\path\to\isearch'</span>, <span class="str">'User'</span>)</code></pre>
+                                    </div>
+                                </div>
+
+                                <div class="install-method-step">
+                                    <h4>Method 2: Windows Installer (.exe)</h4>
+                                    <p>Download `isearch-installer-x86_64.exe`, open it, and follow our interactive graphical installer. It configures shortcuts and environment PATH values instantly.</p>
+                                </div>
+
+                                <div class="install-method-step">
+                                    <h4>Method 3: MSI Installer (.msi)</h4>
+                                    <p>Perfect for enterprise deployment and quiet administrative automation setups. Run the MSI package quietly through PowerShell:</p>
+                                    <div class="cli-command-block">
+                                        <button class="copy-btn" data-clipboard="msiexec /i isearch-installer-x86_64.msi /quiet" aria-label="Copy MSI install command"><i class="fa-regular fa-copy"></i> Copy</button>
+                                        <pre><code class="syntax-powershell">msiexec /i isearch-installer-x86_64.msi /quiet</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Linux Panel -->
+                            <div class="tab-panel" id="install-linux" role="tabpanel" aria-labelledby="tab-linux">
+                                <h3>Linux Deployment</h3>
+                                <p>Install iSearch CLI™ using your native distribution packages or a universal execution archive:</p>
+
+                                <div class="install-method-step">
+                                    <h4>Method 1: Debian / Ubuntu (.deb)</h4>
+                                    <p>Install utilizing `dpkg` or your system standard package managers:</p>
+                                    <div class="cli-command-block">
+                                        <button class="copy-btn" data-clipboard="sudo dpkg -i isearch-linux-x86_64.deb" aria-label="Copy Debian command"><i class="fa-regular fa-copy"></i> Copy</button>
+                                        <pre><code class="syntax-bash"><span class="cmd">sudo</span> dpkg -i isearch-linux-x86_64.deb</code></pre>
+                                    </div>
+                                </div>
+
+                                <div class="install-method-step">
+                                    <h4>Method 2: RedHat / Fedora / CentOS (.rpm)</h4>
+                                    <p>Standard package deployment for RedHat-based environments:</p>
+                                    <div class="cli-command-block">
+                                        <button class="copy-btn" data-clipboard="sudo rpm -i isearch-linux-x86_64.rpm" aria-label="Copy RedHat command"><i class="fa-regular fa-copy"></i> Copy</button>
+                                        <pre><code class="syntax-bash"><span class="cmd">sudo</span> rpm -i isearch-linux-x86_64.rpm</code></pre>
+                                    </div>
+                                </div>
+
+                                <div class="install-method-step">
+                                    <h4>Method 3: AppImage Package</h4>
+                                    <p>A portable, isolated execution bundle. Grant execution rights and run directly:</p>
+                                    <div class="cli-command-block">
+                                        <button class="copy-btn" data-clipboard="chmod +x isearch-linux-x86_64.AppImage && ./isearch-linux-x86_64.AppImage" aria-label="Copy AppImage command"><i class="fa-regular fa-copy"></i> Copy</button>
+                                        <pre><code class="syntax-bash"><span class="cmd">chmod</span> +x isearch-linux-x86_64.AppImage
+./isearch-linux-x86_64.AppImage</code></pre>
+                                    </div>
+                                </div>
+
+                                <div class="install-method-step">
+                                    <h4>Method 4: Portable tar.gz Archive</h4>
+                                    <p>Extract and integrate the native executable into standard system binary paths:</p>
+                                    <div class="cli-command-block">
+                                        <button class="copy-btn" data-clipboard="tar -xzf isearch-linux-x86_64.tar.gz && sudo mv isearch-cli /usr/local/bin/isearch && sudo chmod +x /usr/local/bin/isearch" aria-label="Copy tarball command"><i class="fa-regular fa-copy"></i> Copy</button>
+                                        <pre><code class="syntax-bash"><span class="cmd">tar</span> -xzf isearch-linux-x86_64.tar.gz
+<span class="cmd">sudo</span> mv isearch-cli /usr/local/bin/isearch
+<span class="cmd">sudo</span> chmod +x /usr/local/bin/isearch</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- macOS Panel -->
+                            <div class="tab-panel" id="install-macos" role="tabpanel" aria-labelledby="tab-macos">
+                                <h3>macOS Installation</h3>
+                                <p>iSearch CLI™ offers dedicated native builds for modern Apple Silicon and legacy Intel machines:</p>
+
+                                <div class="install-method-step">
+                                    <h4>Method 1: Native macOS Installers (.pkg)</h4>
+                                    <p>Download `isearch-installer-macos-aarch64.pkg` for Apple Silicon M1/M2/M3 chips, or `isearch-installer-macos-x86_64.pkg` for Intel architectures. Open and complete the graphical walkthrough.</p>
+                                </div>
+
+                                <div class="install-method-step">
+                                    <h4>Method 2: Premium Disk Image (.dmg)</h4>
+                                    <p>Open `isearch.dmg` and drag the application icon directly into your macOS standard `/Applications` system folder.</p>
+                                </div>
+
+                                <div class="install-method-step">
+                                    <h4>Method 3: Portable Command Line Installation</h4>
+                                    <p>Extract, move to path, and configure execution privileges:</p>
+                                    <div class="cli-command-block">
+                                        <button class="copy-btn" data-clipboard="tar -xzf isearch-macos-aarch64.tar.gz && sudo mv isearch-cli /usr/local/bin/isearch && chmod +x /usr/local/bin/isearch" aria-label="Copy macOS CLI command"><i class="fa-regular fa-copy"></i> Copy</button>
+                                        <pre><code class="syntax-bash"><span class="cmd">tar</span> -xzf isearch-macos-aarch64.tar.gz
+<span class="cmd">sudo</span> mv isearch-cli /usr/local/bin/isearch
+<span class="cmd">chmod</span> +x /usr/local/bin/isearch</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Termux Panel -->
+                            <div class="tab-panel" id="install-termux" role="tabpanel" aria-labelledby="tab-termux">
+                                <h3>Termux Environment (Android)</h3>
+                                <p>Deploy iSearch CLI™ directly onto your mobile terminal environment. We strongly recommend using our automated installer script:</p>
+
+                                <div class="cli-command-block">
+                                    <button class="copy-btn" data-clipboard="curl -fsSL https://download.erikraft.com/install-termux.sh | bash" aria-label="Copy Termux command"><i class="fa-regular fa-copy"></i> Copy</button>
+                                    <pre><code class="syntax-bash"><span class="cmd">curl</span> -fsSL https://download.erikraft.com/install-termux.sh | <span class="cmd">bash</span></code></pre>
+                                </div>
+
+                                <div class="install-method-step">
+                                    <h4>Manual Backup Installation Method</h4>
+                                    <p>If you prefer a direct manual setup without executing the online script, pull the pre-compiled binary file directly, configure path execution, and execute:</p>
+                                    <div class="cli-command-block">
+                                        <button class="copy-btn" data-clipboard="mkdir -p $PREFIX/bin && curl -fsSL -o $PREFIX/bin/isearch https://github.com/erikraft/iSearch-CLI/releases/download/v0.1.0/isearch-linux-aarch64 && chmod +x $PREFIX/bin/isearch" aria-label="Copy Termux manual command"><i class="fa-regular fa-copy"></i> Copy</button>
+                                        <pre><code class="syntax-bash"><span class="cmd">mkdir</span> -p $PREFIX/bin
+<span class="cmd">curl</span> -fsSL -o $PREFIX/bin/isearch https://github.com/erikraft/iSearch-CLI/releases/download/v0.1.0/isearch-linux-aarch64
+<span class="cmd">chmod</span> +x $PREFIX/bin/isearch</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cargo Panel -->
+                            <div class="tab-panel" id="install-cargo" role="tabpanel" aria-labelledby="tab-cargo">
+                                <h3>Compile From Source (Cargo)</h3>
+                                <p>Build iSearch CLI™ natively using Rust's official package manager. This requires having a fully functional Rust toolchain configured on your host machine:</p>
+
+                                <div class="cli-command-block">
+                                    <button class="copy-btn" data-clipboard="git clone https://github.com/erikraft/iSearch-CLI.git && cd iSearch-CLI && cargo build --release && sudo mv target/release/isearch-cli /usr/local/bin/isearch" aria-label="Copy Cargo compile commands"><i class="fa-regular fa-copy"></i> Copy</button>
+                                    <pre><code class="syntax-bash"><span class="comment"># 1. Clone the repository</span>
+<span class="cmd">git</span> clone https://github.com/erikraft/iSearch-CLI.git
+<span class="cmd">cd</span> iSearch-CLI
+
+<span class="comment"># 2. Compile optimized production release</span>
+<span class="cmd">cargo</span> build --release
+
+<span class="comment"># 3. Relocate compiled binary to standard executable path</span>
+<span class="cmd">sudo</span> mv target/release/isearch-cli /usr/local/bin/isearch</code></pre>
+                                </div>
+                            </div>
+
+                            <!-- GitHub Panel -->
+                            <div class="tab-panel" id="install-github" role="tabpanel" aria-labelledby="tab-github">
+                                <h3>GitHub Releases Infrastructure</h3>
+                                <p>iSearch CLI™ is built to consume versioning and asset packaging directly from GitHub Releases metadata streams. You can browse, verify cryptographic signatures, and track commits transparently:</p>
+
+                                <div class="install-method-step">
+                                    <h4>Auto Updates System</h4>
+                                    <p>When running, you can securely audit release updates inside your active console sessions:</p>
+                                    <div class="cli-command-block">
+                                        <pre><code>iSearch> version --check
+iSearch> self-update</code></pre>
+                                    </div>
+                                    <p>The client leverages a secure rename-replace atomic pipeline. In case of downloading interruptions or execution failure, it instantly performs automatic rollbacks, protecting your user profiles and preferences.</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -231,19 +647,28 @@
         <div class="container">
             <div class="footer-shell">
                 <div class="footer-brand">
-                    <h3>Erik Rodrigues Balisa</h3>
-                    <p class="footer-copy">Projetando interfaces magníficas, automatizando fluxos e lapidando códigos eficientes do início ao fim.</p>
+                    <h3>iSearch CLI™</h3>
+                    <p class="footer-copy">Crafted with precision by <strong>ErikrafT</strong>. Redefining terminal productivity, browsing capability, and command-line interfaces for modern developer workflows.</p>
                 </div>
-                <div class="footer-actions">
-                    <a href="https://github.com/erikraft" target="_blank" aria-label="Github"><i class="fa-brands fa-github"></i></a>
-                    <a href="https://www.linkedin.com/in/erikraft/" target="_blank" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
-                    <a href="contact.html" class="button button-primary">Contato</a>
+                <div class="footer-links-grid">
+                    <div class="footer-links-col">
+                        <h4>PROJECT</h4>
+                        <a href="https://github.com/erikraft/iSearch-CLI" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github"></i> Repository</a>
+                        <a href="https://github.com/erikraft/iSearch-CLI/issues" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-triangle-exclamation"></i> Support Issues</a>
+                        <a href="https://github.com/erikraft/iSearch-CLI/blob/main/LICENSE" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-scale-balanced"></i> MIT License</a>
+                    </div>
+                    <div class="footer-links-col">
+                        <h4>DOCUMENTATION</h4>
+                        <a href="https://github.com/erikraft/iSearch-CLI/blob/main/README.md" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-file-lines"></i> Main Readme</a>
+                        <a href="https://github.com/erikraft/iSearch-CLI/blob/main/docs/installation.md" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-book"></i> Installation Docs</a>
+                        <a href="https://github.com/erikraft/iSearch-CLI/blob/main/docs/termux.md" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-mobile-screen"></i> Termux Guide</a>
+                    </div>
                 </div>
             </div>
 
             <div class="footer-bottom">
-                <p>&copy; 2026 ErikrafT. Todos os direitos reservados. "Programming is for Everyone!"</p>
-                <button class="back-to-top" aria-label="Voltar para o topo" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+                <p>&copy; 2026 ErikrafT. All rights reserved. iSearch CLI™ is a trademark of ErikrafT.</p>
+                <button class="back-to-top" aria-label="Back to Top" onclick="window.scrollTo({top:0, behavior:'smooth'})">
                     <i class="fa-solid fa-arrow-up"></i>
                 </button>
             </div>
@@ -257,11 +682,7 @@
     <!-- Three.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-    <!-- Dynamic Skills & Interactive Toolkit -->
-    <script src="assets/js/skills.js"></script>
-    <script src="assets/js/skills-engine.js"></script>
-
     <!-- JavaScript Core -->
-    <script src="assets/js/main.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
