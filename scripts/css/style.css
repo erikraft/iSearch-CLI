@@ -1432,3 +1432,226 @@ img {
     padding: 12px;
   }
 }
+
+/* ============================================================
+   MOBILE RESPONSIVENESS AND OVERFLOW MITIGATION SYSTEM
+   ============================================================ */
+
+/* Global text wrapping & safe breaks */
+p, span, li, a, h1, h2, h3, h4, h5, h6 {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* Ensure scrollable blocks are strictly confined and can scroll internally */
+pre, code, .cli-command-block pre, .command-box pre {
+  overflow-wrap: normal !important;
+  word-wrap: normal !important;
+  word-break: keep-all !important;
+  white-space: pre !important;
+  overflow-x: auto !important;
+  max-width: 100% !important;
+}
+
+/* Base viewport layout adjustments */
+html, body {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* General Layout Elements */
+.container {
+  width: min(calc(100% - 2rem), var(--container));
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .container {
+    width: min(calc(100% - 1rem), var(--container));
+  }
+  .section {
+    padding: clamp(40px, 6vw, 80px) 0;
+  }
+}
+
+/* Hero Section Responsiveness */
+@media (max-width: 1024px) {
+  .hero-section {
+    padding: calc(var(--header-height) + 20px) 0 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: clamp(1.8rem, 8vw, 2.5rem);
+    line-height: 1.2;
+  }
+  .hero-desc {
+    font-size: 0.9rem;
+  }
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 12px;
+  }
+  .hero-actions .button {
+    width: 100%;
+  }
+  .hero-stats {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding-top: 16px;
+  }
+  .hero-stats li {
+    align-items: center;
+  }
+}
+
+/* Hero Terminal and high-fidelity CLI styling */
+@media (max-width: 480px) {
+  .cli-body {
+    padding: 16px;
+  }
+  .cli-meta {
+    font-size: 11px;
+    padding-bottom: 10px;
+  }
+  .cli-banner-title {
+    font-size: 13px;
+  }
+  .cli-todo-list li {
+    font-size: 11px;
+  }
+}
+
+/* Termux Section Grid Overrides */
+@media (max-width: 991px) {
+  .termux-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px;
+  }
+}
+
+/* Card components safe wrapping & padding */
+@media (max-width: 480px) {
+  .premium-card {
+    padding: 20px 16px !important;
+    border-radius: var(--radius-sm);
+  }
+  .manual-block {
+    padding: 14px !important;
+  }
+  .command-box {
+    padding: 12px !important;
+  }
+}
+
+/* Command copy boxes and scroll container controls */
+.command-box pre {
+  margin: 0;
+  overflow-x: auto;
+  width: 100%;
+  max-width: 100%;
+  display: block;
+}
+
+.command-header {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Downloads and Features Grids */
+.downloads-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+}
+
+@media (max-width: 350px) {
+  .downloads-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.download-options .button {
+  word-break: break-all;
+  white-space: normal;
+  height: auto;
+  line-height: 1.4;
+  text-align: center;
+  padding: 12px 14px;
+}
+
+.features-grid {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+}
+
+@media (max-width: 480px) {
+  .features-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Tab triggers navigation bar */
+.tab-triggers {
+  flex-wrap: nowrap;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .tab-trigger {
+    padding: 12px 16px;
+    font-size: 0.75rem;
+  }
+}
+
+.tab-panels {
+  padding: clamp(16px, 4vw, 32px) !important;
+}
+
+/* Command blocks inside guides */
+.cli-command-block {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cli-command-block pre {
+  padding-right: 0 !important;
+  margin-top: 40px; /* Leave space for the absolute copy button above */
+  width: 100%;
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  .cli-command-block {
+    padding: 12px !important;
+  }
+  .cli-command-block pre {
+    margin-top: 36px;
+  }
+}
+
+/* Footer Section responsive stack */
+@media (max-width: 768px) {
+  .footer-links-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .site-footer {
+    padding: 40px 0 20px;
+  }
+  .footer-shell {
+    gap: 30px;
+    margin-bottom: 40px;
+  }
+  .footer-bottom {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+    padding-top: 20px;
+  }
+}
