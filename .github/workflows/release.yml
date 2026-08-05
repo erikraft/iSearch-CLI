@@ -111,7 +111,7 @@ jobs:
           python3 -c "import sys; open('AppDir/isearch.png', 'wb').write(bytes.fromhex('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000b49444154789cc5c0010d00000002000183b118af0000000049454e44ae426082'))"
 
           # Download and run appimagetool safely without FUSE dependencies
-          curl -LO https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-x86_64.AppImage
+          curl -LO https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool-x86_64.AppImage
           ./appimagetool-x86_64.AppImage --appimage-extract
 
