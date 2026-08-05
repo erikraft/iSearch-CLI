@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  release:
+    types:
+      - published
   workflow_dispatch:
 
 jobs:
@@ -18,13 +21,88 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-msvc
+          targets: x86_64-pc-windows-msvc, aarch64-pc-windows-msvc
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Build Windows Binary
+      - name: Build Windows x64 Binary
         run: cargo build --release --target x86_64-pc-windows-msvc
+
+      - name: Build Windows ARM64 Binary
+        run: cargo build --release --target aarch64-pc-windows-msvc
+
+      - name: Install WiX and NSIS
+        shell: pwsh
+        run: |
+          # 1. Install/Configure NSIS
+          if (!(Get-Command makensis -ErrorAction SilentlyContinue)) {
+              if (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe") {
+                  "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+              } elseif (Test-Path "C:\Program Files\NSIS\makensis.exe") {
+                  "C:\Program Files\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+              } else {
+                  Write-Host "NSIS not found, installing via Chocolatey..."
+                  choco install nsis -y
+                  if (Test-Path "C:\Program Files (x86)\NSIS") {
+                      "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+                  } elseif (Test-Path "C:\Program Files\NSIS") {
+                      "C:\Program Files\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+                  }
+              }
+          }
+
+          # 2. Install/Configure WiX Toolset v3
+          if (!(Get-Command candle -ErrorAction SilentlyContinue) -or !(Get-Command light -ErrorAction SilentlyContinue)) {
+              if (Test-Path "C:\Program Files (x86)\WiX Toolset v3.14\bin") {
+                  "C:\Program Files (x86)\WiX Toolset v3.14\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+              } elseif (Test-Path "C:\Program Files (x86)\WiX Toolset v3.11\bin") {
+                  "C:\Program Files (x86)\WiX Toolset v3.11\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+              } else {
+                  Write-Host "WiX Toolset not found, installing via Chocolatey..."
+                  choco install wixtoolset -y
+                  $wixPath = Get-ChildItem -Path "C:\Program Files (x86)" -Filter "WiX Toolset*" | Select-Object -First 1
+                  if ($wixPath) {
+                      $binPath = Join-Path $wixPath.FullName "bin"
+                      if (Test-Path $binPath) {
+                          $binPath | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+                      }
+                  }
+              }
+          }
+
+      - name: Verify WiX and NSIS
+        shell: pwsh
+        run: |
+          $missing = @()
+          if (!(Get-Command makensis -ErrorAction SilentlyContinue)) { $missing += "makensis" }
+          if (!(Get-Command candle -ErrorAction SilentlyContinue)) { $missing += "candle" }
+          if (!(Get-Command light -ErrorAction SilentlyContinue)) { $missing += "light" }
+
+          if ($missing.Count -gt 0) {
+              Write-Error "Required tools missing: $($missing -join ', ')"
+              exit 1
+          } else {
+              Write-Host "All required tools (makensis, candle, light) are installed and verified successfully!"
+          }
+
+      - name: Build Installers (.exe, .msi)
+        shell: pwsh
+        run: |
+          mkdir dist
+          cp target/x86_64-pc-windows-msvc/release/isearch-cli.exe dist/isearch-windows-x86_64.exe
+
+          # Compile NSIS Installer (.exe) and WiX (.msi) from inside scripts/ to resolve relative paths
+          cd scripts
+          makensis installer.nsi
+          candle installer.wxs -o installer.wixobj
+          light -ext WixUIExtension installer.wixobj -o ../dist/isearch-installer-x86_64.msi
+
+          # Rename artifacts to consistent names
+          cp ../dist/isearch-installer-x86_64.exe ../dist/isearch-cli-windows-x64.exe
+          cp ../dist/isearch-installer-x86_64.msi ../dist/isearch-cli-windows-x64.msi
+          Compress-Archive -Path ../target/x86_64-pc-windows-msvc/release/isearch-cli.exe -DestinationPath ../dist/isearch-cli-windows-x64.zip
+          Compress-Archive -Path ../target/aarch64-pc-windows-msvc/release/isearch-cli.exe -DestinationPath ../dist/isearch-cli-windows-arm64.zip
 
       - name: Upload Windows Portable Artifact
         if: github.event_name != 'pull_request'
@@ -32,3 +110,10 @@ jobs:
         with:
           name: isearch-windows-x86_64.exe
           path: target/x86_64-pc-windows-msvc/release/isearch-cli.exe
+
+      - name: Upload Windows Consistent Assets
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-assets
+          path: dist/*

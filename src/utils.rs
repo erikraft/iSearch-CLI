@@ -110,10 +110,13 @@ fn run_command_get_stdout(cmd: &str, args: &[&str]) -> Result<String, String> {
 /// ```
 #[cfg(not(target_os = "android"))]
 pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
-    // 1. Try native clipboard via arboard first
-    if let Ok(mut clipboard) = arboard::Clipboard::new() {
-        if clipboard.set_text(text.to_string()).is_ok() {
-            return Ok(());
+    // 1. Try native clipboard via arboard first if feature is enabled
+    #[cfg(feature = "clipboard")]
+    {
+        if let Ok(mut clipboard) = arboard::Clipboard::new() {
+            if clipboard.set_text(text.to_string()).is_ok() {
+                return Ok(());
+            }
         }
     }
 
@@ -219,9 +222,12 @@ pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
 /// ```
 #[cfg(not(target_os = "android"))]
 pub fn get_from_clipboard() -> Result<String, String> {
-    if let Ok(mut clipboard) = arboard::Clipboard::new() {
-        if let Ok(text) = clipboard.get_text() {
-            return Ok(text);
+    #[cfg(feature = "clipboard")]
+    {
+        if let Ok(mut clipboard) = arboard::Clipboard::new() {
+            if let Ok(text) = clipboard.get_text() {
+                return Ok(text);
+            }
         }
     }
     Err("Failed to read from clipboard.".to_string())

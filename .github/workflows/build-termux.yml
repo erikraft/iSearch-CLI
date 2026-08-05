@@ -5,11 +5,14 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  release:
+    types:
+      - published
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build Android Termux Binaries (Aarch64 & Armv7)
+    name: Build Android Termux Binaries (Aarch64, Armv7, x86_64)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -18,7 +21,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android, armv7-linux-androideabi
+          targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
@@ -26,22 +29,55 @@ jobs:
       - name: Compile native Android binaries
         run: |
           mkdir dist
+          NDK_BIN="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
 
-          # Setup compilers, linkers, and archivers for Android Aarch64 using pre-installed NDK
-          export CC_aarch64_linux_android=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
-          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
-          export AR_aarch64_linux_android=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
+          # 1. Compile for Android Aarch64 (ARM64)
+          CLANG_AARCH64=$(find "$NDK_BIN" -name "aarch64-linux-android*-clang" | sort -V | tail -n 1)
+          if [ -z "$CLANG_AARCH64" ]; then
+            CLANG_AARCH64="$NDK_BIN/aarch64-linux-android33-clang"
+          fi
+          echo "Using Aarch64 clang: $CLANG_AARCH64"
+
+          export CC_aarch64_linux_android="$CLANG_AARCH64"
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$CLANG_AARCH64"
+          export AR_aarch64_linux_android="$NDK_BIN/llvm-ar"
 
           cargo build --release --target aarch64-linux-android
           cp target/aarch64-linux-android/release/isearch-cli dist/isearch-linux-android-aarch64
+          # Keep old name for backwards compatibility
+          cp target/aarch64-linux-android/release/isearch-cli dist/isearch-linux-aarch64
 
-          # Setup compilers, linkers, and archivers for Android Armv7
-          export CC_armv7_linux_androideabi=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi33-clang
-          export CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi33-clang
-          export AR_armv7_linux_androideabi=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
+          # 2. Compile for Android Armv7 (32-bit ARM)
+          CLANG_ARMV7=$(find "$NDK_BIN" -name "armv7a-linux-androideabi*-clang" | sort -V | tail -n 1)
+          if [ -z "$CLANG_ARMV7" ]; then
+            CLANG_ARMV7="$NDK_BIN/armv7a-linux-androideabi33-clang"
+          fi
+          echo "Using Armv7 clang: $CLANG_ARMV7"
+
+          export CC_armv7_linux_androideabi="$CLANG_ARMV7"
+          export CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER="$CLANG_ARMV7"
+          export AR_armv7_linux_androideabi="$NDK_BIN/llvm-ar"
 
           cargo build --release --target armv7-linux-androideabi
           cp target/armv7-linux-androideabi/release/isearch-cli dist/isearch-linux-android-armv7
+          # Keep old name for backwards compatibility
+          cp target/armv7-linux-androideabi/release/isearch-cli dist/isearch-linux-arm
+
+          # 3. Compile for Android x86_64
+          CLANG_X86_64=$(find "$NDK_BIN" -name "x86_64-linux-android*-clang" | sort -V | tail -n 1)
+          if [ -z "$CLANG_X86_64" ]; then
+            CLANG_X86_64="$NDK_BIN/x86_64-linux-android33-clang"
+          fi
+          echo "Using x86_64 clang: $CLANG_X86_64"
+
+          export CC_x86_64_linux_android="$CLANG_X86_64"
+          export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$CLANG_X86_64"
+          export AR_x86_64_linux_android="$NDK_BIN/llvm-ar"
+
+          cargo build --release --target x86_64-linux-android
+          cp target/x86_64-linux-android/release/isearch-cli dist/isearch-linux-android-x86_64
+          # Keep old name for backwards compatibility
+          cp target/x86_64-linux-android/release/isearch-cli dist/isearch-linux-x86_64
 
       - name: Upload Termux Aarch64 Artifact
         if: github.event_name != 'pull_request'
@@ -56,3 +92,10 @@ jobs:
         with:
           name: isearch-termux-armv7
           path: dist/isearch-linux-android-armv7
+
+      - name: Upload Termux x86_64 Artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: isearch-termux-x86_64
+          path: dist/isearch-linux-android-x86_64

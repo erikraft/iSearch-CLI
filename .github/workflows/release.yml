@@ -2,10 +2,14 @@ name: Release Pipeline
 
 on:
   push:
+    branches: [ main ]
     tags:
       - 'v*'
+  pull_request:
+    branches: [ main ]
   release:
-    types: [published]
+    types:
+      - published
   workflow_dispatch:
 
 permissions:
@@ -55,10 +59,15 @@ jobs:
           cp target/aarch64-unknown-linux-gnu/release/isearch-cli dist/isearch-linux-aarch64
           cp target/armv7-unknown-linux-gnueabihf/release/isearch-cli dist/isearch-linux-arm
 
-          # Generate portable archives
+          # Generate portable archives (old names for backward compatibility)
           tar -czf dist/isearch-linux-x86_64.tar.gz -C dist isearch-linux-x86_64
           tar -czf dist/isearch-linux-aarch64.tar.gz -C dist isearch-linux-aarch64
           tar -czf dist/isearch-linux-arm.tar.gz -C dist isearch-linux-arm
+
+          # Generate portable archives (new consistent names)
+          tar -czf dist/isearch-cli-linux-x64.tar.gz -C dist isearch-linux-x86_64
+          tar -czf dist/isearch-cli-linux-arm64.tar.gz -C dist isearch-linux-aarch64
+          tar -czf dist/isearch-cli-linux-arm.tar.gz -C dist isearch-linux-arm
 
           # Build Debian package (.deb)
           mkdir -p debian/DEBIAN
@@ -73,13 +82,15 @@ jobs:
           Maintainer: ErikrafT
           Description: Premium terminal browser and search assistant
           EOF
-          dpkg-deb --build debian dist/isearch-linux-x86_64.deb
+          dpkg-deb --build debian dist/isearch-cli-linux-amd64.deb
+          cp dist/isearch-cli-linux-amd64.deb dist/isearch-linux-x86_64.deb
 
           # Convert to RedHat package (.rpm) using alien
-          sudo alien --to-rpm --scripts dist/isearch-linux-x86_64.deb
-          mv isearch-cli-*.rpm dist/isearch-linux-x86_64.rpm || mv isearch-*.rpm dist/isearch-linux-x86_64.rpm || true
+          sudo alien --to-rpm --scripts dist/isearch-cli-linux-amd64.deb
+          mv isearch-cli-*.rpm dist/isearch-cli-linux-amd64.rpm || mv isearch-*.rpm dist/isearch-cli-linux-amd64.rpm || true
+          cp dist/isearch-cli-linux-amd64.rpm dist/isearch-linux-x86_64.rpm || true
 
-          # Build AppImage
+          # Build AppImage Base Dir
           mkdir -p AppDir/usr/bin
           cp target/x86_64-unknown-linux-gnu/release/isearch-cli AppDir/usr/bin/isearch
           cat <<'EOF' > AppDir/AppRun
@@ -103,7 +114,19 @@ jobs:
           curl -LO https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-x86_64.AppImage
           chmod +x appimagetool-x86_64.AppImage
           ./appimagetool-x86_64.AppImage --appimage-extract
-          ./squashfs-root/AppRun AppDir dist/isearch-linux-x86_64.AppImage
+
+          # Build x86_64 AppImage
+          ARCH=x86_64 ./squashfs-root/AppRun AppDir dist/isearch-cli-linux-x64.AppImage
+          cp dist/isearch-cli-linux-x64.AppImage dist/isearch-linux-x86_64.AppImage
+
+          # Build ARM64 AppImage
+          mkdir -p AppDir-arm64/usr/bin
+          cp target/aarch64-unknown-linux-gnu/release/isearch-cli AppDir-arm64/usr/bin/isearch
+          cp AppDir/AppRun AppDir-arm64/
+          cp AppDir/isearch.desktop AppDir-arm64/
+          cp AppDir/isearch.png AppDir-arm64/
+
+          ARCH=arm64 ./squashfs-root/AppRun AppDir-arm64 dist/isearch-cli-linux-arm64.AppImage
 
       - name: Upload Linux Assets
         uses: actions/upload-artifact@v4
@@ -121,27 +144,69 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-msvc
+          targets: x86_64-pc-windows-msvc, aarch64-pc-windows-msvc
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Build Windows
+      - name: Build Windows x64
         run: cargo build --release --target x86_64-pc-windows-msvc
 
-      - name: Configure WiX and NSIS Path
+      - name: Build Windows ARM64
+        run: cargo build --release --target aarch64-pc-windows-msvc
+
+      - name: Install WiX and NSIS
         shell: pwsh
         run: |
-          # Add WiX bin to PATH
-          if (Test-Path "C:\Program Files (x86)\WiX Toolset v3.14\bin") {
-              "C:\Program Files (x86)\WiX Toolset v3.14\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          # 1. Install/Configure NSIS
+          if (!(Get-Command makensis -ErrorAction SilentlyContinue)) {
+              if (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe") {
+                  "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+              } elseif (Test-Path "C:\Program Files\NSIS\makensis.exe") {
+                  "C:\Program Files\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+              } else {
+                  Write-Host "NSIS not found, installing via Chocolatey..."
+                  choco install nsis -y
+                  if (Test-Path "C:\Program Files (x86)\NSIS") {
+                      "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+                  } elseif (Test-Path "C:\Program Files\NSIS") {
+                      "C:\Program Files\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+                  }
+              }
           }
-          # Add NSIS to PATH if pre-installed
-          if (Test-Path "C:\Program Files (x86)\NSIS") {
-              "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+          # 2. Install/Configure WiX Toolset v3
+          if (!(Get-Command candle -ErrorAction SilentlyContinue) -or !(Get-Command light -ErrorAction SilentlyContinue)) {
+              if (Test-Path "C:\Program Files (x86)\WiX Toolset v3.14\bin") {
+                  "C:\Program Files (x86)\WiX Toolset v3.14\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+              } elseif (Test-Path "C:\Program Files (x86)\WiX Toolset v3.11\bin") {
+                  "C:\Program Files (x86)\WiX Toolset v3.11\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+              } else {
+                  Write-Host "WiX Toolset not found, installing via Chocolatey..."
+                  choco install wixtoolset -y
+                  $wixPath = Get-ChildItem -Path "C:\Program Files (x86)" -Filter "WiX Toolset*" | Select-Object -First 1
+                  if ($wixPath) {
+                      $binPath = Join-Path $wixPath.FullName "bin"
+                      if (Test-Path $binPath) {
+                          $binPath | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+                      }
+                  }
+              }
+          }
+
+      - name: Verify WiX and NSIS
+        shell: pwsh
+        run: |
+          $missing = @()
+          if (!(Get-Command makensis -ErrorAction SilentlyContinue)) { $missing += "makensis" }
+          if (!(Get-Command candle -ErrorAction SilentlyContinue)) { $missing += "candle" }
+          if (!(Get-Command light -ErrorAction SilentlyContinue)) { $missing += "light" }
+
+          if ($missing.Count -gt 0) {
+              Write-Error "Required tools missing: $($missing -join ', ')"
+              exit 1
           } else {
-              # Install NSIS via chocolatey if not found
-              choco install nsis -y
+              Write-Host "All required tools (makensis, candle, light) are installed and verified successfully!"
           }
 
       - name: Build Installers (.exe, .msi)
@@ -155,6 +220,12 @@ jobs:
           makensis installer.nsi
           candle installer.wxs -o installer.wixobj
           light -ext WixUIExtension installer.wixobj -o ../dist/isearch-installer-x86_64.msi
+
+          # Rename and package consistent artifact names
+          cp ../dist/isearch-installer-x86_64.exe ../dist/isearch-cli-windows-x64.exe
+          cp ../dist/isearch-installer-x86_64.msi ../dist/isearch-cli-windows-x64.msi
+          Compress-Archive -Path ../target/x86_64-pc-windows-msvc/release/isearch-cli.exe -DestinationPath ../dist/isearch-cli-windows-x64.zip
+          Compress-Archive -Path ../target/aarch64-pc-windows-msvc/release/isearch-cli.exe -DestinationPath ../dist/isearch-cli-windows-arm64.zip
 
       - name: Upload Windows Assets
         uses: actions/upload-artifact@v4
@@ -189,9 +260,17 @@ jobs:
           cp target/x86_64-apple-darwin/release/isearch-cli dist/isearch-macos-x86_64
           cp target/aarch64-apple-darwin/release/isearch-cli dist/isearch-macos-aarch64
 
-          # Package as .tar.gz
+          # Package as .tar.gz (old names)
           tar -czf dist/isearch-macos-x86_64.tar.gz -C dist isearch-macos-x86_64
           tar -czf dist/isearch-macos-aarch64.tar.gz -C dist isearch-macos-aarch64
+
+          # Package as .tar.gz (new consistent names)
+          tar -czf dist/isearch-cli-macos-intel.tar.gz -C dist isearch-macos-x86_64
+          tar -czf dist/isearch-cli-macos-arm64.tar.gz -C dist isearch-macos-aarch64
+
+          # Package as .zip (new consistent names)
+          zip -j dist/isearch-cli-macos-intel.zip target/x86_64-apple-darwin/release/isearch-cli
+          zip -j dist/isearch-cli-macos-arm64.zip target/aarch64-apple-darwin/release/isearch-cli
 
           # Build Apple Silicon PKG
           mkdir -p osx-pkg-aarch64/usr/local/bin
@@ -228,7 +307,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android, armv7-linux-androideabi
+          targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
@@ -236,22 +315,60 @@ jobs:
       - name: Compile native Android binaries
         run: |
           mkdir dist
+          NDK_BIN="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
 
-          # Setup compilers, linkers, and archivers for Android Aarch64 using pre-installed NDK
-          export CC_aarch64_linux_android=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
-          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
-          export AR_aarch64_linux_android=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
+          # 1. Compile for Android Aarch64 (ARM64)
+          CLANG_AARCH64=$(find "$NDK_BIN" -name "aarch64-linux-android*-clang" | sort -V | tail -n 1)
+          if [ -z "$CLANG_AARCH64" ]; then
+            CLANG_AARCH64="$NDK_BIN/aarch64-linux-android33-clang"
+          fi
+          echo "Using Aarch64 clang: $CLANG_AARCH64"
+
+          export CC_aarch64_linux_android="$CLANG_AARCH64"
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$CLANG_AARCH64"
+          export AR_aarch64_linux_android="$NDK_BIN/llvm-ar"
 
           cargo build --release --target aarch64-linux-android
           cp target/aarch64-linux-android/release/isearch-cli dist/isearch-linux-android-aarch64
+          # Keep old name for backwards compatibility
+          cp target/aarch64-linux-android/release/isearch-cli dist/isearch-linux-aarch64
 
-          # Setup compilers, linkers, and archivers for Android Armv7
-          export CC_armv7_linux_androideabi=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi33-clang
-          export CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi33-clang
-          export AR_armv7_linux_androideabi=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
+          # 2. Compile for Android Armv7
+          CLANG_ARMV7=$(find "$NDK_BIN" -name "armv7a-linux-androideabi*-clang" | sort -V | tail -n 1)
+          if [ -z "$CLANG_ARMV7" ]; then
+            CLANG_ARMV7="$NDK_BIN/armv7a-linux-androideabi33-clang"
+          fi
+          echo "Using Armv7 clang: $CLANG_ARMV7"
+
+          export CC_armv7_linux_androideabi="$CLANG_ARMV7"
+          export CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER="$CLANG_ARMV7"
+          export AR_armv7_linux_androideabi="$NDK_BIN/llvm-ar"
 
           cargo build --release --target armv7-linux-androideabi
           cp target/armv7-linux-androideabi/release/isearch-cli dist/isearch-linux-android-armv7
+          # Keep old name for backwards compatibility
+          cp target/armv7-linux-androideabi/release/isearch-cli dist/isearch-linux-arm
+
+          # 3. Compile for Android x86_64
+          CLANG_X86_64=$(find "$NDK_BIN" -name "x86_64-linux-android*-clang" | sort -V | tail -n 1)
+          if [ -z "$CLANG_X86_64" ]; then
+            CLANG_X86_64="$NDK_BIN/x86_64-linux-android33-clang"
+          fi
+          echo "Using x86_64 clang: $CLANG_X86_64"
+
+          export CC_x86_64_linux_android="$CLANG_X86_64"
+          export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$CLANG_X86_64"
+          export AR_x86_64_linux_android="$NDK_BIN/llvm-ar"
+
+          cargo build --release --target x86_64-linux-android
+          cp target/x86_64-linux-android/release/isearch-cli dist/isearch-linux-android-x86_64
+          # Keep old name for backwards compatibility
+          cp target/x86_64-linux-android/release/isearch-cli dist/isearch-linux-x86_64
+
+          # Package consistent Android release archives
+          tar -czf dist/isearch-cli-termux-aarch64.tar.gz -C target/aarch64-linux-android/release isearch-cli
+          tar -czf dist/isearch-cli-termux-arm.tar.gz -C target/armv7-linux-androideabi/release isearch-cli
+          tar -czf dist/isearch-cli-termux-x64.tar.gz -C target/x86_64-linux-android/release isearch-cli
 
       - name: Upload Android Assets
         uses: actions/upload-artifact@v4
