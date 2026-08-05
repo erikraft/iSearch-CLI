@@ -820,6 +820,85 @@ img {
   }
 }
 
+@media (max-width: 768px) {
+  .termux-section .container {
+    width: min(calc(100% - 1.5rem), var(--container)) !important;
+  }
+  .termux-section {
+    padding: clamp(40px, 6vw, 80px) 0 !important;
+  }
+  .termux-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    gap: 24px !important;
+  }
+  .termux-info-block,
+  .termux-terminal-block {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+  .termux-terminal-block .cli-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+  .termux-terminal-block .cli-body {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: clamp(12px, 3vw, 16px) !important;
+    box-sizing: border-box !important;
+  }
+  .termux-terminal-block .command-box {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: clamp(10px, 2.5vw, 12px) !important;
+    box-sizing: border-box !important;
+  }
+  .termux-terminal-block .command-header {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    box-sizing: border-box !important;
+  }
+  .termux-terminal-block .command-header span {
+    word-break: break-all !important;
+  }
+  .termux-terminal-block .command-header .copy-btn {
+    flex-shrink: 0 !important;
+  }
+  .termux-terminal-block .command-box pre {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    box-sizing: border-box !important;
+    white-space: pre !important;
+  }
+  .termux-terminal-block .command-box pre code {
+    white-space: pre !important;
+    word-wrap: normal !important;
+    word-break: normal !important;
+    display: inline-block !important;
+  }
+  .termux-terminal-block .command-desc {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    word-break: break-word !important;
+  }
+}
+
 .termux-info-block h3 {
   font-size: 1.75rem;
   margin-bottom: 16px;
