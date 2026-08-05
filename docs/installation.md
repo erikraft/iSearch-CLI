@@ -11,9 +11,9 @@ This document provides a comprehensive setup guide for installing and running **
 ## Supported Platforms
 
 iSearch CLI™ runs natively on:
-- **Windows** (x86_64, portable, installers)
-- **Linux** (x86_64, aarch64, armv7)
-- **macOS** (Intel x86_64 and Apple Silicon aarch64)
+- **Windows** (x86_64, portable, installers, .msi)
+- **Linux** (x86_64, aarch64, armv7, .deb, .rpm, .AppImage)
+- **macOS** (Intel x86_64 and Apple Silicon aarch64, .pkg, .dmg)
 - **Android Termux** (Aarch64, arm, x86_64)
 
 ---
@@ -24,7 +24,7 @@ iSearch CLI™ runs natively on:
 1. Go to the [Releases Page](https://github.com/erikraft/iSearch-CLI/releases).
 2. Download `isearch-windows-x86_64.exe`.
 3. Add the directory containing the file to your system's `PATH` environment variable.
-4. Run `isearch` in Command Prompt or PowerShell.
+4. Run `isearch` in Command Prompt, PowerShell, or Windows Terminal.
 
 ### Method 2: Windows Installer (.exe)
 1. Download `isearch-installer-x86_64.exe` from GitHub Releases.
