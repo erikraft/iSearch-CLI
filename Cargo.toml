@@ -21,4 +21,10 @@ rusqlite = { version = "0.31.0", features = ["bundled"] }
 serde_json = "1.0.151"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
-arboard = "3.4"
+arboard = { version = "3.4", optional = true }
+
+[features]
+default = ["clipboard", "browser", "desktop"]
+clipboard = ["arboard"]
+browser = []
+desktop = []
