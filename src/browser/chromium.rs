@@ -186,9 +186,9 @@ impl ChromiumEngine {
                 _ => return Err(BrowserError::UnsupportedPlatform(format!("No automated pre-built Chromium binary for {} {}", os, arch))),
             };
 
-            let cache_dir = self
-                .get_cache_directory()
-                .ok_or_else(|| BrowserError::IoError("Failed to get cache directory".to_string()))?;
+            let cache_dir = self.get_cache_directory().ok_or_else(|| {
+                BrowserError::IoError("Failed to get cache directory".to_string())
+            })?;
             fs::create_dir_all(&cache_dir).map_err(|e| BrowserError::IoError(e.to_string()))?;
 
             let zip_path = cache_dir.join("chrome.zip");
@@ -234,7 +234,8 @@ impl ChromiumEngine {
 
             on_progress(0.7, "Extracting zip archive...");
             // Extract ZIP
-            let file = fs::File::open(&zip_path).map_err(|e| BrowserError::IoError(e.to_string()))?;
+            let file =
+                fs::File::open(&zip_path).map_err(|e| BrowserError::IoError(e.to_string()))?;
             let mut archive = zip::ZipArchive::new(file)
                 .map_err(|e| BrowserError::DownloadError(format!("Failed to parse zip: {}", e)))?;
             let total_files = archive.len();
@@ -249,15 +250,17 @@ impl ChromiumEngine {
                 };
 
                 if file.name().ends_with('/') {
-                    fs::create_dir_all(&outpath).map_err(|e| BrowserError::IoError(e.to_string()))?;
+                    fs::create_dir_all(&outpath)
+                        .map_err(|e| BrowserError::IoError(e.to_string()))?;
                 } else {
                     if let Some(p) = outpath.parent() {
                         if !p.exists() {
-                            fs::create_dir_all(p).map_err(|e| BrowserError::IoError(e.to_string()))?;
+                            fs::create_dir_all(p)
+                                .map_err(|e| BrowserError::IoError(e.to_string()))?;
                         }
                     }
-                    let mut outfile =
-                        fs::File::create(&outpath).map_err(|e| BrowserError::IoError(e.to_string()))?;
+                    let mut outfile = fs::File::create(&outpath)
+                        .map_err(|e| BrowserError::IoError(e.to_string()))?;
                     io::copy(&mut file, &mut outfile)
                         .map_err(|e| BrowserError::IoError(e.to_string()))?;
                 }
@@ -271,7 +274,8 @@ impl ChromiumEngine {
                             .to_string_lossy()
                             .contains("Google Chrome.app/Contents/MacOS/")
                     {
-                        fs::set_permissions(&outpath, fs::Permissions::from_mode(0o755)).unwrap_or(());
+                        fs::set_permissions(&outpath, fs::Permissions::from_mode(0o755))
+                            .unwrap_or(());
                     }
                 }
 
