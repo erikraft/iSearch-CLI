@@ -2,13 +2,40 @@ use qrcode::{Color, QrCode};
 use std::io::Write;
 use std::process::{Command, Stdio};
 
-/// Detects if the current environment is Termux.
+/// Detects if the current running environment is Termux on Android.
+///
+/// Looks up standard environment variables and local paths used by Termux.
+///
+/// # Returns
+///
+/// Returns `true` if the environment is determined to be Termux, otherwise `false`.
+///
+/// # Examples
+///
+/// ```
+/// use isearch_cli::utils::is_termux;
+/// let termux = is_termux();
+/// ```
 pub fn is_termux() -> bool {
     std::env::var("TERMUX_VERSION").is_ok()
         || std::path::Path::new("/data/data/com.termux").exists()
 }
 
-/// Runs a command with input via stdin and returns if it succeeded.
+/// Runs an OS command with standard input piped into it.
+///
+/// # Arguments
+///
+/// * `cmd` - The system command name or path to execute.
+/// * `args` - Arguments passed to the command.
+/// * `input` - The string contents to write into the spawned process's stdin.
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success, or `Err(String)` containing an error description.
+///
+/// # Errors
+///
+/// Returns an error if spawning the process fails or if writing to standard input fails.
 fn run_command_with_input(cmd: &str, args: &[&str], input: &str) -> Result<(), String> {
     let mut child = Command::new(cmd)
         .args(args)
@@ -32,7 +59,56 @@ fn run_command_with_input(cmd: &str, args: &[&str], input: &str) -> Result<(), S
     }
 }
 
-/// Copies text to the clipboard using native APIs (via arboard) or system fallbacks.
+/// Runs an OS command and returns its standard output.
+///
+/// # Arguments
+///
+/// * `cmd` - The system command name or path to execute.
+/// * `args` - Arguments passed to the command.
+///
+/// # Returns
+///
+/// Returns the standard output on success, or `Err(String)` containing an error description.
+#[cfg(target_os = "android")]
+fn run_command_get_stdout(cmd: &str, args: &[&str]) -> Result<String, String> {
+    let output = Command::new(cmd)
+        .args(args)
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    } else {
+        Err(format!("Command {} exited with non-zero status", cmd))
+    }
+}
+
+/// Copies the provided text slice to the user's system clipboard.
+///
+/// This function attempts multiple methods:
+/// 1. Primary: Native APIs using the `arboard` crate.
+/// 2. Secondary: Fallbacks using CLI commands depending on the platform (e.g., `pbcopy` on macOS,
+///    PowerShell commands or `clip.exe` on Windows, `wl-copy`/`xclip`/`xsel` on Linux, and `termux-clipboard-set` on Android/Termux).
+///
+/// # Arguments
+///
+/// * `text` - The string slice that will be placed onto the system clipboard.
+///
+/// # Returns
+///
+/// Returns `Ok(())` if successfully copied, otherwise `Err(String)` with an error.
+///
+/// # Errors
+///
+/// Returns an error if all clipboard copy attempts and fallback tools fail.
+///
+/// # Examples
+///
+/// ```no_run
+/// use isearch_cli::utils::copy_to_clipboard;
+/// copy_to_clipboard("test-text-to-clipboard").unwrap();
+/// ```
+#[cfg(not(target_os = "android"))]
 pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
     // 1. Try native clipboard via arboard first
     if let Ok(mut clipboard) = arboard::Clipboard::new() {
@@ -95,8 +171,110 @@ pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
     Err("Clipboard fallback failed. Please copy the code manually.".to_string())
 }
 
-/// Renders a QR code using high-quality Unicode half-block characters.
-/// This groups 2 vertical modules into 1 character, making it compact and highly scannable.
+/// Copies the provided text slice to the user's system clipboard on Android.
+///
+/// On Android, this utilizes the Termux `termux-clipboard-set` command if available.
+///
+/// # Arguments
+///
+/// * `text` - The string slice that will be placed onto the system clipboard.
+///
+/// # Returns
+///
+/// Returns `Ok(())` if successfully copied, otherwise `Err(String)` with an error.
+///
+/// # Errors
+///
+/// Returns an error if the platform is not Termux or if the copy tool fails.
+///
+/// # Examples
+///
+/// ```no_run
+/// use isearch_cli::utils::copy_to_clipboard;
+/// copy_to_clipboard("test-text-to-clipboard").unwrap();
+/// ```
+#[cfg(target_os = "android")]
+pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
+    if is_termux() && run_command_with_input("termux-clipboard-set", &[], text).is_ok() {
+        return Ok(());
+    }
+    Err("Clipboard copy is not supported on Android without Termux clipboard tools.".to_string())
+}
+
+/// Reads the current text from the user's system clipboard.
+///
+/// # Returns
+///
+/// Returns `Ok(String)` containing the clipboard text if successfully retrieved, otherwise `Err(String)`.
+///
+/// # Errors
+///
+/// Returns an error if reading from the clipboard fails or if the clipboard backend is unavailable.
+///
+/// # Examples
+///
+/// ```no_run
+/// use isearch_cli::utils::get_from_clipboard;
+/// let text = get_from_clipboard().unwrap();
+/// ```
+#[cfg(not(target_os = "android"))]
+pub fn get_from_clipboard() -> Result<String, String> {
+    if let Ok(mut clipboard) = arboard::Clipboard::new() {
+        if let Ok(text) = clipboard.get_text() {
+            return Ok(text);
+        }
+    }
+    Err("Failed to read from clipboard.".to_string())
+}
+
+/// Reads the current text from the user's system clipboard on Android.
+///
+/// On Android, this utilizes the Termux `termux-clipboard-get` command if available.
+///
+/// # Returns
+///
+/// Returns `Ok(String)` containing the clipboard text if successfully retrieved, otherwise `Err(String)`.
+///
+/// # Errors
+///
+/// Returns an error if the platform is not Termux or if the get tool fails.
+///
+/// # Examples
+///
+/// ```no_run
+/// use isearch_cli::utils::get_from_clipboard;
+/// let text = get_from_clipboard().unwrap();
+/// ```
+#[cfg(target_os = "android")]
+pub fn get_from_clipboard() -> Result<String, String> {
+    if is_termux() {
+        run_command_get_stdout("termux-clipboard-get", &[])
+    } else {
+        Err("Clipboard is not available on Android outside of Termux.".to_string())
+    }
+}
+
+/// Renders a QR code into a terminal-compatible string using Unicode half-block characters.
+///
+/// This groups 2 vertical modules into 1 character block, making the rendered QR code much more
+/// compact and highly scannable under standard terminal font ratios.
+///
+/// # Arguments
+///
+/// * `code` - Reference to the generated [QrCode] instance.
+///
+/// # Returns
+///
+/// Returns the rendered multi-line string containing half-block characters representing the QR code.
+///
+/// # Examples
+///
+/// ```
+/// use qrcode::QrCode;
+/// use isearch_cli::utils::render_qr_half_blocks;
+/// let code = QrCode::new(b"Hello").unwrap();
+/// let rendered = render_qr_half_blocks(&code);
+/// ```
 pub fn render_qr_half_blocks(code: &QrCode) -> String {
     let width = code.width();
     let mut qr_str = String::new();
@@ -138,7 +316,26 @@ pub fn render_qr_half_blocks(code: &QrCode) -> String {
     qr_str
 }
 
-/// Renders a QR code using pure ASCII characters (# for dark, space for light) with aspect ratio formatting.
+/// Renders a QR code into a terminal-compatible string using ASCII characters (`##` for dark, spaces for light).
+///
+/// This handles terminals that lack proper Unicode rendering capabilities.
+///
+/// # Arguments
+///
+/// * `code` - Reference to the generated [QrCode] instance.
+///
+/// # Returns
+///
+/// Returns the rendered ASCII string.
+///
+/// # Examples
+///
+/// ```
+/// use qrcode::QrCode;
+/// use isearch_cli::utils::render_qr_pure_ascii;
+/// let code = QrCode::new(b"Hello").unwrap();
+/// let rendered = render_qr_pure_ascii(&code);
+/// ```
 pub fn render_qr_pure_ascii(code: &QrCode) -> String {
     let width = code.width();
     let mut qr_str = String::new();
