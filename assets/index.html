@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ErikrafT — Full Stack Developer & AI Engineer</title>
+    <meta name="description" content="Portfolio premium de Erik Rodrigues Balisa (ErikrafT), desenvolvedor Full Stack, especialista em IA e criador de conteúdo.">
+
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" href="assets/images/favicon.png">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="assets/css/style.css">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+<body class="page-home">
+
+    <!-- Global Interactive Canvas Background -->
+    <canvas id="three-bg"></canvas>
+
+    <!-- Ambient Glow Blobs -->
+    <div class="glow-blob glow-blob-blue"></div>
+    <div class="glow-blob glow-blob-purple"></div>
+    <div class="glow-blob glow-blob-cyan"></div>
+    <div class="grid-overlay"></div>
+
+    <!-- Site Loader -->
+    <div class="site-loader">
+        <div class="loader-terminal">
+            <span>root@erikraft:~$ init --portfolio</span>
+            <div class="loader-cursor"></div>
+        </div>
+    </div>
+
+    <!-- Site Header -->
+    <header class="site-header">
+        <div class="container">
+            <div class="nav-shell">
+                <a href="index.html" class="brand" aria-label="ErikrafT Home">
+                    <img src="assets/images/favicon.png" alt="ErikrafT Logo">
+                    <span class="brand-text">ErikrafT</span>
+                </a>
+
+                <nav class="site-nav" aria-label="Navegação Principal">
+                    <a href="index.html" aria-current="page">Home</a>
+                    <a href="about.html">Sobre</a>
+                    <a href="projects.html">Projetos</a>
+                    <a href="timeline.html">Timeline</a>
+                    <a href="contact.html" class="nav-cta">Contato</a>
+                </nav>
+
+                <button class="menu-toggle" aria-label="Abrir Menu" aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Floating WhatsApp Button -->
+    <a href="https://wa.me/5511925416678?text=Olá%2C%20vim%20através%20do%20seu%20portfólio%20e%20gostaria%20de%20conversar%21"
+       target="_blank"
+       class="btn-whatsapp-flutuante"
+       rel="noopener noreferrer"
+       aria-label="Fale comigo no WhatsApp">
+        <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 39 39">
+            <path fill="#00E676" d="M10.7 32.8l.6.3c2.5 1.5 5.3 2.2 8.1 2.2 8.8 0 16-7.2 16-16 0-4.2-1.7-8.3-4.7-11.3s-7-4.7-11.3-4.7c-8.8 0-16 7.2-15.9 16.1 0 3 .9 5.9 2.4 8.4l.4.6-1.6 5.9 6-1.5z"></path>
+            <path fill="#FFF" d="M32.4 6.4C29 2.9 24.3 1 19.5 1 9.3 1 1.1 9.3 1.2 19.4c0 3.2.9 6.3 2.4 9.1L1 38l9.7-2.5c2.7 1.5 5.7 2.2 8.7 2.2 10.1 0 18.3-8.3 18.3-18.4 0-4.9-1.9-9.5-5.3-12.9zM19.5 34.6c-2.7 0-5.4-.7-7.7-2.1l-.6-.3-5.8 1.5L6.9 28l-.4-.6c-4.4-7.1-2.3-16.5 4.9-20.9s16.5-2.3 20.9 4.9 2.3 16.5-4.9 20.9c-2.3 1.5-5.1 2.3-7.9 2.3zm8.8-11.1l-1.1-.5s-1.6-.7-2.6-1.2c-.1 0-.2-.1-.3-.1-.3 0-.5.1-.7.2 0 0-.1.1-1.5 1.7-.1.2-.3.3-.5.3h-.1c-.1 0-.3-.1-.4-.2l-.5-.2c-1.1-.5-2.1-1.1-2.9-1.9-.2-.2-.5-.4-.7-.6-.7-.7-1.4-1.5-1.9-2.4l-.1-.2c-.1-.1-.1-.2-.2-.4 0-.2 0-.4.1-.5 0 0 .4-.5.7-.8.2-.2.3-.5.5-.7.2-.3.3-.7.2-1-.1-.5-1.3-3.2-1.6-3.8-.2-.3-.4-.4-.7-.5h-1.1c-.2 0-.4.1-.6.1l-.1.1c-.2.1-.4.3-.6.4-.2.2-.3.4-.5.6-.7.9-1.1 2-1.1 3.1 0 .8.2 1.6.5 2.3l.1.3c.9 1.9 2.1 3.6 3.7 5.1l.4.4c.3.3.6.5.8.8 2.1 1.8 4.5 3.1 7.2 3.8.3.1.7.1 1 .2h1c.5 0 1.1-.2 1.5-.4.3-.2.5-.2.7-.4l.2-.2c.2-.2.4-.3.6-.5s.4-.4.5-.6c.2-.4.3-.9.4-1.4v-.7s-.1-.1-.3-.2z"></path>
+        </svg>
+    </a>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="section hero-section">
+            <!-- Giant Continuous Sliding Background Text -->
+            <div class="hero-marquee" aria-hidden="true">
+                <div class="hero-marquee-inner">ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★ ERIK ★</div>
+            </div>
+
+            <div class="container hero-container">
+                <div class="hero-content">
+                    <div class="eyebrow"><i class="fa-solid fa-circle-nodes"></i> Disponível para Projetos</div>
+                    <h1 class="hero-title">
+                        Olá! Eu sou <br><span class="typing-text"></span><span class="cursor">|</span>
+                    </h1>
+                    <p class="hero-desc">
+                        Desenvolvedor Full Stack apaixonado por arquiteturas modernas, automações e inteligência artificial. Criando ecossistemas digitais premium com estética minimalista e performance implacável.
+                    </p>
+
+                    <div class="hero-actions">
+                        <a href="projects.html" class="button button-primary">Explorar Projetos</a>
+                        <a href="about.html" class="button button-secondary">Minha Jornada</a>
+                    </div>
+
+                    <ul class="hero-stats">
+                        <li>
+                            <strong id="age-counter" class="counter" data-target="16">...</strong>
+                            <span>Idade</span>
+                        </li>
+                        <li>
+                            <strong id="exp-counter" class="counter" data-target="2">...</strong>
+                            <span>Anos de Exp</span>
+                        </li>
+                        <li>
+                            <strong class="counter" data-target="30">...</strong>
+                            <span>Tecnologias</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Centralized Transparent Developer Photo -->
+                <div class="hero-photo-wrapper">
+                    <img src="assets/images/me.png" alt="Erik Rodrigues Balisa" class="hero-photo-img">
+                </div>
+            </div>
+        </section>
+
+        <!-- Featured Projects Section -->
+        <section class="section featured-projects-section">
+            <div class="container">
+                <div class="section-stack">
+                    <div class="section-heading reveal">
+                        <div class="label-container">
+                            <div class="label-line"></div>
+                            <span class="section-label">Portfólio</span>
+                        </div>
+                        <h2>Projetos em Destaque</h2>
+                        <p>Uma seleção dos meus sistemas de software mais inovadores e mantidos ativamente.</p>
+                    </div>
+
+                    <div class="featured-grid">
+                        <!-- Project 1: ErikrafT Drop -->
+                        <div class="showcase-card reveal">
+                            <div class="showcase-preview preview-drop-large">
+                                <div class="preview-window">
+                                    <div></div><div></div><div></div>
+                                </div>
+                                <span class="preview-chip">Web Ecosystem</span>
+                            </div>
+                            <div class="showcase-content">
+                                <span class="preview-tag">ErikrafT Drop</span>
+                                <h3>Drop — Repositório Geral</h3>
+                                <p>Meu hub central e ecossistema de scripts, utilitários, web crawlers e APIs modernas construídos de forma modular.</p>
+                                <ul class="feature-list">
+                                    <li><i class="fa-solid fa-circle-check"></i> Lógica avançada em Node</li>
+                                    <li><i class="fa-solid fa-circle-check"></i> Integração facilitada de serviços</li>
+                                    <li><i class="fa-solid fa-circle-check"></i> Totalmente responsivo e otimizado</li>
+                                </ul>
+                                <div class="project-actions">
+                                    <a href="https://github.com/erikraft/Drop" target="_blank" class="button button-primary"><i class="fa-brands fa-github"></i> GitHub</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Project 2: ErikrafT Drop Android -->
+                        <div class="showcase-card reveal">
+                            <div class="showcase-preview preview-search-large">
+                                <div class="preview-window">
+                                    <div></div><div></div><div></div>
+                                </div>
+                                <span class="preview-chip">Mobile Application</span>
+                            </div>
+                            <div class="showcase-content">
+                                <span class="preview-tag">Drop-Android</span>
+                                <h3>Drop — Aplicativo Nativo</h3>
+                                <p>O poder e as facilidades do ecossistema Drop portados inteiramente para dispositivos Android nativos com performance brilhante.</p>
+                                <ul class="feature-list">
+                                    <li><i class="fa-solid fa-circle-check"></i> Desenvolvimento Nativo em Java & Kotlin</li>
+                                    <li><i class="fa-solid fa-circle-check"></i> UI limpa baseada no Material Design 3</li>
+                                    <li><i class="fa-solid fa-circle-check"></i> Baixo consumo de memória e bateria</li>
+                                </ul>
+                                <div class="project-actions">
+                                    <a href="https://github.com/erikraft/Drop-Android" target="_blank" class="button button-primary"><i class="fa-brands fa-github"></i> GitHub</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Toolkit / Skill Grid Section -->
+        <section class="section">
+            <div class="container">
+                <div class="section-stack">
+                    <div class="section-heading reveal">
+                        <div class="label-container">
+                            <div class="label-line"></div>
+                            <span class="section-label">Habilidades</span>
+                        </div>
+                        <h2>Linguagens & Tecnologias</h2>
+                        <p>O arsenal de ferramentas e bibliotecas que domino para resolver problemas de software complexos no dia a dia.</p>
+                    </div>
+
+                    <div id="skills-interactive-container" class="reveal"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- GitHub Activity Section -->
+        <section class="section">
+            <div class="container">
+                <div class="section-stack">
+                    <div class="section-heading reveal">
+                        <div class="label-container">
+                            <div class="label-line"></div>
+                            <span class="section-label">GitHub</span>
+                        </div>
+                        <h2>Atividade & Estatísticas</h2>
+                        <p>Meu engajamento real e contribuições consolidadas na comunidade de código aberto.</p>
+                    </div>
+
+                    <div style="margin-top: 2rem; display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center;" class="reveal">
+                        <img src="https://github-readme-stats-fast.vercel.app/api?username=erikraft&show_icons=true&theme=tokyonight&hide_rank=true" alt="Estatísticas GitHub" style="width: 100%; max-width: 495px; height: auto; border-radius: var(--radius); border: 1px solid var(--border);">
+                        <img src="https://github-readme-stats-fast.vercel.app/api/top-langs/?username=erikraft&layout=compact&theme=tokyonight&langs_count=10" alt="Linguagens mais utilizadas" style="width: 100%; max-width: 495px; height: auto; border-radius: var(--radius); border: 1px solid var(--border);">
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Site Footer -->
+    <footer class="site-footer">
+        <div class="container">
+            <div class="footer-shell">
+                <div class="footer-brand">
+                    <h3>Erik Rodrigues Balisa</h3>
+                    <p class="footer-copy">Projetando interfaces magníficas, automatizando fluxos e lapidando códigos eficientes do início ao fim.</p>
+                </div>
+                <div class="footer-actions">
+                    <a href="https://github.com/erikraft" target="_blank" aria-label="Github"><i class="fa-brands fa-github"></i></a>
+                    <a href="https://www.linkedin.com/in/erikraft/" target="_blank" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+                    <a href="contact.html" class="button button-primary">Contato</a>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2026 ErikrafT. Todos os direitos reservados. "Programming is for Everyone!"</p>
+                <button class="back-to-top" aria-label="Voltar para o topo" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+                    <i class="fa-solid fa-arrow-up"></i>
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- GSAP CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15/dist/ScrollTrigger.min.js"></script>
+
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Dynamic Skills & Interactive Toolkit -->
+    <script src="assets/js/skills.js"></script>
+    <script src="assets/js/skills-engine.js"></script>
+
+    <!-- JavaScript Core -->
+    <script src="assets/js/main.js"></script>
+</body>
+</html>
