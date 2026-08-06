@@ -153,6 +153,7 @@ jobs:
         run: |
           mkdir dist -Force
           cp target/x86_64-pc-windows-msvc/release/isearch-cli.exe dist/isearch-windows-x86_64.exe
+          cp target/aarch64-pc-windows-msvc/release/isearch-cli.exe dist/isearch-windows-arm64.exe
 
           # Compile NSIS Installer (.exe) and WiX (.msi) from inside scripts/ to resolve relative paths
           cd scripts
@@ -176,10 +177,7 @@ jobs:
               exit 1
           }
 
-          # Rename artifacts to consistent names
           cd ..
-          cp dist/isearch-installer-x86_64.exe dist/isearch-cli-windows-x64.exe
-          cp dist/isearch-installer-x86_64.msi dist/isearch-cli-windows-x64.msi
 
           # Create flat zip archives for portable targets to prevent nested empty folder structures
           mkdir temp-x64 -Force
@@ -192,12 +190,14 @@ jobs:
 
           rm -Recurse -Force temp-x64, temp-arm64
 
-      - name: Upload Windows Portable Artifact
+      - name: Upload Windows Portable Artifacts
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: isearch-windows-x86_64.exe
-          path: target/x86_64-pc-windows-msvc/release/isearch-cli.exe
+          name: windows-portable-exes
+          path: |
+            dist/isearch-windows-x86_64.exe
+            dist/isearch-windows-arm64.exe
 
       - name: Upload Windows Consistent Assets
         if: github.event_name != 'pull_request'

@@ -14,6 +14,13 @@ jobs:
   build:
     name: Build Linux Binaries (x86_64, aarch64, arm)
     runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_AR: aarch64-linux-gnu-ar
+      CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
+      CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_AR: arm-linux-gnueabihf-ar
+      PKG_CONFIG_ALLOW_CROSS: 1
+      PKG_CONFIG_LIBDIR: /usr/lib/aarch64-linux-gnu/pkgconfig:/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -26,19 +33,29 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Install Cross
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cross
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y alien dpkg-dev rpm pkg-config \
+            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+            gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
+
+      - name: Verify Cross Toolchain
+        run: |
+          command -v aarch64-linux-gnu-gcc
+          command -v aarch64-linux-gnu-ar
+          command -v arm-linux-gnueabihf-gcc
+          command -v arm-linux-gnueabihf-ar
+          command -v pkg-config
 
       - name: Build standard x86_64-unknown-linux-gnu
-        run: cross build --release --target x86_64-unknown-linux-gnu
+        run: cargo build --release --target x86_64-unknown-linux-gnu
 
       - name: Build standard aarch64-unknown-linux-gnu
-        run: cross build --release --target aarch64-unknown-linux-gnu
+        run: cargo build --release --target aarch64-unknown-linux-gnu
 
       - name: Build standard armv7-unknown-linux-gnueabihf
-        run: cross build --release --target armv7-unknown-linux-gnueabihf
+        run: cargo build --release --target armv7-unknown-linux-gnueabihf
 
       - name: Upload Linux x86_64 Artifact
         if: github.event_name != 'pull_request'
@@ -46,3 +63,17 @@ jobs:
         with:
           name: isearch-linux-x86_64
           path: target/x86_64-unknown-linux-gnu/release/isearch-cli
+
+      - name: Upload Linux aarch64 Artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: isearch-linux-aarch64
+          path: target/aarch64-unknown-linux-gnu/release/isearch-cli
+
+      - name: Upload Linux armv7 Artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: isearch-linux-armv7
+          path: target/armv7-unknown-linux-gnueabihf/release/isearch-cli
