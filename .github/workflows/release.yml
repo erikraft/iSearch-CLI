@@ -218,7 +218,7 @@ jobs:
 
           $nsisBinDir = Split-Path $makensisExe
           $env:PATH += ";$nsisBinDir"
-          [System.IO.File]::AppendAllLines($env:GITHUB_PATH, @($nsisBinDir))
+          $nsisBinDir | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
           "MAKENSIS_PATH=$makensisExe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
           # 2. Install and locate WiX Toolset v3
@@ -267,7 +267,7 @@ jobs:
 
           $wixBinDir = Split-Path $candleExe
           $env:PATH += ";$wixBinDir"
-          [System.IO.File]::AppendAllLines($env:GITHUB_PATH, @($wixBinDir))
+          $wixBinDir | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
           "CANDLE_PATH=$candleExe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "LIGHT_PATH=$lightExe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
