@@ -112,8 +112,8 @@ jobs:
           $env:PATH = "$nsisBinDir;" + $env:PATH
 
           # Add to GITHUB_PATH and GITHUB_ENV without BOM
-          [System.IO.File]::AppendAllLines($env:GITHUB_PATH, @("$nsisBinDir"))
-          [System.IO.File]::AppendAllLines($env:GITHUB_ENV, @("MAKENSIS_PATH=$makensisExe"))
+          Add-Content -Path $env:GITHUB_PATH -Value "$nsisBinDir"
+          Add-Content -Path $env:GITHUB_ENV -Value "MAKENSIS_PATH=$makensisExe"
 
           Write-Host "=== Installing and Configuring WiX Toolset ==="
           Write-Host "Installing WiX Toolset via Chocolatey..."
@@ -164,8 +164,9 @@ jobs:
           $env:PATH = "$wixBinDir;" + $env:PATH
 
           # Add to GITHUB_PATH and GITHUB_ENV without BOM
-          [System.IO.File]::AppendAllLines($env:GITHUB_PATH, @("$wixBinDir"))
-          [System.IO.File]::AppendAllLines($env:GITHUB_ENV, @("CANDLE_PATH=$candleExe", "LIGHT_PATH=$lightExe"))
+          Add-Content -Path $env:GITHUB_PATH -Value "$wixBinDir"
+          Add-Content -Path $env:GITHUB_ENV -Value "CANDLE_PATH=$candleExe"
+          Add-Content -Path $env:GITHUB_ENV -Value "LIGHT_PATH=$lightExe"
 
       - name: Verify WiX and NSIS
         shell: pwsh
