@@ -599,8 +599,19 @@ img {
   font-size: clamp(2.2rem, 5vw, 4.2rem);
   letter-spacing: -0.03em;
   line-height: 1.12;
-  background: linear-gradient(135deg, var(--text) 55%, var(--accent-light));
+}
+
+.hero-title-text {
+  background: linear-gradient(
+    90deg,
+    #4285F4 0%,
+    #DB4437 33%,
+    #F4B400 66%,
+    #0F9D58 100%
+  );
+  background-clip: text;
   -webkit-background-clip: text;
+  color: transparent;
   -webkit-text-fill-color: transparent;
 }
 
