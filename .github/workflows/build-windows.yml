@@ -37,17 +37,27 @@ jobs:
         run: |
           Write-Host "=== Windows Environment Diagnostics ==="
           Write-Host "Checking for existing makensis..."
-          where.exe makensis 2>&1
+          try {
+              $null = where.exe makensis 2>&1
+          } catch {}
           Get-Command makensis -ErrorAction SilentlyContinue
 
-          Write-Host "Searching for makensis.exe in C:\Program Files..."
-          Get-ChildItem "C:\Program Files" -Recurse -Filter makensis.exe -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
+          Write-Host "Checking for existing candle..."
+          try {
+              $null = where.exe candle 2>&1
+          } catch {}
 
-          Write-Host "Searching for makensis.exe in C:\Program Files (x86)..."
-          Get-ChildItem "C:\Program Files (x86)" -Recurse -Filter makensis.exe -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
+          Write-Host "Checking for existing light..."
+          try {
+              $null = where.exe light 2>&1
+          } catch {}
 
-          Write-Host "Checking Chocolatey directories..."
-          Get-ChildItem "C:\ProgramData\chocolatey" -Recurse -Filter makensis.exe -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
+          Write-Host "Listing current system PATH folders:"
+          $env:PATH -split ';' | ForEach-Object { Write-Host "  $_" }
+
+          # Explicitly force a success exit code so diagnostics never break the run
+          $global:LASTEXITCODE = 0
+          exit 0
 
       - name: Install WiX and NSIS
         shell: pwsh
