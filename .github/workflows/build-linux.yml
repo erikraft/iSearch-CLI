@@ -14,11 +14,6 @@ jobs:
   build:
     name: Build Linux Binaries (x86_64, aarch64, arm)
     runs-on: ubuntu-latest
-    env:
-      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-      CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
-      CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
-      CC_armv7_unknown_linux_gnueabihf: arm-linux-gnueabihf-gcc
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -31,19 +26,19 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Install cross-compilation dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf libsqlite3-dev
+      - name: Install Cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
 
       - name: Build standard x86_64-unknown-linux-gnu
-        run: cargo build --release --target x86_64-unknown-linux-gnu
+        run: cross build --release --target x86_64-unknown-linux-gnu
 
       - name: Build standard aarch64-unknown-linux-gnu
-        run: cargo build --release --target aarch64-unknown-linux-gnu
+        run: cross build --release --target aarch64-unknown-linux-gnu
 
       - name: Build standard armv7-unknown-linux-gnueabihf
-        run: cargo build --release --target armv7-unknown-linux-gnueabihf
+        run: cross build --release --target armv7-unknown-linux-gnueabihf
 
       - name: Upload Linux x86_64 Artifact
         if: github.event_name != 'pull_request'
