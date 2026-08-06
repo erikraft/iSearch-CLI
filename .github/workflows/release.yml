@@ -41,13 +41,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y alien dpkg-dev rpm
 
-      - name: Disable conflicting local Cargo configuration
-        run: |
-          if [ -f .cargo/config.toml ]; then
-            mv .cargo/config.toml .cargo/config.toml.bak
-            echo "Temporarily disabled .cargo/config.toml to prevent cross-compilation linker conflicts."
-          fi
-
       - name: Build Linux x86_64
         run: cross build --release --target x86_64-unknown-linux-gnu
 
@@ -56,14 +49,6 @@ jobs:
 
       - name: Build Linux Armv7
         run: cross build --release --target armv7-unknown-linux-gnueabihf
-
-      - name: Restore local Cargo configuration
-        if: always()
-        run: |
-          if [ -f .cargo/config.toml.bak ]; then
-            mv .cargo/config.toml.bak .cargo/config.toml
-            echo "Restored .cargo/config.toml successfully."
-          fi
 
       - name: Package .deb, .rpm, .AppImage, .tar.gz
         run: |
@@ -249,9 +234,10 @@ jobs:
           # Add to system environment PATH for the current step (to be safe)
           $env:PATH = "$nsisBinDir;" + $env:PATH
 
-          # Add to GITHUB_PATH and GITHUB_ENV without BOM
-          Add-Content -Path $env:GITHUB_PATH -Value "$nsisBinDir"
-          Add-Content -Path $env:GITHUB_ENV -Value "MAKENSIS_PATH=$makensisExe"
+          # Add to GITHUB_PATH and GITHUB_ENV cleanly (using UTF-8 without BOM)
+          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+          [System.IO.File]::AppendAllLines($env:GITHUB_PATH, [string[]]($nsisBinDir), $utf8NoBom)
+          [System.IO.File]::AppendAllLines($env:GITHUB_ENV, [string[]]("MAKENSIS_PATH=$makensisExe"), $utf8NoBom)
 
           Write-Host "=== Installing and Configuring WiX Toolset ==="
           Write-Host "Installing WiX Toolset via Chocolatey..."
@@ -301,77 +287,82 @@ jobs:
           # Add to system environment PATH for the current step (to be safe)
           $env:PATH = "$wixBinDir;" + $env:PATH
 
-          # Add to GITHUB_PATH and GITHUB_ENV without BOM
-          Add-Content -Path $env:GITHUB_PATH -Value "$wixBinDir"
-          Add-Content -Path $env:GITHUB_ENV -Value "CANDLE_PATH=$candleExe"
-          Add-Content -Path $env:GITHUB_ENV -Value "LIGHT_PATH=$lightExe"
+          # Add to GITHUB_PATH and GITHUB_ENV cleanly (using UTF-8 without BOM)
+          [System.IO.File]::AppendAllLines($env:GITHUB_PATH, [string[]]($wixBinDir), $utf8NoBom)
+          [System.IO.File]::AppendAllLines($env:GITHUB_ENV, [string[]]("CANDLE_PATH=$candleExe", "LIGHT_PATH=$lightExe"), $utf8NoBom)
 
       - name: Verify WiX and NSIS
         shell: pwsh
         run: |
           Write-Host "=== Verifying WiX and NSIS installation ==="
 
-          $makensis = if ($env:MAKENSIS_PATH) { $env:MAKENSIS_PATH } else { "makensis.exe" }
-          $candle = if ($env:CANDLE_PATH) { $env:CANDLE_PATH } else { "candle.exe" }
-          $light = if ($env:LIGHT_PATH) { $env:LIGHT_PATH } else { "light.exe" }
+          # 4. Validar imediatamente: where.exe makensis
+          Write-Host "Validating makensis via where.exe..."
+          try {
+              $makensisPath = where.exe makensis 2>&1
+              Write-Host "where.exe found: $makensisPath"
+          } catch {
+              Write-Error "CRITICAL ERROR: NSIS is not in the system PATH!"
+              exit 1
+          }
 
-          Write-Host "Using makensis path: $makensis"
-          Write-Host "Using candle path: $candle"
-          Write-Host "Using light path: $light"
+          if ($LASTEXITCODE -ne 0 -or -not $makensisPath) {
+              Write-Error "CRITICAL ERROR: NSIS is not in the system PATH (where.exe failed)!"
+              exit 1
+          }
 
-          # Mandatory /VERSION and help checks
-          Write-Host "Testing makensis..."
-          & "$makensis" /VERSION
+          # 5. Executar: makensis /VERSION
+          Write-Host "Testing makensis /VERSION..."
+          makensis /VERSION
           if ($LASTEXITCODE -ne 0) {
-              Write-Error "CRITICAL ERROR: makensis is not functioning correctly or not found."
+              Write-Error "CRITICAL ERROR: makensis is not functioning correctly!"
               exit 1
           }
 
           Write-Host "Testing candle..."
-          & "$candle" -?
+          candle -?
           if ($LASTEXITCODE -ne 0) {
-              Write-Error "CRITICAL ERROR: candle is not functioning correctly or not found."
+              Write-Error "CRITICAL ERROR: candle is not functioning correctly!"
               exit 1
           }
 
           Write-Host "Testing light..."
-          & "$light" -?
+          light -?
           if ($LASTEXITCODE -ne 0) {
-              Write-Error "CRITICAL ERROR: light is not functioning correctly or not found."
+              Write-Error "CRITICAL ERROR: light is not functioning correctly!"
               exit 1
           }
 
-          # Final validation that tools exist in PATH or as valid commands
-          if (!(Get-Command $makensis -ErrorAction SilentlyContinue) -and !(Test-Path $makensis)) {
-              Write-Error "CRITICAL ERROR: makensis could not be found or executed!"
-              exit 1
-          }
-          if (!(Get-Command $candle -ErrorAction SilentlyContinue) -and !(Test-Path $candle)) {
-              Write-Error "CRITICAL ERROR: candle could not be found or executed!"
-              exit 1
-          }
-          if (!(Get-Command $light -ErrorAction SilentlyContinue) -and !(Test-Path $light)) {
-              Write-Error "CRITICAL ERROR: light could not be found or executed!"
-              exit 1
-          }
-
-          Write-Host "All tools verified successfully and are fully operational!"
+          Write-Host "All tools verified successfully!"
 
       - name: Build Installers (.exe, .msi)
         shell: pwsh
         run: |
-          $makensis = if ($env:MAKENSIS_PATH) { $env:MAKENSIS_PATH } else { "makensis" }
-          $candle = if ($env:CANDLE_PATH) { $env:CANDLE_PATH } else { "candle" }
-          $light = if ($env:LIGHT_PATH) { $env:LIGHT_PATH } else { "light" }
-
           mkdir dist -Force
           cp target/x86_64-pc-windows-msvc/release/isearch-cli.exe dist/isearch-windows-x86_64.exe
 
           # Compile NSIS Installer (.exe) and WiX (.msi) from inside scripts/ to resolve relative paths
           cd scripts
-          & $makensis installer.nsi
-          & $candle installer.wxs -o installer.wixobj
-          & $light -ext WixUIExtension installer.wixobj -o ../dist/isearch-installer-x86_64.msi
+
+          # 6. Somente depois executar: makensis installer.nsi
+          Write-Host "Compiling NSIS installer..."
+          makensis installer.nsi
+          if ($LASTEXITCODE -ne 0) {
+              Write-Error "NSIS compilation failed!"
+              exit 1
+          }
+
+          Write-Host "Compiling WiX installer..."
+          candle installer.wxs -o installer.wixobj
+          if ($LASTEXITCODE -ne 0) {
+              Write-Error "WiX compilation (candle) failed!"
+              exit 1
+          }
+          light -ext WixUIExtension installer.wixobj -o ../dist/isearch-installer-x86_64.msi
+          if ($LASTEXITCODE -ne 0) {
+              Write-Error "WiX compilation (light) failed!"
+              exit 1
+          }
 
           # Rename and package consistent artifact names
           cd ..
