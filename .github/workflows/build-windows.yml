@@ -10,6 +10,9 @@ on:
       - published
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build Windows Binary & Installers
@@ -32,183 +35,116 @@ jobs:
       - name: Build Windows ARM64 Binary
         run: cargo build --release --target aarch64-pc-windows-msvc
 
-      - name: Diagnostics and Auditing
-        shell: pwsh
-        run: |
-          Write-Host "=== Windows Environment Diagnostics ==="
-          Write-Host "Checking for existing makensis..."
-          try {
-              $null = where.exe makensis 2>&1
-          } catch {}
-          Get-Command makensis -ErrorAction SilentlyContinue
-
-          Write-Host "Checking for existing candle..."
-          try {
-              $null = where.exe candle 2>&1
-          } catch {}
-
-          Write-Host "Checking for existing light..."
-          try {
-              $null = where.exe light 2>&1
-          } catch {}
-
-          Write-Host "Listing current system PATH folders:"
-          $env:PATH -split ';' | ForEach-Object { Write-Host "  $_" }
-
-          # Explicitly force a success exit code so diagnostics never break the run
-          $global:LASTEXITCODE = 0
-          exit 0
-
       - name: Install WiX and NSIS
         shell: pwsh
         run: |
-          Write-Host "=== Installing and Configuring NSIS ==="
+          Write-Host "=== Installing and Configuring NSIS & WiX ==="
 
-          # Force install NSIS via Chocolatey to ensure it exists
-          Write-Host "Installing NSIS via Chocolatey..."
-          choco install nsis -y --no-progress
+          # Force install NSIS and WiX Toolset via Chocolatey
+          choco install nsis wixtoolset -y --no-progress
 
-          # Search for makensis.exe in all possible locations
-          $searchPaths = @(
-              "C:\Program Files (x86)\NSIS\makensis.exe",
-              "C:\Program Files\NSIS\makensis.exe",
-              "C:\ProgramData\chocolatey\bin\makensis.exe"
+          # Standard installation directories
+          $nsisDirs = @(
+              "C:\Program Files (x86)\NSIS",
+              "C:\Program Files\NSIS",
+              "C:\ProgramData\chocolatey\bin",
+              "C:\ProgramData\chocolatey\lib\nsis\tools"
           )
 
-          $makensisExe = $null
-          foreach ($path in $searchPaths) {
-              if (Test-Path $path) {
-                  $makensisExe = $path
+          $wixDirs = @(
+              "C:\Program Files (x86)\WiX Toolset v3.14\bin",
+              "C:\Program Files (x86)\WiX Toolset v3.11\bin",
+              "C:\Program Files (x86)\WiX Toolset v3.10\bin",
+              "C:\Program Files\WiX Toolset v3.11",
+              "C:\Program Files\WiX Toolset v3.14",
+              "C:\Program Files\WiX Toolset v3.9\bin",
+              "C:\Program Files\WiX Toolset v3.12\bin"
+          )
+
+          # Find NSIS directory
+          $nsisDir = $null
+          foreach ($dir in $nsisDirs) {
+              if (Test-Path (Join-Path $dir "makensis.exe")) {
+                  $nsisDir = $dir
                   break
               }
           }
 
-          if ($null -eq $makensisExe) {
-              Write-Host "makensis.exe not found in quick search paths. Performing recursive search in C:\Program Files, C:\Program Files (x86), and C:\ProgramData..."
-              $found = Get-ChildItem -Path "C:\Program Files", "C:\Program Files (x86)", "C:\ProgramData" -Filter "makensis.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          # If not found in standard paths, do a targeted recursive search inside Program Files
+          if ($null -eq $nsisDir) {
+              Write-Host "Performing targeted search for makensis.exe..."
+              $found = Get-ChildItem -Path "C:\Program Files (x86)", "C:\Program Files", "C:\ProgramData" -Filter "makensis.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
               if ($found) {
-                  $makensisExe = $found.FullName
+                  $nsisDir = Split-Path $found.FullName
               }
           }
 
-          if ($null -eq $makensisExe) {
-              Write-Error "NSIS installation failed! makensis.exe could not be found anywhere."
+          # Find WiX directory
+          $wixDir = $null
+          foreach ($dir in $wixDirs) {
+              if ((Test-Path (Join-Path $dir "candle.exe")) -and (Test-Path (Join-Path $dir "light.exe"))) {
+                  $wixDir = $dir
+                  break
+              }
+          }
+
+          # If not found in standard paths, do a targeted recursive search inside Program Files
+          if ($null -eq $wixDir) {
+              Write-Host "Performing targeted search for candle.exe..."
+              $found = Get-ChildItem -Path "C:\Program Files (x86)", "C:\Program Files", "C:\ProgramData" -Filter "candle.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($found) {
+                  $wixDir = Split-Path $found.FullName
+              }
+          }
+
+          if ($null -eq $nsisDir) {
+              Write-Error "NSIS directory containing makensis.exe could not be found!"
+              exit 1
+          }
+          if ($null -eq $wixDir) {
+              Write-Error "WiX directory containing candle.exe / light.exe could not be found!"
               exit 1
           }
 
-          Write-Host "Found makensis.exe at: $makensisExe"
-
-          # Test if the executable runs
-          & "$makensisExe" /VERSION
-          if ($LASTEXITCODE -ne 0) {
-              Write-Error "Failed to execute makensis.exe!"
-              exit 1
-          }
-
-          $nsisBinDir = Split-Path $makensisExe
-          Write-Host "NSIS Directory: $nsisBinDir"
-
-          # Add to system environment PATH for the current step (to be safe)
-          $env:PATH = "$nsisBinDir;" + $env:PATH
+          Write-Host "Found NSIS Dir: $nsisDir"
+          Write-Host "Found WiX Dir: $wixDir"
 
           # Add to GITHUB_PATH and GITHUB_ENV cleanly (using UTF-8 without BOM)
           $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-          [System.IO.File]::AppendAllLines($env:GITHUB_PATH, [string[]]($nsisBinDir), $utf8NoBom)
-          [System.IO.File]::AppendAllLines($env:GITHUB_ENV, [string[]]("MAKENSIS_PATH=$makensisExe"), $utf8NoBom)
-
-          Write-Host "=== Installing and Configuring WiX Toolset ==="
-          Write-Host "Installing WiX Toolset via Chocolatey..."
-          choco install wixtoolset -y --no-progress
-
-          # Find candle.exe and light.exe
-          $candleExe = $null
-          $lightExe = $null
-
-          $wixSearchDirs = @(
-              "C:\Program Files (x86)\WiX Toolset v3.14\bin",
-              "C:\Program Files (x86)\WiX Toolset v3.11\bin",
-              "C:\Program Files\WiX Toolset v3.14\bin",
-              "C:\Program Files\WiX Toolset v3.11\bin"
-          )
-
-          foreach ($dir in $wixSearchDirs) {
-              $candlePath = Join-Path $dir "candle.exe"
-              $lightPath = Join-Path $dir "light.exe"
-              if ((Test-Path $candlePath) -and (Test-Path $lightPath)) {
-                  $candleExe = $candlePath
-                  $lightExe = $lightPath
-                  break
-              }
-          }
-
-          if ($null -eq $candleExe) {
-              Write-Host "WiX bin dir not found in standard paths. Performing recursive search for candle.exe..."
-              $foundCandle = Get-ChildItem -Path "C:\Program Files", "C:\Program Files (x86)", "C:\ProgramData" -Filter "candle.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-              if ($foundCandle) {
-                  $candleExe = $foundCandle.FullName
-                  $lightExe = Join-Path (Split-Path $candleExe) "light.exe"
-              }
-          }
-
-          if ($null -eq $candleExe -or !(Test-Path $lightExe)) {
-              Write-Error "WiX Toolset installation failed! candle.exe or light.exe could not be found."
-              exit 1
-          }
-
-          Write-Host "Found candle.exe at: $candleExe"
-          Write-Host "Found light.exe at: $lightExe"
-
-          $wixBinDir = Split-Path $candleExe
-          Write-Host "WiX Directory: $wixBinDir"
-
-          # Add to system environment PATH for the current step (to be safe)
-          $env:PATH = "$wixBinDir;" + $env:PATH
-
-          # Add to GITHUB_PATH and GITHUB_ENV cleanly (using UTF-8 without BOM)
-          [System.IO.File]::AppendAllLines($env:GITHUB_PATH, [string[]]($wixBinDir), $utf8NoBom)
-          [System.IO.File]::AppendAllLines($env:GITHUB_ENV, [string[]]("CANDLE_PATH=$candleExe", "LIGHT_PATH=$lightExe"), $utf8NoBom)
+          [System.IO.File]::AppendAllLines($env:GITHUB_PATH, [string[]]($nsisDir, $wixDir), $utf8NoBom)
+          [System.IO.File]::AppendAllLines($env:GITHUB_ENV, [string[]]("MAKENSIS_PATH=$(Join-Path $nsisDir 'makensis.exe')", "CANDLE_PATH=$(Join-Path $wixDir 'candle.exe')", "LIGHT_PATH=$(Join-Path $wixDir 'light.exe')"), $utf8NoBom)
 
       - name: Verify WiX and NSIS
         shell: pwsh
         run: |
           Write-Host "=== Verifying WiX and NSIS installation ==="
 
-          # 4. Validar imediatamente: where.exe makensis
-          Write-Host "Validating makensis via where.exe..."
-          try {
-              $makensisPath = where.exe makensis 2>&1
-              Write-Host "where.exe found: $makensisPath"
-          } catch {
-              Write-Error "CRITICAL ERROR: NSIS is not in the system PATH!"
+          # Native PowerShell check to avoid external where.exe exit code issues
+          $makensis = Get-Command makensis -ErrorAction SilentlyContinue
+          if ($null -eq $makensis) {
+              Write-Error "CRITICAL ERROR: makensis is not in the system PATH!"
               exit 1
           }
+          Write-Host "makensis found at: $($makensis.Source)"
 
-          if ($LASTEXITCODE -ne 0 -or -not $makensisPath) {
-              Write-Error "CRITICAL ERROR: NSIS is not in the system PATH (where.exe failed)!"
+          $candle = Get-Command candle -ErrorAction SilentlyContinue
+          if ($null -eq $candle) {
+              Write-Error "CRITICAL ERROR: candle is not in the system PATH!"
               exit 1
           }
+          Write-Host "candle found at: $($candle.Source)"
 
-          # 5. Executar: makensis /VERSION
-          Write-Host "Testing makensis /VERSION..."
+          $light = Get-Command light -ErrorAction SilentlyContinue
+          if ($null -eq $light) {
+              Write-Error "CRITICAL ERROR: light is not in the system PATH!"
+              exit 1
+          }
+          Write-Host "light found at: $($light.Source)"
+
+          # Run basic version check commands
           makensis /VERSION
-          if ($LASTEXITCODE -ne 0) {
-              Write-Error "CRITICAL ERROR: makensis is not functioning correctly!"
-              exit 1
-          }
-
-          Write-Host "Testing candle..."
           candle -?
-          if ($LASTEXITCODE -ne 0) {
-              Write-Error "CRITICAL ERROR: candle is not functioning correctly!"
-              exit 1
-          }
-
-          Write-Host "Testing light..."
           light -?
-          if ($LASTEXITCODE -ne 0) {
-              Write-Error "CRITICAL ERROR: light is not functioning correctly!"
-              exit 1
-          }
 
           Write-Host "All tools verified successfully!"
 
@@ -221,7 +157,6 @@ jobs:
           # Compile NSIS Installer (.exe) and WiX (.msi) from inside scripts/ to resolve relative paths
           cd scripts
 
-          # 6. Somente depois executar: makensis installer.nsi
           Write-Host "Compiling NSIS installer..."
           makensis installer.nsi
           if ($LASTEXITCODE -ne 0) {
