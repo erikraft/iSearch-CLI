@@ -1,3 +1,4 @@
+use crate::branding::gradient_spans;
 use crate::browser::core::{BrowserCore, BrowserError, EngineType, PageContent};
 use crate::browser::favorites::{FavoriteItem, FavoritesManager};
 use crate::browser::history::{group_by_date, group_by_domain, HistoryItem, HistoryManager};
@@ -1251,17 +1252,12 @@ pub fn ui(f: &mut Frame, app: &mut BrowserApp) {
         ));
     }
     let engine_mode = format!(" Engine: {:?} ", app.core.current_engine);
-    let mut top_spans = vec![
-        Span::styled(
-            if app.private_mode {
-                " iSearch CLI™ [PRIVATE] "
-            } else {
-                " iSearch Browser™ "
-            },
-            primary_style,
-        ),
-        Span::raw(" │ "),
-    ];
+    let mut top_spans = if app.private_mode {
+        gradient_spans(" iSearch CLI™ [PRIVATE] ")
+    } else {
+        gradient_spans(" iSearch CLI™ ")
+    };
+    top_spans.push(Span::raw(" │ "));
     top_spans.extend(tabs_spans);
     top_spans.push(Span::raw(" │ "));
     top_spans.push(Span::styled(

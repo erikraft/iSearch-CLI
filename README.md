@@ -41,7 +41,7 @@ iSearch CLI™ delivers a premium terminal experience with a professional intera
 
 ### 💻 Windows
 - **Portable:** Download `isearch-windows-x86_64.exe` from GitHub Releases.
-- **Installer:** Run `isearch-installer-x86_64.exe` or `isearch-installer-x86_64.msi`.
+- **Installer:** Run `isearch-cli-windows-x64.exe` or `isearch-cli-windows-x64.msi`.
 
 ### 🐧 Linux
 - **Debian/Ubuntu:** `sudo dpkg -i isearch-linux-x86_64.deb`

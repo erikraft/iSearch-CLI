@@ -356,10 +356,26 @@ img {
   width: auto;
 }
 
-.brand-text {
-  background: linear-gradient(135deg, var(--text), var(--accent-light));
+.brand-gradient {
+  background: linear-gradient(
+    90deg,
+    #4285F4 0%,
+    #DB4437 33%,
+    #F4B400 66%,
+    #0F9D58 100%
+  );
+  background-clip: text;
   -webkit-background-clip: text;
+  color: transparent;
   -webkit-text-fill-color: transparent;
+}
+
+.brand-text {
+  font-family: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  margin: 0;
+  padding: 0;
 }
 
 .site-nav {

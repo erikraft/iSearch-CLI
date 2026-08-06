@@ -27,14 +27,14 @@ iSearch CLI™ runs natively on:
 4. Run `isearch` in Command Prompt, PowerShell, or Windows Terminal.
 
 ### Method 2: Windows Installer (.exe)
-1. Download `isearch-installer-x86_64.exe` from GitHub Releases.
+1. Download `isearch-cli-windows-x64.exe` from GitHub Releases.
 2. Double-click the installer and follow the on-screen instructions.
 3. The installer will automatically configure shortcuts and environment variables.
 
 ### Method 3: MSI Installer (.msi)
-For enterprise enrollment and automated deployment, download `isearch-installer-x86_64.msi` and run:
+For enterprise enrollment and automated deployment, download `isearch-cli-windows-x64.msi` and run:
 ```powershell
-msiexec /i isearch-installer-x86_64.msi /quiet
+msiexec /i isearch-cli-windows-x64.msi /quiet
 ```
 
 ---

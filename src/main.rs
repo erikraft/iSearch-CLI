@@ -1,17 +1,19 @@
+pub mod branding;
 pub mod browser;
 pub mod config;
 pub mod pix;
 pub mod ui;
 pub mod utils;
 
+use branding::{ascii_logo, isearch, isearch_cli};
 use config::load_config;
 use std::env;
-use std::io::{self, Write};
+use std::io::{self, stdout, Write};
 use ui::run_donation_tui;
 
 /// Formats and outputs the global list of interactive commands.
 pub fn print_help() {
-    println!("iSearch CLI™ - Version 0.1.0");
+    println!("{} - Version 0.1.0", isearch_cli());
     println!("Available commands:");
     println!("  browse         - Open the premium multi-engine interactive terminal browser");
     println!("  donate         - Open the premium terminal donation screen");
@@ -24,14 +26,11 @@ pub fn print_help() {
 
 /// Initiates the primary interactive prompt loop when the executable is launched without arguments.
 pub fn start_interactive_cli() {
-    println!("░▀█▀░█▀▀░█▀▀░█▀█░█▀▄░█▀▀░█░█░░░█▀▀░█░░░▀█▀");
-    println!("░░█░░▀▀█░█▀▀░█▀█░█▀▄░█░░░█▀█░░░█░░░█░░░░█░");
-    println!("░▀▀▀░▀▀▀░▀▀▀░▀░▀░▀░▀░▀▀▀░▀░▀░░░▀▀▀░▀▀▀░▀▀▀");
-    println!("                 iSearch CLI™");
+    println!("{}", ascii_logo());
     println!("=================================================");
-    println!(" Type 'browse' to surf the web/local files,");
-    println!(" type 'donate' to support the project, or");
-    println!(" type 'help' to see other commands.");
+    println!(" Type '{}' to surf the web/local files,", isearch());
+    println!(" Type '{}' to support the project, or", "donate");
+    println!(" Type '{}' to see other commands.", "help");
     println!("=================================================");
 
     let stdin = io::stdin();

@@ -1,8 +1,7 @@
 //! Automated version checking, update checking, and safe self-updating logic for iSearch CLI™.
 
-use crate::browser::release_config::{
-    get_download_url, get_latest_release_url, AUTHOR, BRAND_NAME, COPYRIGHT,
-};
+use crate::branding::{ascii_logo, isearch_cli};
+use crate::browser::release_config::{get_download_url, get_latest_release_url, AUTHOR, COPYRIGHT};
 use serde::Deserialize;
 use std::env;
 use std::fs;
@@ -97,10 +96,7 @@ pub fn print_version(check: bool) {
     let current_version = env!("CARGO_PKG_VERSION");
     let (platform, arch) = get_platform_info();
 
-    println!("░▀█▀░█▀▀░█▀▀░█▀█░█▀▄░█▀▀░█░█░░░█▀▀░█░░░▀█▀");
-    println!("░░█░░▀▀█░█▀▀░█▀█░█▀▄░█░░░█▀█░░░█░░░█░░░░█░");
-    println!("░▀▀▀░▀▀▀░▀▀▀░▀░▀░▀░▀░▀▀▀░▀░▀░░░▀▀▀░▀▀▀░▀▀▀");
-    println!("                 {} ", BRAND_NAME);
+    println!("{}", ascii_logo());
     println!("=================================================");
     println!("Author:          {}", AUTHOR);
     println!("Copyright:       {}", COPYRIGHT);
@@ -123,7 +119,7 @@ pub fn print_version(check: bool) {
                     println!("To update automatically, run:");
                     println!("  isearch self-update");
                 } else {
-                    println!("\n✨ You are on the latest version of {}!", BRAND_NAME);
+                    println!("\n✨ You are on the latest version of {}!", isearch_cli());
                 }
             }
             Err(e) => {

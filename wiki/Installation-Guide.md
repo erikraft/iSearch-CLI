@@ -18,13 +18,13 @@ We offer three flexible options for installing iSearch CLI™ on Windows platfor
 4. Restart your terminal and run: `isearch`
 
 ### Method 2: Graphical Setup Installer (.exe)
-1. Download `isearch-installer-x86_64.exe` from GitHub Releases.
+1. Download `isearch-cli-windows-x64.exe` from GitHub Releases.
 2. Double-click the file and follow the interactive wizard. It automatically registers environmental paths, writes standard register metadata, and sets up uninstall parameters.
 
 ### Method 3: Enterprise MSI Installer (.msi)
 For headless corporate deployment or quiet automation, execute the MSI installer through PowerShell:
 ```powershell
-msiexec /i isearch-installer-x86_64.msi /quiet
+msiexec /i isearch-cli-windows-x64.msi /quiet
 ```
 
 ---
