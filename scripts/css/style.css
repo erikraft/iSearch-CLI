@@ -2118,11 +2118,24 @@ html, body {
     border-radius: var(--radius);
 
     box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
 
     transition:
         transform .35s var(--transition),
         border-color .35s var(--transition),
         box-shadow .35s var(--transition);
+}
+
+.isearch-classic-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), transparent);
+    pointer-events: none;
 }
 
 .isearch-classic-card:hover {
@@ -2131,6 +2144,10 @@ html, body {
     box-shadow:
         0 20px 45px -15px rgba(0,0,0,.9),
         var(--glow-shadow);
+}
+
+.isearch-classic-card:hover .isearch-classic-icon i {
+    transform: scale(1.12);
 }
 
 .isearch-classic-icon {
@@ -2151,6 +2168,10 @@ html, body {
     color: var(--accent-light);
 
     font-size: 1.45rem;
+}
+
+.isearch-classic-icon i {
+    transition: transform 0.35s var(--transition);
 }
 
 .isearch-classic-content {
@@ -2208,4 +2229,19 @@ html, body {
         width:100%;
     }
 
+}
+
+@media (max-width: 480px) {
+    .isearch-classic-card {
+        padding: 20px 16px;
+        gap: 16px;
+    }
+    .isearch-classic-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 1.25rem;
+    }
+    .isearch-classic-content h3 {
+        font-size: 1.25rem;
+    }
 }
