@@ -154,24 +154,99 @@
                                 <span class="dot yellow"></span>
                                 <span class="dot green"></span>
                             </div>
+                            <div class="cli-tabs">
+                                <span class="cli-tab active"><i class="fa-solid fa-terminal"></i> isearch</span>
+                                <span class="cli-tab"><i class="fa-solid fa-earth-americas"></i> browser</span>
+                                <span class="cli-tab"><i class="fa-solid fa-gear"></i> config</span>
+                            </div>
                             <span class="cli-title">isearch --interactive</span>
                         </div>
                         <div class="cli-body">
-                            <div class="cli-meta">
-                                <span class="cli-banner-title">iSearch CLI™ v<span class="release-version-tag">0.1.0</span></span>
-                                <span>Official Author: <strong style="color:var(--accent-light);">ErikrafT</strong></span><br>
-                                <span>Copyright: <strong style="color:var(--accent-light);">Copyright © 2026 ErikrafT</strong></span>
+                            <!-- Boot Loader Loading Diagnostics -->
+                            <div id="cli-boot-loader">
+                                <span class="boot-line active">✓ Loading configuration...</span>
+                                <span class="boot-line">✓ Loading search engines...</span>
+                                <span class="boot-line">✓ Initializing SQLite database...</span>
+                                <span class="boot-line">✓ Loading bookmarks...</span>
+                                <span class="boot-line">✓ Loading history...</span>
+                                <span class="boot-line">✓ Ready.</span>
                             </div>
-                            <div class="cli-intro">
-                                <span class="prompt-symbol">iSearch></span> <span class="cli-cursor-input"></span><span class="cli-blink-cursor"></span>
+
+                            <!-- Real Application UI Header & Interactive Banner -->
+                            <div id="cli-banner-screen" style="display: none;">
+                                <div class="cli-app-decor">
+                                    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                                    <span class="cli-brand-banner">iSearch CLI™</span>
+                                    Version <span class="release-version-tag">0.1.0</span>
+
+                                    Official Author
+                                    ErikrafT
+
+                                    Copyright © 2026 ErikrafT
+                                    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                                </div>
+
+                                <div class="cli-prompt-line">
+                                    <span class="prompt-symbol">iSearch></span> <span class="cli-cursor-input"></span><span class="cli-blink-cursor"></span>
+                                </div>
                             </div>
-                            <div class="cli-section-title">ACTIVE FEATURES AVAILABLE:</div>
-                            <ul class="cli-todo-list">
-                                <li><span class="todo-icon todo-done"><i class="fa-solid fa-check-double"></i></span> Dual Engine Browser (Rust Native / Headless Chromium)</li>
-                                <li><span class="todo-icon todo-done"><i class="fa-solid fa-check-double"></i></span> Interactive SQLite History Database & JSON Bookmarks</li>
-                                <li><span class="todo-icon todo-done"><i class="fa-solid fa-check-double"></i></span> 100% Private Browsing Mode (Isolated Memory, Incognito)</li>
-                                <li><span class="todo-icon todo-done"><i class="fa-solid fa-check-double"></i></span> Integrated Self-Updater & PIX Donation Screen</li>
-                            </ul>
+
+                            <!-- Real simulated command output section -->
+                            <div id="cli-output-screen" style="display: none;">
+                                <div class="cli-tui-header">
+                                    <span class="tui-logo">iSearch CLI™</span>
+                                    <span class="tui-tab active">[ Tab 1: Google ]</span>
+                                    <span class="tui-tab">[ Tab 2: DuckDuckGo ]</span>
+                                    <span class="tui-engine-mode">Engine: NATIVE</span>
+                                </div>
+                                <div class="cli-tui-address-bar">
+                                    <span class="tui-url-label">URL:</span> <span class="tui-url-value">https://www.google.com</span>
+                                </div>
+                                <div class="cli-tui-viewport">
+                                    <div class="viewport-results">
+                                        <p class="g-result"><span class="g-title">iSearch CLI™ — GitHub</span><br><span class="g-url">https://github.com/erikraft/iSearch-CLI</span><br><span class="g-desc">Professional terminal browser and search assistant built in Rust...</span></p>
+                                        <p class="g-result"><span class="g-title">ErikrafT — Official Website</span><br><span class="g-url">https://erikraft.com</span><br><span class="g-desc">Personal portfolio, open-source projects, and developer hub...</span></p>
+                                    </div>
+                                </div>
+                                <div class="cli-tui-status-bar">
+                                    [Esc: Exit] [L: Go to] [E: Switch Engine] [T: New Tab] [H: Help] │ Ready.
+                                </div>
+                            </div>
+
+                            <!-- Professional Interactive Premium Features Grid -->
+                            <div class="cli-features-section">
+                                <div class="cli-section-title">ACTIVE FEATURES AVAILABLE:</div>
+                                <div class="cli-features-grid">
+                                    <div class="cli-feature-card">
+                                        <div class="card-icon"><i class="fa-solid fa-earth-americas"></i></div>
+                                        <div class="card-info">
+                                            <h4>Dual Engine</h4>
+                                            <p>Rust Native / Headless Chromium</p>
+                                        </div>
+                                    </div>
+                                    <div class="cli-feature-card">
+                                        <div class="card-icon"><i class="fa-solid fa-database"></i></div>
+                                        <div class="card-info">
+                                            <h4>SQLite History</h4>
+                                            <p>SQLite database & JSON Bookmarks</p>
+                                        </div>
+                                    </div>
+                                    <div class="cli-feature-card">
+                                        <div class="card-icon"><i class="fa-solid fa-user-secret"></i></div>
+                                        <div class="card-info">
+                                            <h4>Private Mode</h4>
+                                            <p>Isolated temporary memory & incognito</p>
+                                        </div>
+                                    </div>
+                                    <div class="cli-feature-card">
+                                        <div class="card-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                                        <div class="card-info">
+                                            <h4>Auto Updater</h4>
+                                            <p>Self-updater & PIX Donation Screen</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

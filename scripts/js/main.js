@@ -282,42 +282,109 @@ function initTyping() {
 }
 
 /**
- * Terminal simulator blinking commands loops
+ * Terminal simulator state machine loop & animations
  */
 function initTerminalMockupTyping() {
+    const bootContainer = document.getElementById('cli-boot-loader');
+    const bannerScreen = document.getElementById('cli-banner-screen');
+    const outputScreen = document.getElementById('cli-output-screen');
     const cursorInput = document.querySelector('.cli-cursor-input');
-    if (!cursorInput) return;
 
-    const commandsList = ["help", "browse https://download.erikraft.com", "version --check", "self-update", "donate"];
+    if (!bootContainer || !bannerScreen || !outputScreen || !cursorInput) return;
+
+    const bootLines = Array.from(bootContainer.querySelectorAll('.boot-line'));
+    let currentBootIdx = 0;
+
+    // Phase 1: Boot sequence simulation
+    function simulateBoot() {
+        if (currentBootIdx < bootLines.length) {
+            // Activate current line
+            bootLines[currentBootIdx].classList.add('active');
+
+            // Random natural loading delay (200ms - 600ms)
+            const delay = 150 + Math.random() * 300;
+            currentBootIdx++;
+            setTimeout(simulateBoot, delay);
+        } else {
+            // Once boot is complete, wait 1s, then fade to active shell banner
+            setTimeout(() => {
+                bootContainer.style.display = 'none';
+                bannerScreen.style.display = 'block';
+                // Start typing loop
+                startTypingLoop();
+            }, 1000);
+        }
+    }
+
+    // Start boot cycle after a small initial load
+    setTimeout(simulateBoot, 500);
+
+    // Phase 2: Natural Typing loop simulating real commands and views
+    const commandsList = [
+        { cmd: "help", response: "help" },
+        { cmd: "browse https://github.com/erikraft/iSearch-CLI", response: "browse" },
+        { cmd: "version --check", response: "version" },
+        { cmd: "self-update", response: "update" },
+        { cmd: "donate", response: "donate" }
+    ];
+
     let cmdIdx = 0;
     let charI = 0;
     let deleting = false;
 
-    function typeCmd() {
-        const currentCmd = commandsList[cmdIdx];
-        if (!deleting) {
-            cursorInput.textContent = currentCmd.substring(0, charI + 1);
-            charI++;
-            if (charI === currentCmd.length) {
-                deleting = true;
-                setTimeout(typeCmd, 3000); // Wait 3s before deleting
+    function startTypingLoop() {
+        function typeCmd() {
+            const currentItem = commandsList[cmdIdx];
+            const currentCmd = currentItem.cmd;
+
+            if (!deleting) {
+                cursorInput.textContent = currentCmd.substring(0, charI + 1);
+                charI++;
+                if (charI === currentCmd.length) {
+                    // Pause on the finished command before action
+                    setTimeout(() => {
+                        triggerTerminalAction(currentItem.response);
+                    }, 1200);
+                } else {
+                    setTimeout(typeCmd, 70 + Math.random() * 80); // Natural random typing
+                }
             } else {
-                setTimeout(typeCmd, 100 + Math.random() * 80);
+                cursorInput.textContent = currentCmd.substring(0, charI - 1);
+                charI--;
+                if (charI === 0) {
+                    deleting = false;
+                    cmdIdx = (cmdIdx + 1) % commandsList.length;
+                    setTimeout(typeCmd, 600); // Pause before typing the next command
+                } else {
+                    setTimeout(typeCmd, 30); // Fast backspacing
+                }
             }
-        } else {
-            cursorInput.textContent = currentCmd.substring(0, charI - 1);
-            charI--;
-            if (charI === 0) {
-                deleting = false;
-                cmdIdx = (cmdIdx + 1) % commandsList.length;
-                setTimeout(typeCmd, 800);
+        }
+
+        typeCmd();
+
+        function triggerTerminalAction(actionType) {
+            if (actionType === "browse") {
+                // Fade to TUI mode
+                bannerScreen.style.display = 'none';
+                outputScreen.style.display = 'block';
+
+                // Remain in TUI Mode for 6 seconds, then restore and continue typing
+                setTimeout(() => {
+                    outputScreen.style.display = 'none';
+                    bannerScreen.style.display = 'block';
+                    deleting = true;
+                    setTimeout(typeCmd, 400);
+                }, 6000);
             } else {
-                setTimeout(typeCmd, 40);
+                // For simple commands, just backspace directly after 2 seconds
+                setTimeout(() => {
+                    deleting = true;
+                    typeCmd();
+                }, 2000);
             }
         }
     }
-
-    setTimeout(typeCmd, 1500);
 }
 
 /**

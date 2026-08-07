@@ -8,7 +8,7 @@ pub mod utils;
 use branding::{ascii_logo, isearch, isearch_cli};
 use config::load_config;
 use std::env;
-use std::io::{self, stdout, Write};
+use std::io::{self, Write};
 use ui::run_donation_tui;
 
 /// Formats and outputs the global list of interactive commands.
