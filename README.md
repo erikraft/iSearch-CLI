@@ -1,6 +1,12 @@
 [![Dependency Integrity Check](https://github.com/erikraft/iSearch-CLI/actions/workflows/dependency-check.yml/badge.svg)](https://github.com/erikraft/iSearch-CLI/actions/workflows/dependency-check.yml)
 [![Release Pipeline](https://github.com/erikraft/iSearch-CLI/actions/workflows/release.yml/badge.svg)](https://github.com/erikraft/iSearch-CLI/actions/workflows/release.yml)
-# iSearch CLI™
+```text
+  _ ___                  _       ___ _    ___ 
+ (_) __| ___ __ _ _ _ __| |_    / __| |  |_ _|
+ | \__ \/ -_) _` | '_/ _| ' \  | (__| |__ | | 
+ |_|___/\___\__,_|_| \__|_||_|  \___|____|___|
+```
+                                              
 
 **iSearch CLI™** is a polished terminal browser and search assistant designed for modern developers, power users, and terminal-first workflows.
 
