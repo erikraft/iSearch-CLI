@@ -122,22 +122,52 @@ pub fn isearch_cli() -> &'static str {
         .as_str()
 }
 
-/// Returns the ASCII art logo for the application, with colors applied when supported.
+/// Returns the ASCII art logo for the application, with official brand colors.
 pub fn ascii_logo() -> &'static str {
     CACHED_ASCII_LOGO.get_or_init(|| {
-        let banner = r#"
-                                                                                                                        
-    ██       ▄▄▄▄                                            ▄▄                     ▄▄▄▄   ▄▄         ▄▄▄▄▄▄  ▄▄▄ ▄▄ ▄▄ 
-    ▀▀     ▄█▀▀▀▀█                                           ██                   ██▀▀▀▀█  ██         ▀▀██▀▀   █  █▀▄▀█ 
-  ████     ██▄        ▄████▄    ▄█████▄   ██▄████   ▄█████▄  ██▄████▄            ██▀       ██           ██     █  █ ▀ █ 
-    ██      ▀████▄   ██▄▄▄▄██   ▀ ▄▄▄██   ██▀      ██▀    ▀  ██▀   ██            ██        ██           ██              
-    ██          ▀██  ██▀▀▀▀▀▀  ▄██▀▀▀██   ██       ██        ██    ██            ██▄       ██           ██              
- ▄▄▄██▄▄▄  █▄▄▄▄▄█▀  ▀██▄▄▄▄█  ██▄▄▄███   ██       ▀██▄▄▄▄█  ██    ██             ██▄▄▄▄█  ██▄▄▄▄▄▄   ▄▄██▄▄            
- ▀▀▀▀▀▀▀▀   ▀▀▀▀▀      ▀▀▀▀▀    ▀▀▀▀ ▀▀   ▀▀         ▀▀▀▀▀   ▀▀    ▀▀               ▀▀▀▀   ▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀            
-                                                                                                                        
-                                                                                                                        
-"#;
-        gradient(banner)
+        let mut logo = String::new();
+
+        const BLUE: (u8, u8, u8) = (0x42, 0x85, 0xF4);
+        const RED: (u8, u8, u8) = (0xDB, 0x44, 0x37);
+        const YELLOW: (u8, u8, u8) = (0xF4, 0xB4, 0x00);
+        const GREEN: (u8, u8, u8) = (0x0F, 0x9D, 0x58);
+
+        let lines = [
+            "    ██       ▄▄▄▄                                            ▄▄                     ▄▄▄▄   ▄▄         ▄▄▄▄▄▄  ▄▄▄ ▄▄ ▄▄ ",
+            "    ▀▀     ▄█▀▀▀▀█                                           ██                   ██▀▀▀▀█  ██         ▀▀██▀▀   █  █▀▄▀█ ",
+            "  ████     ██▄        ▄████▄    ▄█████▄   ██▄████   ▄█████▄  ██▄████▄            ██▀       ██           ██     █  █ ▀ █ ",
+            "    ██      ▀████▄   ██▄▄▄▄██   ▀ ▄▄▄██   ██▀      ██▀    ▀  ██▀   ██            ██        ██           ██              ",
+            "    ██          ▀██  ██▀▀▀▀▀▀  ▄██▀▀▀██   ██       ██        ██    ██            ██▄       ██           ██              ",
+            " ▄▄▄██▄▄▄  █▄▄▄▄▄█▀  ▀██▄▄▄▄█  ██▄▄▄███   ██       ▀██▄▄▄▄█  ██    ██             ██▄▄▄▄█  ██▄▄▄▄▄▄   ▄▄██▄▄           ",
+            " ▀▀▀▀▀▀▀▀   ▀▀▀▀▀      ▀▀▀▀▀    ▀▀▀▀ ▀▀   ▀▀         ▀▀▀▀▀   ▀▀    ▀▀               ▀▀▀▀   ▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀           ",
+        ];
+
+        for line in lines {
+            let chars: Vec<char> = line.chars().collect();
+            let len = chars.len();
+
+            let blue_end = len * 40 / 100;
+            let red_end = len * 65 / 100;
+            let yellow_end = len * 82 / 100;
+
+            for (i, ch) in chars.iter().enumerate() {
+                let color = if i < blue_end {
+                    BLUE
+                } else if i < red_end {
+                    RED
+                } else if i < yellow_end {
+                    YELLOW
+                } else {
+                    GREEN
+                };
+
+                logo.push_str(&colorize(&ch.to_string(), color));
+            }
+
+            logo.push('\n');
+        }
+
+        logo
     }).as_str()
 }
 
