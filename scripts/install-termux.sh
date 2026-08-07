@@ -30,11 +30,11 @@ print_banner() {
 
 cat <<EOF
 
-${BLUE}  _ ____${RED}                      _${YELLOW}        ____ _${GREEN}     ___${NC}
-${BLUE} (_)_ ___|${RED}  ___  __ _ _ __ ___| |__${YELLOW}    / ___| |${GREEN}   |_ _|${NC}
-${BLUE} | \\___ \\${RED} / _ \\/ _\` | '__/ __| '_ \\${YELLOW}  | |   | |${GREEN}    | |${NC}
-${BLUE} | |___) |${RED}  __/ (_| | | | (__| | | |${YELLOW} | |___| |___${GREEN} | |${NC}
-${BLUE} |_|____/${RED} \\___|\\__,_|_|  \\___|_| |_|${YELLOW}  \\____|_____|${GREEN}___|${NC}
+printf "${BLUE}  _ ____${RED}                      _${YELLOW}        ____ _${GREEN}     ___${NC}\n"
+printf "${BLUE} (_)_ ___|${RED}  ___  __ _ _ __ ___| |__${YELLOW}    / ___| |${GREEN}   |_ _|${NC}\n"
+printf "${BLUE} | \\\\___ \\\\${RED} / _ \\\\/ _\` | '__/ __| '_ \\\\${YELLOW}  | |   | |${GREEN}    | |${NC}\n"
+printf "${BLUE} | |___) |${RED}  __/ (_| | | | (__| | | |${YELLOW} | |___| |___${GREEN} | |${NC}\n"
+printf "${BLUE} |_|____/${RED} \\\\___|\\\\__,_|_|  \\\\___|_| |_|${YELLOW}  \\\\____|_____|${GREEN}___|${NC}\n\n"
 
 EOF
 
