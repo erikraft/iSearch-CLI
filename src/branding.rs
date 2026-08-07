@@ -110,6 +110,55 @@ fn ansi_code_for(color_support: ColorSupport, rgb: (u8, u8, u8)) -> String {
     }
 }
 
+fn interpolate_rgb(start: (u8, u8, u8), end: (u8, u8, u8), position: f32) -> (u8, u8, u8) {
+    let (sr, sg, sb) = start;
+    let (er, eg, eb) = end;
+
+    let r = sr as f32 + (er as f32 - sr as f32) * position;
+    let g = sg as f32 + (eg as f32 - sg as f32) * position;
+    let b = sb as f32 + (eb as f32 - sb as f32) * position;
+
+    (r.round() as u8, g.round() as u8, b.round() as u8)
+}
+
+fn ascii_logo_color_at(index: usize, total_chars: usize) -> (u8, u8, u8) {
+    const BLUE: (u8, u8, u8) = (0x42, 0x85, 0xF4);
+    const RED: (u8, u8, u8) = (0xDB, 0x44, 0x37);
+    const YELLOW: (u8, u8, u8) = (0xF4, 0xB4, 0x00);
+    const GREEN: (u8, u8, u8) = (0x0F, 0x9D, 0x58);
+
+    if total_chars <= 1 {
+        return BLUE;
+    }
+
+    let blue_end = total_chars * 40 / 100;
+    let red_end = total_chars * 65 / 100;
+    let yellow_end = total_chars * 82 / 100;
+
+    let segment_position = |start: usize, end: usize| {
+        let segment_len = end.saturating_sub(start);
+        if segment_len <= 1 {
+            0.0
+        } else {
+            (index.saturating_sub(start)) as f32 / (segment_len - 1) as f32
+        }
+    };
+
+    if index < blue_end {
+        return interpolate_rgb(BLUE, RED, segment_position(0, blue_end));
+    }
+
+    if index < red_end {
+        return interpolate_rgb(RED, YELLOW, segment_position(blue_end, red_end));
+    }
+
+    if index < yellow_end {
+        return interpolate_rgb(YELLOW, GREEN, segment_position(red_end, yellow_end));
+    }
+
+    GREEN
+}
+
 /// Returns the branded `iSearch™` string, using terminal colors when available.
 pub fn isearch() -> &'static str {
     CACHED_ISEARCH.get_or_init(|| gradient(BRAND_TEXT)).as_str()
@@ -126,11 +175,7 @@ pub fn isearch_cli() -> &'static str {
 pub fn ascii_logo() -> &'static str {
     CACHED_ASCII_LOGO.get_or_init(|| {
         let mut logo = String::new();
-
-        const BLUE: (u8, u8, u8) = (0x42, 0x85, 0xF4);
-        const RED: (u8, u8, u8) = (0xDB, 0x44, 0x37);
-        const YELLOW: (u8, u8, u8) = (0xF4, 0xB4, 0x00);
-        const GREEN: (u8, u8, u8) = (0x0F, 0x9D, 0x58);
+        let color_support = effective_color_support();
 
         let lines = [
             "    ██       ▄▄▄▄                                            ▄▄                     ▄▄▄▄   ▄▄         ▄▄▄▄▄▄  ▄▄▄ ▄▄ ▄▄ ",
@@ -146,22 +191,14 @@ pub fn ascii_logo() -> &'static str {
             let chars: Vec<char> = line.chars().collect();
             let len = chars.len();
 
-            let blue_end = len * 40 / 100;
-            let red_end = len * 65 / 100;
-            let yellow_end = len * 82 / 100;
-
             for (i, ch) in chars.iter().enumerate() {
-                let color = if i < blue_end {
-                    BLUE
-                } else if i < red_end {
-                    RED
-                } else if i < yellow_end {
-                    YELLOW
-                } else {
-                    GREEN
-                };
+                let rgb = ascii_logo_color_at(i, len);
+                logo.push_str(&ansi_code_for(color_support, rgb));
+                logo.push(*ch);
+            }
 
-                logo.push_str(&colorize(&ch.to_string(), color));
+            if color_support != ColorSupport::None {
+                logo.push_str("\x1b[0m");
             }
 
             logo.push('\n');
