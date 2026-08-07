@@ -8,7 +8,7 @@ pub mod utils;
 use branding::{ascii_logo, isearch, isearch_cli};
 use config::load_config;
 use std::env;
-use std::io::{self, stdout, Write};
+use std::io::{self, Write};
 use ui::run_donation_tui;
 
 /// Formats and outputs the global list of interactive commands.
@@ -29,8 +29,8 @@ pub fn start_interactive_cli() {
     println!("{}", ascii_logo());
     println!("=================================================");
     println!(" Type '{}' to surf the web/local files,", isearch());
-    println!(" Type '{}' to support the project, or", "donate");
-    println!(" Type '{}' to see other commands.", "help");
+    println!(" Type 'donate' to support the project, or");
+    println!(" Type 'help' to see other commands.");
     println!("=================================================");
 
     let stdin = io::stdin();

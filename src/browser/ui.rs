@@ -1206,7 +1206,7 @@ pub fn ui(f: &mut Frame, app: &mut BrowserApp) {
     let size = f.area();
 
     // Theme and style settings
-    let primary_style = if app.private_mode {
+    let _primary_style = if app.private_mode {
         Style::default()
             .fg(Color::Magenta)
             .add_modifier(Modifier::BOLD)

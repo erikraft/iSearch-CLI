@@ -37,13 +37,7 @@ fn effective_color_support() -> ColorSupport {
         return ColorSupport::None;
     }
 
-    let detected = TerminalCapabilities::detect().color_support;
-    match detected {
-        ColorSupport::TrueColor => ColorSupport::TrueColor,
-        ColorSupport::Ansi256 => ColorSupport::Ansi256,
-        ColorSupport::Ansi16 => ColorSupport::Ansi16,
-        ColorSupport::None => ColorSupport::None,
-    }
+    TerminalCapabilities::detect().color_support
 }
 
 fn gradient_color_at(index: usize, total_chars: usize) -> (u8, u8, u8) {
@@ -88,9 +82,9 @@ fn rgb_to_basic_ansi_code((r, g, b): (u8, u8, u8)) -> u8 {
     let mut best_score = u32::MAX;
 
     for candidate in candidates {
-        let dr = r as i32 - candidate.0 .0 as i32;
-        let dg = g as i32 - candidate.0 .1 as i32;
-        let db = b as i32 - candidate.0 .2 as i32;
+        let dr = r as i32 - candidate.0 .0;
+        let dg = g as i32 - candidate.0 .1;
+        let db = b as i32 - candidate.0 .2;
         let score = (dr * dr + dg * dg + db * db) as u32;
         if score < best_score {
             best_score = score;
@@ -168,7 +162,11 @@ pub fn gradient(text: &str) -> String {
 /// Returns a themed style for terminal UI headings and branded titles.
 pub fn brand_style() -> Style {
     Style::default()
-        .fg(Color::Rgb(GRADIENT_STOPS[0].0, GRADIENT_STOPS[0].1, GRADIENT_STOPS[0].2))
+        .fg(Color::Rgb(
+            GRADIENT_STOPS[0].0,
+            GRADIENT_STOPS[0].1,
+            GRADIENT_STOPS[0].2,
+        ))
         .add_modifier(Modifier::BOLD)
 }
 
@@ -176,7 +174,7 @@ pub fn brand_style() -> Style {
 pub fn gradient_spans(text: &str) -> Vec<Span<'static>> {
     let total_chars = text.chars().count();
     if total_chars == 0 {
-        return vec![Span::raw(text)];
+        return vec![Span::raw(text.to_string())];
     }
 
     let mut spans = Vec::with_capacity(total_chars);
