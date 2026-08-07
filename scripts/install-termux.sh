@@ -14,7 +14,11 @@ USE_CUSTOM_DOMAIN=false
 DOWNLOAD_DOMAIN="https://download.erikraft.com"
 GITHUB_ORG_REPO="erikraft/iSearch-CLI"
 
-# iSearch CLI™ Colors (True Color / 24-bit ANSI)
+# ==============================================================================
+# Colors
+# ==============================================================================
+
+# TrueColor (24-bit)
 BLUE='\033[38;2;66;133;244m'
 RED='\033[38;2;219;68;55m'
 YELLOW='\033[38;2;244;180;0m'
@@ -26,62 +30,51 @@ WHITE='\033[38;2;245;245;245m'
 GRAY='\033[38;2;160;160;160m'
 NC='\033[0m'
 
-# iSearch CLI™ Colors (True Color / 24-bit ANSI)
-BLUE='\033[38;2;66;133;244m'
-RED='\033[38;2;219;68;55m'
-YELLOW='\033[38;2;244;180;0m'
-GREEN='\033[38;2;15;157;88m'
-
-PURPLE='\033[38;2;171;71;188m'
-CYAN='\033[38;2;38;198;218m'
-WHITE='\033[38;2;245;245;245m'
-GRAY='\033[38;2;160;160;160m'
-NC='\033[0m'
-
-# Fallback para terminais sem suporte a TrueColor
+# Fallback para terminais sem TrueColor
 if [[ "${COLORTERM:-}" != *truecolor* ]]; then
     BLUE='\033[34m'
     RED='\033[31m'
     YELLOW='\033[33m'
     GREEN='\033[32m'
+
     PURPLE='\033[35m'
     CYAN='\033[36m'
     WHITE='\033[97m'
     GRAY='\033[90m'
+    NC='\033[0m'
 fi
 
 print_banner() {
-    printf "${BLUE}  _ ____${RED}                      _${YELLOW}        ____ _${GREEN}     ___${NC}\n"
-    printf "${BLUE} (_)_ ___|${RED}  ___  __ _ _ __ ___| |__${YELLOW}    / ___| |${GREEN}   |_ _|${NC}\n"
-    printf "${BLUE} | \\___ \\${RED} / _ \\/ _\` | '__/ __| '_ \\${YELLOW}  | |   | |${GREEN}    | |${NC}\n"
-    printf "${BLUE} | |___) |${RED}  __/ (_| | | | (__| | | |${YELLOW} | |___| |___${GREEN} | |${NC}\n"
-    printf "${BLUE} |_|____/${RED} \\___|\\__,_|_|  \\___|_| |_|${YELLOW}  \\____|_____|___|${NC}\n\n"
+    printf '%b\n' "${BLUE}  _ ____${RED}                      _${YELLOW}        ____ _${GREEN}     ___${NC}"
+    printf '%b\n' "${BLUE} (_)_ ___|${RED}  ___  __ _ _ __ ___| |__${YELLOW}    / ___| |${GREEN}   |_ _|${NC}"
+    printf '%b\n' "${BLUE} | \\___ \\${RED} / _ \\/ _\` | '__/ __| '_ \\${YELLOW}  | |   | |${GREEN}    | |${NC}"
+    printf '%b\n' "${BLUE} | |___) |${RED}  __/ (_| | | | (__| | | |${YELLOW} | |___| |___${GREEN} | |${NC}"
+    printf '%b\n\n' "${BLUE} |_|____/${RED} \\___|\\__,_|_|  \\___|_| |_|${YELLOW}  \\____|_____|${GREEN}___|${NC}"
 
-    printf "${PURPLE}                     iSearch CLI™${NC}\n"
-    printf "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
-    printf " ${WHITE}Author${GRAY}    : ${GREEN}ErikrafT${NC}\n"
-    printf " ${WHITE}Copyright${GRAY} : ${GREEN}© 2026 ErikrafT${NC}\n"
-    printf " ${WHITE}Search${GRAY}    : ${BLUE}https://search.erikraft.com${NC} ${YELLOW}(Classic Website)${NC}\n"
-    printf " ${WHITE}Download${GRAY}  : ${BLUE}https://download.erikraft.com${NC}\n"
-    printf " ${WHITE}GitHub${GRAY}    : ${BLUE}https://github.com/erikraft/iSearch-CLI${NC}\n"
-    printf "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
-    printf "\n"
+    printf '%b\n' "${PURPLE}                     iSearch CLI™${NC}"
+    printf '%b\n' "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    printf '%b\n' " ${WHITE}Author${GRAY}    : ${GREEN}ErikrafT${NC}"
+    printf '%b\n' " ${WHITE}Copyright${GRAY} : ${GREEN}© 2026 ErikrafT${NC}"
+    printf '%b\n' " ${WHITE}Search${GRAY}    : ${BLUE}https://search.erikraft.com${NC} ${YELLOW}(Classic Website)${NC}"
+    printf '%b\n' " ${WHITE}Download${GRAY}  : ${BLUE}https://download.erikraft.com${NC}"
+    printf '%b\n' " ${WHITE}GitHub${GRAY}    : ${BLUE}https://github.com/erikraft/iSearch-CLI${NC}"
+    printf '%b\n\n' "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
 log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    printf '%b\n' "${BLUE}[INFO]${NC} $1" >&2
 }
 
 log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    printf '%b\n' "${GREEN}[SUCCESS]${NC} $1" >&2
 }
 
 log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+    printf '%b\n' "${YELLOW}[WARN]${NC} $1" >&2
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1" >&2
+    printf '%b\n' "${RED}[ERROR]${NC} $1" >&2
 }
 
 # Ensure script is running inside Termux and not as root
@@ -133,7 +126,7 @@ detect_arch() {
     esac
 
     log_success "Architecture detected: $arch"
-    echo "$arch"
+    printf '%s\n' "$arch"
 }
 
 # Get latest release version and download url
@@ -146,13 +139,13 @@ get_release_info() {
     # Determine filename based on architecture
     case "$arch" in
         aarch64)
-            filename="isearch-linux-aarch64"
+            filename="isearch-cli-termux-aarch64.tar.gz"
             ;;
         arm)
-            filename="isearch-linux-arm"
+            filename="isearch-cli-termux-arm.tar.gz"
             ;;
         x86_64)
-            filename="isearch-linux-x86_64"
+            filename="isearch-cli-termux-x64.tar.gz"
             ;;
     esac
 
