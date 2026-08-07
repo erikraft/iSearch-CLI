@@ -26,27 +26,46 @@ WHITE='\033[38;2;245;245;245m'
 GRAY='\033[38;2;160;160;160m'
 NC='\033[0m'
 
+# iSearch CLI™ Colors (True Color / 24-bit ANSI)
+BLUE='\033[38;2;66;133;244m'
+RED='\033[38;2;219;68;55m'
+YELLOW='\033[38;2;244;180;0m'
+GREEN='\033[38;2;15;157;88m'
+
+PURPLE='\033[38;2;171;71;188m'
+CYAN='\033[38;2;38;198;218m'
+WHITE='\033[38;2;245;245;245m'
+GRAY='\033[38;2;160;160;160m'
+NC='\033[0m'
+
+# Fallback para terminais sem suporte a TrueColor
+if [[ "${COLORTERM:-}" != *truecolor* ]]; then
+    BLUE='\033[34m'
+    RED='\033[31m'
+    YELLOW='\033[33m'
+    GREEN='\033[32m'
+    PURPLE='\033[35m'
+    CYAN='\033[36m'
+    WHITE='\033[97m'
+    GRAY='\033[90m'
+fi
+
 print_banner() {
+    printf "${BLUE}  _ ____${RED}                      _${YELLOW}        ____ _${GREEN}     ___${NC}\n"
+    printf "${BLUE} (_)_ ___|${RED}  ___  __ _ _ __ ___| |__${YELLOW}    / ___| |${GREEN}   |_ _|${NC}\n"
+    printf "${BLUE} | \\___ \\${RED} / _ \\/ _\` | '__/ __| '_ \\${YELLOW}  | |   | |${GREEN}    | |${NC}\n"
+    printf "${BLUE} | |___) |${RED}  __/ (_| | | | (__| | | |${YELLOW} | |___| |___${GREEN} | |${NC}\n"
+    printf "${BLUE} |_|____/${RED} \\___|\\__,_|_|  \\___|_| |_|${YELLOW}  \\____|_____|___|${NC}\n\n"
 
-cat <<EOF
-
-printf "${BLUE}  _ ____${RED}                      _${YELLOW}        ____ _${GREEN}     ___${NC}\n"
-printf "${BLUE} (_)_ ___|${RED}  ___  __ _ _ __ ___| |__${YELLOW}    / ___| |${GREEN}   |_ _|${NC}\n"
-printf "${BLUE} | \\\\___ \\\\${RED} / _ \\\\/ _\` | '__/ __| '_ \\\\${YELLOW}  | |   | |${GREEN}    | |${NC}\n"
-printf "${BLUE} | |___) |${RED}  __/ (_| | | | (__| | | |${YELLOW} | |___| |___${GREEN} | |${NC}\n"
-printf "${BLUE} |_|____/${RED} \\\\___|\\\\__,_|_|  \\\\___|_| |_|${YELLOW}  \\\\____|_____|${GREEN}___|${NC}\n\n"
-
-EOF
-
-echo -e "${PURPLE}                     iSearch CLI™${NC}"
-echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e " ${WHITE}Author${GRAY}    : ${GREEN}ErikrafT${NC}"
-echo -e " ${WHITE}Copyright${GRAY} : ${GREEN}© 2026 ErikrafT${NC}"
-echo -e " ${WHITE}Search${GRAY}    : ${BLUE}https://search.erikraft.com${NC} ${YELLOW}(Classic Website)${NC}"
-echo -e " ${WHITE}Download${GRAY}  : ${BLUE}https://download.erikraft.com${NC}"
-echo -e " ${WHITE}GitHub${GRAY}    : ${BLUE}https://github.com/erikraft/iSearch-CLI${NC}"
-echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo
+    printf "${PURPLE}                     iSearch CLI™${NC}\n"
+    printf "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+    printf " ${WHITE}Author${GRAY}    : ${GREEN}ErikrafT${NC}\n"
+    printf " ${WHITE}Copyright${GRAY} : ${GREEN}© 2026 ErikrafT${NC}\n"
+    printf " ${WHITE}Search${GRAY}    : ${BLUE}https://search.erikraft.com${NC} ${YELLOW}(Classic Website)${NC}\n"
+    printf " ${WHITE}Download${GRAY}  : ${BLUE}https://download.erikraft.com${NC}\n"
+    printf " ${WHITE}GitHub${GRAY}    : ${BLUE}https://github.com/erikraft/iSearch-CLI${NC}\n"
+    printf "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+    printf "\n"
 }
 
 log_info() {
