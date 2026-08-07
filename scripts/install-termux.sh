@@ -47,8 +47,8 @@ fi
 print_banner() {
     printf '%b\n' "${BLUE}  _ ___                  _       ${RED}___ _    ${YELLOW}___${NC}"
     printf '%b\n' "${BLUE} (_) __| ___ __ _ _ _ __| |_    ${RED}/ __| |  ${YELLOW}|_ _|${NC}"
-    printf '%b\n' "${BLUE} | \\__ \\/ -_) _\` | '_/ _| ' \\  ${GREEN}| (__| |__ ${YELLOW}| |${NC}"
-    printf '%b\n' "${BLUE} |_|___/\\___\\__,_|_| \\__|_||_|  ${GREEN}\\___|____|${RED}___|${NC}"
+    printf '%b\n' "${RED} | \\__ \\/ -_) _\` | '_/ _| ' \\  ${GREEN}| (__| |__ ${YELLOW}| |${NC}"
+    printf '%b\n' "${YELLOW} |_|___/\\___\\__,_|_| \\__|_||_|  ${GREEN}\\___|____|${RED}___|${NC}"
     printf '\n'
 
     printf '%b\n' "${PURPLE}                     iSearch CLI™${NC}"
