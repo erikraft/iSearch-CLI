@@ -5,8 +5,46 @@
 // Top-level Configurable Variables (Do not hardcode release version tags)
 const CONFIG = {
     GITHUB_API_URL: "https://api.github.com/repos/erikraft/iSearch-CLI/releases/latest",
-    FALLBACK_VERSION: "0.1.0", // Fallback version if offline or API limit reached
     REPO_URL: "https://github.com/erikraft/iSearch-CLI"
+};
+
+const DOWNLOAD_ASSETS = {
+    windows: [
+        { name: "isearch-installer-x86_64.exe", label: "isearch-installer-x86_64.exe", style: "button-primary", icon: "fa-solid fa-download" },
+        { name: "isearch-installer-x86_64.msi", label: "isearch-installer-x86_64.msi", style: "button-secondary", icon: "fa-solid fa-box" },
+        { name: "isearch-windows-x86_64.exe", label: "isearch-windows-x86_64.exe", style: "button-secondary", icon: "fa-solid fa-file" },
+        { name: "isearch-windows-arm64.exe", label: "isearch-windows-arm64.exe", style: "button-secondary", icon: "fa-solid fa-file" }
+    ],
+    linux: [
+        { name: "isearch-linux-x86_64", label: "isearch-linux-x86_64", style: "button-primary", icon: "fa-solid fa-download" },
+        { name: "isearch-linux-aarch64", label: "isearch-linux-aarch64", style: "button-secondary", icon: "fa-solid fa-file" },
+        { name: "isearch-linux-arm", label: "isearch-linux-arm", style: "button-secondary", icon: "fa-solid fa-file" },
+        { name: "isearch-linux-x86_64.AppImage", label: "isearch-linux-x86_64.AppImage", style: "button-secondary", icon: "fa-solid fa-rocket" },
+        { name: "isearch-linux-x86_64.deb", label: "isearch-linux-x86_64.deb", style: "button-secondary", icon: "fa-solid fa-file-archive" },
+        { name: "isearch-linux-x86_64.rpm", label: "isearch-linux-x86_64.rpm", style: "button-secondary", icon: "fa-solid fa-file-archive" },
+        { name: "isearch-linux-x86_64.tar.gz", label: "isearch-linux-x86_64.tar.gz", style: "button-secondary", icon: "fa-solid fa-file-archive" },
+        { name: "isearch-linux-aarch64.tar.gz", label: "isearch-linux-aarch64.tar.gz", style: "button-secondary", icon: "fa-solid fa-file-archive" },
+        { name: "isearch-linux-arm.tar.gz", label: "isearch-linux-arm.tar.gz", style: "button-secondary", icon: "fa-solid fa-file-archive" }
+    ],
+    macos: [
+        { name: "isearch-installer-macos-aarch64.dmg", label: "isearch-installer-macos-aarch64.dmg", style: "button-primary", icon: "fa-solid fa-download" },
+        { name: "isearch-installer-macos-aarch64.pkg", label: "isearch-installer-macos-aarch64.pkg", style: "button-secondary", icon: "fa-solid fa-box" },
+        { name: "isearch-installer-macos-x86_64.dmg", label: "isearch-installer-macos-x86_64.dmg", style: "button-secondary", icon: "fa-solid fa-download" },
+        { name: "isearch-installer-macos-x86_64.pkg", label: "isearch-installer-macos-x86_64.pkg", style: "button-secondary", icon: "fa-solid fa-box" },
+        { name: "isearch-macos-aarch64", label: "isearch-macos-aarch64", style: "button-secondary", icon: "fa-solid fa-file" },
+        { name: "isearch-macos-aarch64.tar.gz", label: "isearch-macos-aarch64.tar.gz", style: "button-secondary", icon: "fa-solid fa-file-archive" },
+        { name: "isearch-macos-x86_64", label: "isearch-macos-x86_64", style: "button-secondary", icon: "fa-solid fa-file" },
+        { name: "isearch-macos-x86_64.tar.gz", label: "isearch-macos-x86_64.tar.gz", style: "button-secondary", icon: "fa-solid fa-file-archive" }
+    ],
+    termux: [
+        { name: "isearch-cli-termux-aarch64.tar.gz", label: "isearch-cli-termux-aarch64.tar.gz", style: "button-primary", icon: "fa-solid fa-download" },
+        { name: "isearch-cli-termux-arm.tar.gz", label: "isearch-cli-termux-arm.tar.gz", style: "button-secondary", icon: "fa-solid fa-file-archive" },
+        { name: "isearch-cli-termux-x64.tar.gz", label: "isearch-cli-termux-x64.tar.gz", style: "button-secondary", icon: "fa-solid fa-file-archive" }
+    ],
+    source: [
+        { type: "zip", label: "Source ZIP (.zip)", style: "button-primary", icon: "fa-solid fa-file-zipper" },
+        { type: "tar", label: "Source Tarball (.tar.gz)", style: "button-secondary", icon: "fa-solid fa-file-archive" }
+    ]
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -22,7 +60,8 @@ document.addEventListener("DOMContentLoaded", () => {
     initClipboard();
     initTabs();
 
-    // Dynamic Releases Fetcher
+    // Build download buttons and resolve latest release information
+    initDownloadButtons();
     fetchLatestRelease();
 });
 
@@ -607,88 +646,102 @@ function initTabs() {
 }
 
 /**
+ * Build download buttons dynamically on the page.
+ */
+function initDownloadButtons() {
+    const assetSections = {
+        windows: document.getElementById('windows-downloads'),
+        linux: document.getElementById('linux-downloads'),
+        macos: document.getElementById('macos-downloads'),
+        termux: document.getElementById('termux-downloads'),
+        source: document.getElementById('source-downloads')
+    };
+
+    Object.keys(DOWNLOAD_ASSETS).forEach(sectionKey => {
+        const sectionElement = assetSections[sectionKey];
+        if (!sectionElement) return;
+
+        DOWNLOAD_ASSETS[sectionKey].forEach(asset => {
+            const button = document.createElement('a');
+            const isSource = sectionKey === 'source';
+            const assetName = isSource ? asset.type : asset.name;
+            const href = isSource
+                ? `${CONFIG.REPO_URL}/releases/latest`
+                : `https://github.com/erikraft/iSearch-CLI/releases/latest/download/${assetName}`;
+
+            button.className = `button ${asset.style} ${isSource ? (asset.type === 'zip' ? 'source-zip-btn' : 'source-tar-btn') : 'download-link-btn'}`;
+            button.setAttribute('href', href);
+            if (!isSource) {
+                button.setAttribute('data-asset', assetName);
+                button.setAttribute('target', '_blank');
+                button.setAttribute('rel', 'noopener noreferrer');
+            } else {
+                button.setAttribute('target', '_blank');
+                button.setAttribute('rel', 'noopener noreferrer');
+            }
+
+            button.innerHTML = `<i class="${asset.icon}"></i> ${asset.label}`;
+            sectionElement.appendChild(button);
+        });
+    });
+}
+
+/**
  * Dynamic GitHub Releases Fetcher
  */
 function fetchLatestRelease() {
-    // Keep URLs and release versions fully configurable dynamically
     const versionTags = document.querySelectorAll('.release-version-tag');
     const downloadBtns = document.querySelectorAll('.download-link-btn');
     const sourceZipBtn = document.querySelector('.source-zip-btn');
     const sourceTarBtn = document.querySelector('.source-tar-btn');
     const releaseNotesLinks = document.querySelectorAll('.release-notes-link');
 
-    // Default static update based on CONFIG
-    updateReleaseDOM(CONFIG.FALLBACK_VERSION);
+    // Update tags immediately to a generic label until release data arrives
+    versionTags.forEach(el => el.textContent = 'latest');
 
     fetch(CONFIG.GITHUB_API_URL)
         .then(response => {
             if (!response.ok) {
-                throw new Error("API Limit reached or network error.");
+                throw new Error('API Limit reached or network error.');
             }
             return response.json();
         })
         .then(data => {
-            const tagName = data.tag_name;
-            const cleanVersion = tagName.replace(/^v/, ''); // Remove 'v' prefix if exists
+            const tagName = data.tag_name || 'latest';
+            const cleanVersion = tagName.replace(/^v/, '');
 
-            // Update DOM with dynamic latest release info
-            updateReleaseDOM(cleanVersion);
+            versionTags.forEach(el => el.textContent = cleanVersion);
 
-            // Populate specific dynamic assets if present in GitHub release assets structure
             if (data.assets && data.assets.length > 0) {
                 downloadBtns.forEach(btn => {
-                    const assetNamePattern = btn.getAttribute('data-asset');
-                    if (assetNamePattern) {
-                        // Find matching asset in API assets list
-                        const matchedAsset = data.assets.find(asset => {
-                            // Check if asset name matches the pattern (e.g. replacing v0.1.0 with the actual dynamic cleanVersion/tagName)
-                            const parameterizedName = assetNamePattern.replace('v0.1.0', tagName);
-                            return asset.name === parameterizedName || asset.name === assetNamePattern;
-                        });
+                    const assetName = btn.getAttribute('data-asset');
+                    if (!assetName) return;
 
-                        if (matchedAsset) {
-                            btn.setAttribute('href', matchedAsset.browser_download_url);
-                            // Set file size if present
-                            const sizeInMb = (matchedAsset.size / (1024 * 1024)).toFixed(2);
-                            const originalText = btn.innerHTML;
-                            if (!originalText.includes('MB')) {
-                                btn.innerHTML = `${originalText} <span style="font-size: 10px; opacity: 0.65;">(${sizeInMb} MB)</span>`;
-                            }
+                    const matchedAsset = data.assets.find(asset => asset.name === assetName);
+                    if (matchedAsset) {
+                        btn.setAttribute('href', matchedAsset.browser_download_url);
+                        const sizeInMb = (matchedAsset.size / (1024 * 1024)).toFixed(2);
+                        const originalText = btn.innerHTML;
+                        if (!originalText.includes('MB')) {
+                            btn.innerHTML = `${originalText} <span style="font-size: 10px; opacity: 0.65;">(${sizeInMb} MB)</span>`;
                         }
                     }
                 });
             }
 
-            // Update Release Notes Links
+            if (sourceZipBtn) {
+                sourceZipBtn.setAttribute('href', `${CONFIG.REPO_URL}/archive/refs/tags/${tagName}.zip`);
+            }
+            if (sourceTarBtn) {
+                sourceTarBtn.setAttribute('href', `${CONFIG.REPO_URL}/archive/refs/tags/${tagName}.tar.gz`);
+            }
+
             releaseNotesLinks.forEach(link => {
-                link.setAttribute('href', data.html_url);
+                link.setAttribute('href', data.html_url || `${CONFIG.REPO_URL}/releases/latest`);
             });
         })
         .catch(err => {
-            console.log("GitHub API request failed, using configured default values.", err);
+            console.log('GitHub API request failed, using fallback latest URLs.', err);
+            releaseNotesLinks.forEach(link => link.setAttribute('href', `${CONFIG.REPO_URL}/releases/latest`));
         });
-
-    function updateReleaseDOM(version) {
-        // Update tags
-        versionTags.forEach(el => {
-            el.textContent = version;
-        });
-
-        // Update standard download buttons URLs with clean versions
-        downloadBtns.forEach(btn => {
-            const currentHref = btn.getAttribute('href');
-            if (currentHref) {
-                const updatedHref = currentHref.replace(/v\d+\.\d+\.\d+/, `v${version}`);
-                btn.setAttribute('href', updatedHref);
-            }
-        });
-
-        // Update Source Code Links
-        if (sourceZipBtn) {
-            sourceZipBtn.setAttribute('href', `${CONFIG.REPO_URL}/archive/refs/tags/v${version}.zip`);
-        }
-        if (sourceTarBtn) {
-            sourceTarBtn.setAttribute('href', `${CONFIG.REPO_URL}/archive/refs/tags/v${version}.tar.gz`);
-        }
-    }
 }
