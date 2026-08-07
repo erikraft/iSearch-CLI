@@ -510,6 +510,111 @@
             </div>
         </section>
 
+        <!-- Termux Premium Integration Section -->
+        <section id="termux-app" class="section termux-app-section" aria-labelledby="termux-app-title">
+            <div class="container">
+                <div class="section-stack">
+                    <div class="section-heading reveal">
+                        <div class="label-container">
+                            <div class="label-line"></div>
+                            <span class="section-label">Premium Mobile Experience</span>
+                        </div>
+                        <h2 id="termux-app-title">Run iSearch CLI™ on Termux</h2>
+                        <p>Install Termux from your preferred source and start using iSearch CLI™ directly on your mobile device.</p>
+                    </div>
+
+                    <div class="termux-app-grid reveal">
+                        <!-- Left: High-Fidelity Termux SVG Logo -->
+                        <div class="termux-logo-container">
+                            <svg class="termux-premium-svg" width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Termux Official Vector Logo">
+                                <defs>
+                                    <!-- Metallic gold-to-beige gradient matching the core theme -->
+                                    <linearGradient id="termux-gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#867d6c" />
+                                        <stop offset="50%" stop-color="#a89f8d" />
+                                        <stop offset="100%" stop-color="#c5bba8" />
+                                    </linearGradient>
+                                    <!-- Glow filter -->
+                                    <filter id="termux-glow-filter" x="-20%" y="-20%" width="140%" height="140%">
+                                        <feGaussianBlur stdDeviation="3" result="blur" />
+                                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                    </filter>
+                                </defs>
+                                <!-- Outer glowing badge container -->
+                                <rect x="5" y="5" width="90" height="90" rx="18" fill="rgba(13, 14, 20, 0.7)" stroke="url(#termux-gold-grad)" stroke-width="2" filter="url(#termux-glow-filter)" />
+                                <!-- Decorative subtle terminal dotted grid lines -->
+                                <path d="M15 25 h70 M15 37 h70 M15 49 h70 M15 61 h70 M15 73 h70 M15 85 h70" stroke="rgba(134, 125, 108, 0.08)" stroke-width="1" stroke-dasharray="2 2" />
+                                <!-- Chevron command terminal prompt (>_) -->
+                                <path d="M 32 38 L 47 48 L 32 58" fill="none" stroke="url(#termux-gold-grad)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" />
+                                <!-- Underscore cursor (_) -->
+                                <line x1="52" y1="58" x2="68" y2="58" stroke="url(#termux-gold-grad)" stroke-width="5.5" stroke-linecap="round" />
+                            </svg>
+                        </div>
+
+                        <!-- Center: Informative Description -->
+                        <div class="termux-app-content">
+                            <h3>High-Performance Linux Console on Android</h3>
+                            <p class="termux-app-text">
+                                Termux brings a powerful Linux terminal to Android, allowing you to run iSearch CLI™ with the same command-line experience available on desktop.
+                            </p>
+                            <p class="termux-app-text">
+                                Leverage Termux's native package management, keyboard shortcuts, and deep clipboard integration. Take full advantage of SQLite history, multi-platform search engines, private browsing, and customizable syntax themes completely on-the-go.
+                            </p>
+                            <div class="termux-app-keywords" aria-hidden="true">
+                                <span class="seo-tag">#AndroidTerminal</span>
+                                <span class="seo-tag">#LinuxOnAndroid</span>
+                                <span class="seo-tag">#MobileTerminal</span>
+                                <span class="seo-tag">#CLI</span>
+                            </div>
+                        </div>
+
+                        <!-- Right: Platform Buttons Grid -->
+                        <div class="termux-buttons-grid">
+                            <!-- GitHub Releases (Premium APK) -->
+                            <a href="https://github.com/termux/termux-app/releases" target="_blank" rel="noopener noreferrer" class="termux-btn termux-btn-github" aria-label="Download Official APK directly from Termux official GitHub Releases">
+                                <div class="termux-btn-top">
+                                    <div class="termux-btn-icon"><i class="fa-brands fa-github"></i></div>
+                                    <div class="termux-btn-titles">
+                                        <span class="termux-btn-subtitle">GET IT ON</span>
+                                        <span class="termux-btn-main">GitHub Releases</span>
+                                    </div>
+                                    <span class="termux-btn-badge">Official APK</span>
+                                </div>
+                                <span class="termux-btn-desc">Download the latest APK directly from the official GitHub Releases.</span>
+                            </a>
+
+                            <!-- F-Droid -->
+                            <a href="https://f-droid.org/en/packages/com.termux/" target="_blank" rel="noopener noreferrer" class="termux-btn" aria-label="Get Termux on F-Droid Android app repository">
+                                <div class="termux-btn-icon"><i class="fa-brands fa-android"></i></div>
+                                <div class="termux-btn-titles">
+                                    <span class="termux-btn-subtitle">GET IT ON</span>
+                                    <span class="termux-btn-main">F-Droid Repo</span>
+                                </div>
+                            </a>
+
+                            <!-- Google Play -->
+                            <a href="https://play.google.com/store/apps/details?id=com.termux" target="_blank" rel="noopener noreferrer" class="termux-btn" aria-label="Get Termux on Google Play Store">
+                                <div class="termux-btn-icon"><i class="fa-brands fa-google-play"></i></div>
+                                <div class="termux-btn-titles">
+                                    <span class="termux-btn-subtitle">GET IT ON</span>
+                                    <span class="termux-btn-main">Google Play</span>
+                                </div>
+                            </a>
+
+                            <!-- Apple App Store -->
+                            <a href="https://apps.apple.com/us/app/termux/id6738933789" target="_blank" rel="noopener noreferrer" class="termux-btn" aria-label="Download Termux on the Apple iOS App Store">
+                                <div class="termux-btn-icon"><i class="fa-brands fa-apple"></i></div>
+                                <div class="termux-btn-titles">
+                                    <span class="termux-btn-subtitle">DOWNLOAD ON THE</span>
+                                    <span class="termux-btn-main">App Store</span>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Features Section -->
         <section id="features" class="section features-section">
             <div class="container">
