@@ -707,13 +707,15 @@ img {
   width: 100%;
 }
 
-/* High Fidelity CLI Panels */
+/* High Fidelity CLI Panels — Redesigned Warp/Ghostty style with modern accents */
 .cli-panel {
   width: 100%;
-  background: #08080c;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  background: rgba(8, 8, 12, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(134, 125, 108, 0.25);
+  border-radius: 16px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.85), 0 0 40px rgba(134, 125, 108, 0.05);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -721,77 +723,433 @@ img {
   font-size: 13px;
   line-height: 1.5;
   color: #c0caf5;
-  transition: border-color 0.4s var(--transition);
+  transition: all 0.4s var(--transition);
+  position: relative;
+}
+
+.cli-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.1), transparent 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 .cli-panel:hover {
-  border-color: var(--border-glow);
+  border-color: rgba(134, 125, 108, 0.45);
+  box-shadow: 0 40px 90px rgba(0, 0, 0, 0.95), 0 0 50px rgba(134, 125, 108, 0.15);
 }
 
 .cli-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 80px 1fr 120px;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 18px;
-  background: #030305;
-  border-bottom: 1px solid var(--border);
+  padding: 10px 18px;
+  background: rgba(3, 3, 5, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   user-select: none;
 }
 
 .cli-dots {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
 .cli-dots .dot {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
+  position: relative;
 }
-.cli-dots .red { background: #ef4444; }
-.cli-dots .yellow { background: #f59e0b; }
-.cli-dots .green { background: #10b981; }
+.cli-dots .red { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
+.cli-dots .yellow { background: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
+.cli-dots .green { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
 
-.cli-title {
+.cli-tabs-nav {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.cli-tab {
   font-size: 11px;
-  color: var(--accent-light);
-  letter-spacing: 1.5px;
+  color: var(--muted);
+  padding: 4px 14px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.cli-tab.active {
+  color: #fff;
+  background: rgba(134, 125, 108, 0.15);
+  border-color: rgba(134, 125, 108, 0.35);
+  font-weight: bold;
+}
+
+.cli-tab:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+.cli-title-right {
+  font-size: 10px;
+  color: var(--muted-dark);
+  text-align: right;
+  letter-spacing: 0.8px;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
 .cli-body {
   flex-grow: 1;
+  padding: 0; /* Remove generic padding to structure our screen precisely */
+  display: flex;
+  flex-direction: column;
+  background: rgba(5, 5, 8, 0.4);
+}
+
+/* Simulated TUI Address Bar mimicking src/browser/ui.rs */
+.cli-tui-address-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: rgba(13, 14, 20, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cli-tui-addr-label {
+  color: var(--muted);
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.cli-tui-addr-val {
+  color: #7aa2f7;
+  font-size: 12px;
+  text-shadow: 0 0 10px rgba(122, 162, 247, 0.15);
+}
+
+/* Main simulated TUI Content Viewport */
+.cli-tui-viewport {
   padding: 24px;
+  height: 320px;
+  overflow-y: auto;
+  text-align: left;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  text-align: left;
+  background: radial-gradient(circle at center, rgba(13, 14, 20, 0.2) 0%, rgba(5, 5, 8, 0.8) 100%);
 }
 
-.cli-meta {
+.cli-tui-viewport::-webkit-scrollbar {
+  width: 6px;
+}
+.cli-tui-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+/* Boot sequence logging styles */
+.cli-boot-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cli-boot-line {
   color: var(--muted);
+}
+
+.cli-boot-line .success-check {
+  color: #10b981;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+.cli-boot-line-ready {
+  color: #10b981;
+  font-weight: bold;
+  margin-top: 12px;
+  animation: pulse 1.5s infinite;
+}
+
+/* Main Interactive Dashboard inside CLI viewport */
+.cli-app-main-view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cli-logo-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.cli-ascii-logo-pre {
+  margin: 0;
+  font-size: clamp(6px, 1.1vw, 11px);
+  line-height: 1.2;
+  font-family: var(--mono);
+  background: linear-gradient(
+    90deg,
+    #4285F4 0%,
+    #DB4437 33%,
+    #F4B400 66%,
+    #0F9D58 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-align: center;
+  letter-spacing: -0.5px;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.cli-meta-info {
+  display: flex;
+  justify-content: space-around;
+  font-size: 11px;
+  color: var(--muted);
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+  padding: 10px 0;
+}
+
+.cli-meta-info strong {
+  color: var(--accent-light);
+}
+
+.cli-commands-help {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cli-help-title {
+  color: var(--accent-light);
+  font-weight: bold;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.cli-help-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.cli-help-grid div strong {
+  color: #7aa2f7;
+}
+
+/* Live Terminal PIX Support styling */
+.cli-donation-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cli-donation-banner {
+  color: #63e6be;
   font-size: 12px;
-  line-height: 1.6;
-  border-bottom: 1px dashed var(--border);
-  padding-bottom: 14px;
+  line-height: 1.3;
+  font-weight: bold;
 }
 
-.cli-banner-title {
-  display: block;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 4px;
+.cli-donation-p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
 }
 
-.cli-intro {
+.cli-donation-flex-container {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.cli-qr-holder {
+  background: #ffffff;
+  padding: 10px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+#cli-pix-qr-target {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.cli-donation-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
   color: var(--text);
+  flex-grow: 1;
+}
+
+.cli-donation-details strong {
+  color: var(--accent-light);
+}
+
+.cli-copy-payload-container {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.cli-payload-input {
+  flex-grow: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #63e6be;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  outline: none;
+}
+
+.cli-copy-btn {
+  background: #867d6c;
+  border: none;
+  color: #000;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: bold;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cli-copy-btn:hover {
+  background: #c5bba8;
+}
+
+.cli-success-msg {
+  color: #10b981;
+  font-size: 11px;
+  font-weight: bold;
+  margin-top: 4px;
+}
+
+.cli-donation-thankyou {
+  font-weight: bold;
+  color: #63e6be;
+  text-align: center;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+/* Help viewport styles */
+.cli-help-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 11px;
+}
+
+.cli-help-banner {
+  color: var(--accent-light);
+  font-weight: bold;
+}
+
+.cli-help-bullets {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cli-help-bullets li span {
+  color: #7aa2f7;
+  font-weight: bold;
+}
+
+.cli-back-msg {
+  color: var(--muted-dark);
+  font-style: italic;
+  margin: 0;
+}
+
+/* Simulated TUI Status Bar */
+.cli-tui-status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 18px;
+  background: rgba(0, 0, 0, 0.7);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.cli-status-left {
+  color: var(--muted);
+}
+
+.cli-status-right {
+  color: var(--accent-light);
+}
+
+.cli-status-right span {
+  font-weight: bold;
+  color: #10b981;
+}
+
+/* Active command prompt line */
+.cli-prompt-line {
+  display: flex;
+  align-items: center;
+  padding: 12px 18px;
+  background: rgba(13, 14, 20, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .prompt-symbol {
-  color: var(--accent-light);
-  margin-right: 6px;
+  color: #0f9d58;
   font-weight: bold;
+  margin-right: 8px;
+  text-shadow: 0 0 10px rgba(15, 157, 88, 0.2);
+}
+
+.cli-cursor-input {
+  color: var(--text);
+  font-size: 13px;
+  min-height: 18px;
+  display: inline-block;
 }
 
 .cli-blink-cursor {
@@ -803,33 +1161,19 @@ img {
   animation: blink 1s infinite steps(2, start);
 }
 
-.cli-section-title {
-  font-weight: 700;
-  color: var(--accent-light);
-  text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 1.5px;
-  margin-top: 8px;
+/* Helper utilities */
+.hidden {
+  display: none !important;
 }
 
-.cli-todo-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
 }
 
-.cli-todo-list li {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 12px;
-}
-
-.todo-done {
-  color: #10b981;
+.cli-pulse {
+  animation: pulse 1.8s infinite;
 }
 
 /* Termux Section Grid */
@@ -1616,19 +1960,53 @@ html, body {
 }
 
 /* Hero Terminal and high-fidelity CLI styling */
+@media (max-width: 768px) {
+  .cli-header {
+    grid-template-columns: 60px 1fr 0px;
+    padding: 8px 12px;
+  }
+  .cli-title-right {
+    display: none;
+  }
+  .cli-tabs-nav {
+    justify-content: flex-start;
+  }
+  .cli-tab {
+    padding: 3px 8px;
+    font-size: 10px;
+  }
+  .cli-tui-viewport {
+    padding: 14px;
+    height: 340px;
+  }
+  .cli-ascii-logo-pre {
+    font-size: 5px;
+    line-height: 1.15;
+  }
+  .cli-meta-info {
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+  }
+  .cli-help-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .cli-donation-flex-container {
+    flex-direction: column;
+    gap: 16px;
+    padding: 12px;
+  }
+}
+
 @media (max-width: 480px) {
-  .cli-body {
-    padding: 16px;
+  .cli-tui-viewport {
+    height: 380px;
   }
-  .cli-meta {
-    font-size: 11px;
-    padding-bottom: 10px;
-  }
-  .cli-banner-title {
-    font-size: 13px;
-  }
-  .cli-todo-list li {
-    font-size: 11px;
+  .cli-ascii-logo-pre {
+    font-size: 4px;
+    line-height: 1.1;
   }
 }
 

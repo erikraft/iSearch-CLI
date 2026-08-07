@@ -176,7 +176,7 @@ pub fn brand_style() -> Style {
 pub fn gradient_spans(text: &str) -> Vec<Span<'static>> {
     let total_chars = text.chars().count();
     if total_chars == 0 {
-        return vec![Span::raw(text)];
+        return vec![Span::raw(text.to_string())];
     }
 
     let mut spans = Vec::with_capacity(total_chars);
