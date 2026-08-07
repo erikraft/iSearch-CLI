@@ -14,37 +14,39 @@ USE_CUSTOM_DOMAIN=false
 DOWNLOAD_DOMAIN="https://download.erikraft.com"
 GITHUB_ORG_REPO="erikraft/iSearch-CLI"
 
-# Terminal Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+# iSearch CLI™ Colors (True Color / 24-bit ANSI)
+BLUE='\033[38;2;66;133;244m'
+RED='\033[38;2;219;68;55m'
+YELLOW='\033[38;2;244;180;0m'
+GREEN='\033[38;2;15;157;88m'
+
+PURPLE='\033[38;2;171;71;188m'
+CYAN='\033[38;2;38;198;218m'
+WHITE='\033[38;2;245;245;245m'
+GRAY='\033[38;2;160;160;160m'
+NC='\033[0m'
 
 print_banner() {
-    echo -e "${CYAN}"
-    cat <<'EOF'
 
-  _ ____                      _        ____ _     ___
- (_) ___|  ___  __ _ _ __ ___| |__    / ___| |   |_ _|
- | \___ \ / _ \/ _` | '__/ __| '_ \  | |   | |    | |
- | |___) |  __/ (_| | | | (__| | | | | |___| |___ | |
- |_|____/ \___|\__,_|_|  \___|_| |_|  \____|_____|___|
+cat <<EOF
+
+${BLUE}  _ ____${RED}                      _${YELLOW}        ____ _${GREEN}     ___${NC}
+${BLUE} (_)_ ___|${RED}  ___  __ _ _ __ ___| |__${YELLOW}    / ___| |${GREEN}   |_ _|${NC}
+${BLUE} | \\___ \\${RED} / _ \\/ _\` | '__/ __| '_ \\${YELLOW}  | |   | |${GREEN}    | |${NC}
+${BLUE} | |___) |${RED}  __/ (_| | | | (__| | | |${YELLOW} | |___| |___${GREEN} | |${NC}
+${BLUE} |_|____/${RED} \\___|\\__,_|_|  \\___|_| |_|${YELLOW}  \\____|_____|${GREEN}___|${NC}
 
 EOF
-    echo -e "${NC}"
 
-    echo -e "${PURPLE}                     iSearch CLI™${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e " Author    : ${GREEN}ErikrafT${NC}"
-    echo -e " Copyright : ${GREEN}© 2026 ErikrafT${NC}"
-    echo -e " Search    : ${BLUE}https://search.erikraft.com${NC}" ${YELLOW}(Classic Website)${NC}"
-    echo -e " Download  : ${BLUE}https://download.erikraft.com${NC}"
-    echo -e " GitHub    : ${BLUE}https://github.com/erikraft/iSearch-CLI${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo
+echo -e "${PURPLE}                     iSearch CLI™${NC}"
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e " ${WHITE}Author${GRAY}    : ${GREEN}ErikrafT${NC}"
+echo -e " ${WHITE}Copyright${GRAY} : ${GREEN}© 2026 ErikrafT${NC}"
+echo -e " ${WHITE}Search${GRAY}    : ${BLUE}https://search.erikraft.com${NC} ${YELLOW}(Classic Website)${NC}"
+echo -e " ${WHITE}Download${GRAY}  : ${BLUE}https://download.erikraft.com${NC}"
+echo -e " ${WHITE}GitHub${GRAY}    : ${BLUE}https://github.com/erikraft/iSearch-CLI${NC}"
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo
 }
 
 log_info() {
