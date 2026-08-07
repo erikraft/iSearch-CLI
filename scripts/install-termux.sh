@@ -25,14 +25,27 @@ NC='\033[0m' # No Color
 
 # Banner
 print_banner() {
-    echo -e "${CYAN}░▀█▀░█▀▀░█▀▀░█▀█░█▀▄░█▀▀░█░█░░░█▀▀░█░░░▀█▀${NC}"
-    echo -e "${CYAN}░░█░░▀▀█░█▀▀░█▀█░█▀▄░█░░░█▀█░░░█░░░█░░░░█░${NC}"
-    echo -e "${CYAN}░▀▀▀░▀▀▀░▀▀▀░▀░▀░▀░▀░▀▀▀░▀░▀░░░▀▀▀░▀▀▀░▀▀▀${NC}"
-    echo -e "                 ${PURPLE}iSearch CLI™${NC}"
-    echo -e "================================================="
-    echo -e "Official Author: ${GREEN}ErikrafT${NC}"
-    echo -e "Copyright:       ${GREEN}Copyright © 2026 ErikrafT${NC}"
-    echo -e "================================================="
+    echo -e "${CYAN}"
+    cat <<'EOF'
+
+   ▀     ▄▄▄▄                              █               ▄▄▄  ▄      ▄▄▄▄▄ ▄▄▄▄▄▄▄
+ ▄▄▄    █▀   ▀  ▄▄▄    ▄▄▄    ▄ ▄▄   ▄▄▄   █ ▄▄          ▄▀   ▀ █        █    █ █▀▀█
+   █    ▀█▄▄▄  █▀  █  ▀   █   █▀  ▀ █▀  ▀  █▀  █         █      █        █
+   █        ▀█ █▀▀▀▀  ▄▀▀▀█   █     █      █   █         █      █        █
+ ▄▄█▄▄  ▀▄▄▄█▀ ▀█▄▄▀  ▀▄▄▀█   █     ▀█▄▄▀  █   █          ▀▄▄▄▀ █▄▄▄▄▄ ▄▄█▄▄
+
+EOF
+    echo -e "${NC}"
+
+    echo -e "${PURPLE}                             iSearch CLI™${NC}"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e " Official Author  : ${GREEN}ErikrafT${NC}"
+    echo -e " Copyright        : ${GREEN}Copyright © 2026 ErikrafT${NC}"
+    echo -e " Search           : ${BLUE}https://search.erikraft.com${NC} ${YELLOW}(Classic Website)${NC}"
+    echo -e " Download         : ${BLUE}https://download.erikraft.com${NC}"
+    echo -e " GitHub           : ${BLUE}https://github.com/erikraft/iSearch-CLI${NC}"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo
 }
 
 log_info() {
