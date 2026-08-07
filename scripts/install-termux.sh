@@ -45,10 +45,10 @@ if [[ "${COLORTERM:-}" != *truecolor* ]]; then
 fi
 
 print_banner() {
-    printf '%b\n' "${BLUE}  _ ___                  _       ${RED}___ _    ___${NC}"
-    printf '%b\n' "${BLUE} (_) __| ___ __ _ _ _ __| |_    ${RED}/ __| |  |_ _|${NC}"
-    printf '%b\n' "${BLUE} | \\__ \\/ -_) _\` | '_/ _| ' \\  ${RED}| (__| |__ | |${NC}"
-    printf '%b\n' "${BLUE} |_|___/\\___\\__,_|_| \\__|_||_|  ${RED}\\___|____|___|${NC}"
+    printf '%b\n' "${BLUE}  _ ___                  _       ${RED}___ _    ${YELLOW}___${NC}"
+    printf '%b\n' "${BLUE} (_) __| ___ __ _ _ _ __| |_    ${RED}/ __| |  ${YELLOW}|_ _|${NC}"
+    printf '%b\n' "${BLUE} | \\__ \\/ -_) _\` | '_/ _| ' \\  ${GREEN}| (__| |__ ${YELLOW}| |${NC}"
+    printf '%b\n' "${BLUE} |_|___/\\___\\__,_|_| \\__|_||_|  ${GREEN}\\___|____|${RED}___|${NC}"
     printf '\n'
 
     printf '%b\n' "${PURPLE}                     iSearch CLI™${NC}"
