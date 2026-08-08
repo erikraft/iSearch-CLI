@@ -101,6 +101,25 @@ iSearch> self-update
 iSearch> donate
 ```
 
+### ErikrafT Drop Integration
+
+You can open the official ErikrafT Drop site directly with a native CLI renderer:
+
+```bash
+isearch erikraft-drop
+```
+
+To work with the integrated ErikrafT Drop source as a submodule (developer workflow):
+
+```bash
+git clone --recurse-submodules https://github.com/erikraft/iSearch-CLI.git
+cd iSearch-CLI
+git submodule update --init --recursive
+# To update the Drop submodule later:
+git submodule update --remote --merge
+```
+
+
 ---
 
 ## Self Update

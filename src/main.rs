@@ -3,6 +3,7 @@ pub mod browser;
 pub mod config;
 pub mod pix;
 pub mod ui;
+pub mod cli_web;
 pub mod utils;
 
 use branding::{ascii_logo, isearch, isearch_cli};
@@ -63,6 +64,10 @@ pub fn start_interactive_cli() {
                     if let Err(e) = browser::ui::run_browser_tui() {
                         eprintln!("Error launching browser: {}", e);
                     }
+                } else if trimmed == "erikraft-drop" || trimmed == "isearch erikraft-drop" {
+                    if let Err(e) = cli_web::run_erikraft_drop() {
+                        eprintln!("Error launching ErikrafT Drop client: {}", e);
+                    }
                 } else if trimmed == "version" || trimmed == "isearch version" {
                     browser::updater::print_version(false);
                 } else if trimmed == "version --check" || trimmed == "isearch version --check" {
@@ -103,6 +108,11 @@ fn main() {
         {
             if let Err(e) = browser::ui::run_browser_tui() {
                 eprintln!("Error launching browser: {}", e);
+                std::process::exit(1);
+            }
+        } else if joined_args == "erikraft-drop" || joined_args == "isearch erikraft-drop" {
+            if let Err(e) = cli_web::run_erikraft_drop() {
+                eprintln!("Error launching ErikrafT Drop client: {}", e);
                 std::process::exit(1);
             }
         } else if joined_args == "version" || joined_args == "isearch version" {
