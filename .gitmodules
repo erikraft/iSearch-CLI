@@ -1,3 +1,6 @@
 [submodule "iSearch CLI"]
 	path = ErikrafT Drop
 	url = https://github.com/erikraft/Drop.git
+[submodule "ErikrafTDrop"]
+	path = ErikrafTDrop
+	url = https://github.com/erikraft/Drop.git
