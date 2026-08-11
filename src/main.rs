@@ -1,12 +1,13 @@
 pub mod branding;
 pub mod browser;
+pub mod cli_web;
 pub mod config;
 pub mod pix;
 pub mod ui;
-pub mod cli_web;
+pub mod uri;
 pub mod utils;
 
-use branding::{ascii_logo, isearch, isearch_cli};
+use branding::{ascii_logo, isearch_cli};
 use config::load_config;
 use std::env;
 use std::io::{self, Write};
@@ -17,6 +18,8 @@ pub fn print_help() {
     println!("{} - Version 0.1.0", isearch_cli());
     println!("Available commands:");
     println!("  browse         - Open the premium multi-engine interactive terminal browser");
+    println!("  open <URI>     - Open a URI or local file through the centralized URI router");
+    println!("  erikraft-drop  - Open the ErikrafT Drop CLI experience");
     println!("  donate         - Open the premium terminal donation screen");
     println!("  version        - Display version information");
     println!("  version --check- Check for updates online");
@@ -29,7 +32,7 @@ pub fn print_help() {
 pub fn start_interactive_cli() {
     println!("{}", ascii_logo());
     println!("=================================================");
-    println!(" Type '{}' to surf the web/local files,", isearch());
+    println!(" Type 'browse' to surf the web/local files,");
     println!(" Type 'donate' to support the project, or");
     println!(" Type 'help' to see other commands.");
     println!("=================================================");
@@ -63,6 +66,18 @@ pub fn start_interactive_cli() {
                 {
                     if let Err(e) = browser::ui::run_browser_tui() {
                         eprintln!("Error launching browser: {}", e);
+                    }
+                } else if trimmed.starts_with("open ") || trimmed.starts_with("isearch open ") {
+                    let target = trimmed
+                        .strip_prefix("isearch open ")
+                        .or_else(|| trimmed.strip_prefix("open "))
+                        .unwrap_or("");
+                    if let Err(e) = browser::ui::run_browser_tui_with_url(target) {
+                        eprintln!("Error opening resource: {}", e);
+                    }
+                } else if looks_like_resource(trimmed) {
+                    if let Err(e) = browser::ui::run_browser_tui_with_url(trimmed) {
+                        eprintln!("Error opening resource: {}", e);
                     }
                 } else if trimmed == "erikraft-drop" || trimmed == "isearch erikraft-drop" {
                     if let Err(e) = cli_web::run_erikraft_drop() {
@@ -110,6 +125,20 @@ fn main() {
                 eprintln!("Error launching browser: {}", e);
                 std::process::exit(1);
             }
+        } else if joined_args.starts_with("open ") || joined_args.starts_with("isearch open ") {
+            let target = joined_args
+                .strip_prefix("isearch open ")
+                .or_else(|| joined_args.strip_prefix("open "))
+                .unwrap_or("");
+            if let Err(e) = browser::ui::run_browser_tui_with_url(target) {
+                eprintln!("Error opening resource: {}", e);
+                std::process::exit(1);
+            }
+        } else if looks_like_resource(&joined_args) {
+            if let Err(e) = browser::ui::run_browser_tui_with_url(&joined_args) {
+                eprintln!("Error opening resource: {}", e);
+                std::process::exit(1);
+            }
         } else if joined_args == "erikraft-drop" || joined_args == "isearch erikraft-drop" {
             if let Err(e) = cli_web::run_erikraft_drop() {
                 eprintln!("Error launching ErikrafT Drop client: {}", e);
@@ -138,4 +167,23 @@ fn main() {
         // No arguments - start interactive CLI
         start_interactive_cli();
     }
+}
+
+fn looks_like_resource(input: &str) -> bool {
+    matches!(
+        uri::parse(input).scheme,
+        uri::UriScheme::Http
+            | uri::UriScheme::Https
+            | uri::UriScheme::Ws
+            | uri::UriScheme::Wss
+            | uri::UriScheme::Ftp
+            | uri::UriScheme::Ftps
+            | uri::UriScheme::Sftp
+            | uri::UriScheme::Smtp
+            | uri::UriScheme::Smtps
+            | uri::UriScheme::Data
+            | uri::UriScheme::Blob
+            | uri::UriScheme::File
+            | uri::UriScheme::LocalPath
+    )
 }

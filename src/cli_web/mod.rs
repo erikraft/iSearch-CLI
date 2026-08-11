@@ -1,14 +1,12 @@
 pub mod metadata;
-pub mod renderer;
 pub mod parser;
+pub mod renderer;
 
 use crate::browser;
-use metadata::SiteMetadata;
-use parser::CliDocument;
 
 fn build_cli_user_agent() -> String {
     format!(
-        "iSearch-CLI/{} ({}/{})",
+        "iSearchCLI/{} ({}/{})",
         env!("CARGO_PKG_VERSION"),
         std::env::consts::OS,
         std::env::consts::ARCH
@@ -28,23 +26,29 @@ fn normalize_endpoint(base: &str, endpoint: &str) -> String {
 }
 
 fn fetch_page(agent: &ureq::Agent, url: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let resp = agent.get(url).call()?;
-    Ok(resp.into_string()?)
+    let resp = agent
+        .get(url)
+        .header("User-Agent", &build_cli_user_agent())
+        .call()?;
+    Ok(resp.into_body().read_to_string()?)
 }
 
-fn fetch_cli_api(agent: &ureq::Agent, endpoint: &str) -> Result<String, Box<dyn std::error::Error>> {
+fn fetch_cli_api(
+    agent: &ureq::Agent,
+    endpoint: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
     let resp = agent
         .get(endpoint)
-        .set("Accept", "application/json")
+        .header("Accept", "application/json")
+        .header("User-Agent", &build_cli_user_agent())
         .call()?;
-    Ok(resp.into_string()?)
+    Ok(resp.into_body().read_to_string()?)
 }
 
 /// Entrypoint para executar o cliente ErikrafT Drop via CLI.
 pub fn run_erikraft_drop() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://drop.erikraft.com";
-    let user_agent = build_cli_user_agent();
-    let agent = ureq::AgentBuilder::new().user_agent(&user_agent).build();
+    let agent = ureq::Agent::new_with_defaults();
     let page_url = format!("{}?client_type=isearch-cli", url);
 
     let body = fetch_page(&agent, &page_url)?;
@@ -54,7 +58,7 @@ pub fn run_erikraft_drop() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!(
             "Site does not advertise iSearch CLI™ support. Falling back to standard browser renderer."
         );
-        return browser::ui::run_browser_tui().map_err(|e| e.into());
+        return browser::ui::run_browser_tui();
     }
 
     let endpoint_path = meta.endpoint.as_deref().unwrap_or("/api/cli");

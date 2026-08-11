@@ -567,9 +567,10 @@ img {
 /* Hero Container Grid */
 .hero-container {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  gap: 40px;
+  justify-items: center;
+  gap: clamp(28px, 5vw, 56px);
   position: relative;
   z-index: 2;
   width: 100%;
@@ -586,7 +587,11 @@ img {
 .hero-content {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 20px;
+  max-width: 860px;
+  margin: 0 auto;
+  text-align: center;
 }
 
 @media (max-width: 1024px) {
@@ -655,7 +660,7 @@ img {
 .hero-desc {
   font-size: clamp(0.95rem, 1.4vw, 1.15rem);
   color: var(--muted);
-  max-width: 620px;
+  max-width: 760px;
   margin: 0;
   line-height: 1.6;
 }
@@ -663,6 +668,7 @@ img {
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 16px;
 }
 
@@ -674,6 +680,7 @@ img {
 
 .hero-stats {
   display: flex;
+  justify-content: center;
   gap: 40px;
   list-style: none;
   padding: 0;
@@ -709,13 +716,6 @@ img {
   color: var(--accent-light);
   text-transform: uppercase;
   letter-spacing: 1px;
-}
-
-/* Terminal simulator wrap */
-.hero-terminal-wrapper {
-  display: flex;
-  justify-content: center;
-  width: 100%;
 }
 
 /* High Fidelity CLI Panels — Redesigned Warp/Ghostty style with modern accents */
@@ -782,565 +782,15 @@ img {
 .cli-dots .yellow { background: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
 .cli-dots .green { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
 
-.cli-tabs-nav {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
-}
-
-.cli-tab {
+.cli-title {
+  justify-self: center;
+  color: var(--accent-light);
   font-size: 11px;
-  color: var(--muted);
-  padding: 4px 14px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-}
-
-.cli-tab.active {
-  color: #fff;
-  background: rgba(134, 125, 108, 0.15);
-  border-color: rgba(134, 125, 108, 0.35);
-  font-weight: bold;
-}
-
-.cli-tab:hover:not(.active) {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
-}
-
-.cli-title-right {
-  font-size: 10px;
-  color: var(--muted-dark);
-  text-align: right;
+  font-weight: 700;
   letter-spacing: 0.8px;
-  font-weight: 700;
   text-transform: uppercase;
 }
 
-.cli-body {
-  flex-grow: 1;
-  padding: 0; /* Remove generic padding to structure our screen precisely */
-  display: flex;
-  flex-direction: column;
-  background: rgba(5, 5, 8, 0.4);
-}
-
-/* Simulated TUI Address Bar mimicking src/browser/ui.rs */
-.cli-tui-address-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  background: rgba(13, 14, 20, 0.9);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.cli-tui-addr-label {
-  color: var(--muted);
-  font-weight: bold;
-  font-size: 11px;
-}
-
-.cli-tui-addr-val {
-  color: #7aa2f7;
-  font-size: 12px;
-  text-shadow: 0 0 10px rgba(122, 162, 247, 0.15);
-}
-
-/* Main simulated TUI Content Viewport */
-.cli-tui-viewport {
-  padding: 24px;
-  height: 320px;
-  overflow-y: auto;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  background: radial-gradient(circle at center, rgba(13, 14, 20, 0.2) 0%, rgba(5, 5, 8, 0.8) 100%);
-}
-
-.cli-tui-viewport::-webkit-scrollbar {
-  width: 6px;
-}
-.cli-tui-viewport::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
-
-/* Boot sequence logging styles */
-.cli-boot-log {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.cli-boot-line {
-  color: var(--muted);
-}
-
-.cli-boot-line .success-check {
-  color: #10b981;
-  font-weight: bold;
-  margin-right: 6px;
-}
-
-.cli-boot-line-ready {
-  color: #10b981;
-  font-weight: bold;
-  margin-top: 12px;
-  animation: pulse 1.5s infinite;
-}
-
-/* Main Interactive Dashboard inside CLI viewport */
-.cli-app-main-view {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.cli-logo-container {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-}
-
-.cli-ascii-logo-pre {
-  margin: 0;
-  font-size: clamp(6px, 1.1vw, 11px);
-  line-height: 1.2;
-  font-family: var(--mono);
-  background: linear-gradient(
-    90deg,
-    #4285F4 0%,
-    #DB4437 33%,
-    #F4B400 66%,
-    #0F9D58 100%
-  );
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  text-align: center;
-  letter-spacing: -0.5px;
-  width: 100%;
-  overflow-x: auto;
-}
-
-.cli-meta-info {
-  display: flex;
-  justify-content: space-around;
-  font-size: 11px;
-  color: var(--muted);
-  border-top: 1px dashed rgba(255, 255, 255, 0.08);
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
-  padding: 10px 0;
-}
-
-.cli-meta-info strong {
-  color: var(--accent-light);
-}
-
-.cli-commands-help {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.cli-help-title {
-  color: var(--accent-light);
-  font-weight: bold;
-  font-size: 11px;
-  letter-spacing: 1px;
-}
-
-.cli-help-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  font-size: 11px;
-}
-
-.cli-help-grid div strong {
-  color: #7aa2f7;
-}
-
-/* Live Terminal PIX Support styling */
-.cli-donation-view {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.cli-donation-banner {
-  color: #63e6be;
-  font-size: 12px;
-  line-height: 1.3;
-  font-weight: bold;
-}
-
-.cli-donation-p {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 0;
-}
-
-.cli-donation-flex-container {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.cli-qr-holder {
-  background: #ffffff;
-  padding: 10px;
-  border-radius: 10px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-#cli-pix-qr-target {
-  width: 120px;
-  height: 120px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.cli-donation-details {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text);
-  flex-grow: 1;
-}
-
-.cli-donation-details strong {
-  color: var(--accent-light);
-}
-
-.cli-copy-payload-container {
-  display: flex;
-  gap: 6px;
-  margin-top: 8px;
-  width: 100%;
-}
-
-.cli-payload-input {
-  flex-grow: 1;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #63e6be;
-  font-family: var(--mono);
-  font-size: 10px;
-  padding: 6px 10px;
-  border-radius: 4px;
-  outline: none;
-}
-
-.cli-copy-btn {
-  background: #867d6c;
-  border: none;
-  color: #000;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: bold;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.cli-copy-btn:hover {
-  background: #c5bba8;
-}
-
-.cli-success-msg {
-  color: #10b981;
-  font-size: 11px;
-  font-weight: bold;
-  margin-top: 4px;
-}
-
-.cli-donation-thankyou {
-  font-weight: bold;
-  color: #63e6be;
-  text-align: center;
-  font-size: 12px;
-  margin-top: 8px;
-}
-
-/* Help viewport styles */
-.cli-help-view {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  font-size: 11px;
-}
-
-.cli-help-banner {
-  color: var(--accent-light);
-  font-weight: bold;
-}
-
-.cli-help-bullets {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.cli-help-bullets li span {
-  color: #7aa2f7;
-  font-weight: bold;
-}
-
-.cli-back-msg {
-  color: var(--muted-dark);
-  font-style: italic;
-  margin: 0;
-}
-
-/* Simulated TUI Status Bar */
-.cli-tui-status-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 18px;
-  background: rgba(0, 0, 0, 0.7);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.cli-status-left {
-  color: var(--muted);
-}
-
-.cli-status-right {
-  color: var(--accent-light);
-}
-
-.cli-status-right span {
-  font-weight: bold;
-  color: #10b981;
-}
-
-/* Active command prompt line */
-.cli-prompt-line {
-  display: flex;
-  align-items: center;
-  padding: 12px 18px;
-  background: rgba(13, 14, 20, 0.85);
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.prompt-symbol {
-  color: #0f9d58;
-  font-weight: bold;
-  margin-right: 8px;
-  text-shadow: 0 0 10px rgba(15, 157, 88, 0.2);
-}
-
-.cli-cursor-input {
-  color: var(--text);
-  font-size: 13px;
-  min-height: 18px;
-  display: inline-block;
-}
-
-.cli-blink-cursor {
-  display: inline-block;
-  width: 8px;
-  height: 15px;
-  background: var(--accent-light);
-  margin-left: 4px;
-  animation: blink 1s infinite steps(2, start);
-}
-
-/* Helper utilities */
-.hidden {
-  display: none !important;
-}
-
-@keyframes pulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
-}
-
-.cli-pulse {
-  animation: pulse 1.8s infinite;
-}
-
-/* Termux Section Grid */
-.termux-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  align-items: center;
-}
-
-@media (max-width: 991px) {
-  .termux-grid {
-    grid-template-columns: 1fr;
-    gap: 30px;
-  }
-}
-
-@media (max-width: 768px) {
-  .termux-section .container {
-    width: min(calc(100% - 1.5rem), var(--container)) !important;
-  }
-  .termux-section {
-    padding: clamp(40px, 6vw, 80px) 0 !important;
-  }
-  .termux-grid {
-    display: flex !important;
-    flex-direction: column !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    gap: 24px !important;
-  }
-  .termux-info-block,
-  .termux-terminal-block {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-  }
-  .termux-terminal-block .cli-panel {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-  }
-  .termux-terminal-block .cli-body {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    padding: clamp(12px, 3vw, 16px) !important;
-    box-sizing: border-box !important;
-  }
-  .termux-terminal-block .command-box {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    padding: clamp(10px, 2.5vw, 12px) !important;
-    box-sizing: border-box !important;
-  }
-  .termux-terminal-block .command-header {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    flex-wrap: wrap !important;
-    gap: 8px !important;
-    box-sizing: border-box !important;
-  }
-  .termux-terminal-block .command-header span {
-    word-break: break-all !important;
-  }
-  .termux-terminal-block .command-header .copy-btn {
-    flex-shrink: 0 !important;
-  }
-  .termux-terminal-block .command-box pre {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    overflow-x: auto !important;
-    box-sizing: border-box !important;
-    white-space: pre !important;
-  }
-  .termux-terminal-block .command-box pre code {
-    white-space: pre !important;
-    word-wrap: normal !important;
-    word-break: normal !important;
-    display: inline-block !important;
-  }
-  .termux-terminal-block .command-desc {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-    word-break: break-word !important;
-  }
-}
-
-.termux-info-block h3 {
-  font-size: 1.75rem;
-  margin-bottom: 16px;
-}
-
-.installer-highlights {
-  list-style: none;
-  padding: 0;
-  margin: 24px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.installer-highlights li {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.installer-highlights i {
-  color: var(--accent-light);
-  margin-top: 4px;
-  font-size: 1.1rem;
-}
-
-.manual-block {
-  background: rgba(134, 125, 108, 0.05);
-  border: 1px solid var(--border);
-  padding: 20px;
-  border-radius: var(--radius);
-}
-
-.manual-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--mono);
-  font-weight: 700;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--accent-light);
-  margin-bottom: 8px;
-}
-
-.manual-block p {
-  font-size: 0.9rem;
-  margin: 0;
-}
-
-.inline-link {
-  border-bottom: 1px dashed var(--accent-light);
-}
-
-.inline-link:hover {
-  border-bottom-style: solid;
-}
-
-/* Command copy boxes */
 .command-box {
   background: #040406;
   border: 1px solid var(--border);
@@ -1970,92 +1420,14 @@ html, body {
   }
 }
 
-/* Hero Terminal and high-fidelity CLI styling */
+/* Responsive Termux command panel styling */
 @media (max-width: 768px) {
   .cli-header {
-    grid-template-columns: 60px 1fr 0px;
+    grid-template-columns: 60px 1fr;
     padding: 8px 12px;
   }
-  .cli-title-right {
-    display: none;
-  }
-  .cli-tabs-nav {
-    justify-content: flex-start;
-  }
-  .cli-tab {
-    padding: 3px 8px;
-    font-size: 10px;
-  }
-  .cli-tui-viewport {
-    padding: 14px;
-    height: 340px;
-  }
-  .cli-ascii-logo-pre {
-    font-size: 5px;
-    line-height: 1.15;
-  }
-  .cli-meta-info {
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    text-align: center;
-  }
-  .cli-help-grid {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-  .cli-donation-flex-container {
-    flex-direction: column;
-    gap: 16px;
-    padding: 12px;
-  }
 }
 
-@media (max-width: 480px) {
-  .cli-tui-viewport {
-    height: 380px;
-  }
-  .cli-ascii-logo-pre {
-    font-size: 4px;
-    line-height: 1.1;
-  }
-}
-
-/* Termux Section Grid Overrides */
-@media (max-width: 991px) {
-  .termux-grid {
-    grid-template-columns: 1fr !important;
-    gap: 24px;
-  }
-}
-
-/* Card components safe wrapping & padding */
-@media (max-width: 480px) {
-  .premium-card {
-    padding: 20px 16px !important;
-    border-radius: var(--radius-sm);
-  }
-  .manual-block {
-    padding: 14px !important;
-  }
-  .command-box {
-    padding: 12px !important;
-  }
-}
-
-/* Command copy boxes and scroll container controls */
-.command-box pre {
-  margin: 0;
-  overflow-x: auto;
-  width: 100%;
-  max-width: 100%;
-  display: block;
-}
-
-.command-header {
-  flex-wrap: wrap;
-  gap: 8px;
-}
 
 /* Downloads and Features Grids */
 .downloads-grid {

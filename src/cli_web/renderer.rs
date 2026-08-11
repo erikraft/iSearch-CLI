@@ -1,15 +1,26 @@
-use crate::branding::gradient_spans;
-use crate::browser::terminal_media::TerminalCapabilities;
-use crossterm::execute;
-use crossterm::event::EnableMouseCapture;
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
-use ratatui::{backend::CrosstermBackend, layout::{Constraint, Direction, Layout}, style::{Color, Modifier, Style}, text::{Line, Span}, widgets::{Block, BorderType, Borders, Paragraph}, Terminal};
-use std::io::{self, Write};
 use super::metadata::SiteMetadata;
+use crate::branding::gradient_spans;
 use crate::cli_web::parser::CliDocument;
+use crossterm::event::EnableMouseCapture;
+use crossterm::execute;
+use crossterm::terminal::{
+    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+};
+use ratatui::{
+    backend::CrosstermBackend,
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, BorderType, Borders, Paragraph},
+    Terminal,
+};
+use std::io;
 
 /// Simple TUI renderer for ErikrafT Drop client inside iSearch CLI™.
-pub fn run_drop_tui(meta: &SiteMetadata, document: &CliDocument) -> Result<(), Box<dyn std::error::Error>> {
+pub fn run_drop_tui(
+    meta: &SiteMetadata,
+    document: &CliDocument,
+) -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
@@ -18,7 +29,7 @@ pub fn run_drop_tui(meta: &SiteMetadata, document: &CliDocument) -> Result<(), B
 
     loop {
         terminal.draw(|f| {
-            let size = f.size();
+            let size = f.area();
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
@@ -37,7 +48,7 @@ pub fn run_drop_tui(meta: &SiteMetadata, document: &CliDocument) -> Result<(), B
             f.render_widget(top, chunks[0]);
 
             let mut body_lines = vec![
-                Line::from(Span::styled("ErikrafT Drop CLI", Style::default().add_modifier(Modifier::BOLD)));
+                Line::from(Span::styled("ErikrafT Drop CLI", Style::default().add_modifier(Modifier::BOLD))),
                 Line::from(Span::raw("")),
             ];
 

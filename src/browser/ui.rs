@@ -413,6 +413,17 @@ impl BrowserApp {
 ///
 /// Returns an error if terminal setup fails.
 pub fn run_browser_tui() -> Result<(), Box<dyn std::error::Error>> {
+    run_browser_tui_with_initial(None)
+}
+
+/// Opens the browser TUI with a specific initial URI or local file.
+pub fn run_browser_tui_with_url(url: &str) -> Result<(), Box<dyn std::error::Error>> {
+    run_browser_tui_with_initial(Some(url))
+}
+
+fn run_browser_tui_with_initial(
+    initial_url: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
@@ -420,6 +431,13 @@ pub fn run_browser_tui() -> Result<(), Box<dyn std::error::Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = BrowserApp::new();
+    if let Some(url) = initial_url {
+        let parsed = crate::uri::parse(url);
+        app.tabs[app.active_tab_idx].url = parsed.normalized.clone();
+        app.tabs[app.active_tab_idx].history = vec![parsed.normalized.clone()];
+        app.address_buffer = parsed.normalized;
+        let _ = app.load_current_page();
+    }
     let res = run_loop(&mut terminal, &mut app);
 
     disable_raw_mode()?;
@@ -934,16 +952,13 @@ fn run_loop<B: ratatui::backend::Backend>(
                                     &mut app.tabs[app.active_tab_idx].content
                                 {
                                     mesh.rotate_x(0.1);
-                                } else {
-                                    if app.tabs.len() > 1 {
-                                        app.tabs.remove(app.active_tab_idx);
-                                        if app.active_tab_idx >= app.tabs.len() {
-                                            app.active_tab_idx = app.tabs.len() - 1;
-                                        }
-                                        app.address_buffer =
-                                            app.tabs[app.active_tab_idx].url.clone();
-                                        self_render_viewport(app);
+                                } else if app.tabs.len() > 1 {
+                                    app.tabs.remove(app.active_tab_idx);
+                                    if app.active_tab_idx >= app.tabs.len() {
+                                        app.active_tab_idx = app.tabs.len() - 1;
                                     }
+                                    app.address_buffer = app.tabs[app.active_tab_idx].url.clone();
+                                    self_render_viewport(app);
                                 }
                             }
                             KeyCode::Char('s') | KeyCode::Char('S') => {
