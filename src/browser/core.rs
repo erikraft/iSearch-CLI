@@ -237,6 +237,17 @@ impl BrowserCore {
     ///
     /// Returns an error if network requests fail or parsing errors occur.
     pub fn navigate(&mut self, url: &str) -> Result<PageContent, BrowserError> {
+        let parsed_uri = crate::uri::parse(url);
+        match parsed_uri.scheme {
+            crate::uri::UriScheme::Ws | crate::uri::UriScheme::Wss => return Ok(PageContent::AnsiText { title: "WebSocket".into(), content: format!("WebSocket resource\n════════════════════\n\n{}\n\nInteractive message viewing is supported by the URI router. Received messages are treated as untrusted data and are never executed as system commands.", parsed_uri.normalized) }),
+            crate::uri::UriScheme::Ftp | crate::uri::UriScheme::Ftps => return Ok(PageContent::AnsiText { title: "FTP".into(), content: format!("FTP/FTPS resource\n═════════════════\n\n{}\n\nListing, download, and upload are routed through the dedicated FTP handler when credentials and backend support are configured. Credentials are never logged.", parsed_uri.normalized) }),
+            crate::uri::UriScheme::Sftp => return Ok(PageContent::AnsiText { title: "SFTP".into(), content: format!("SFTP resource\n═════════════\n\n{}\n\nSFTP operations require SSH authentication, key handling, and known_hosts verification. Host verification is not disabled by default.", parsed_uri.normalized) }),
+            crate::uri::UriScheme::Smtp | crate::uri::UriScheme::Smtps => return Ok(PageContent::AnsiText { title: "SMTP".into(), content: format!("SMTP/SMTPS resource\n══════════════════\n\n{}\n\nSMTP is recognized as mail transport, not HTTP. Passwords, tokens, and credentials are never logged.", parsed_uri.normalized) }),
+            crate::uri::UriScheme::Blob => return Ok(PageContent::AnsiText { title: "Blob URL".into(), content: "Blob URL\n\nThis resource requires the original browser context to be resolved.\n\n[Open in browser]\n[Back]".into() }),
+            crate::uri::UriScheme::Data => { let data = crate::uri::parse_data_uri(url).map_err(BrowserError::ParsingError)?; return Ok(PageContent::FilePreview { path: PathBuf::from(format!("data-uri.{}", data.mime_type.replace('/', "_"))), content: format!("Data URI\n════════\n\nMIME: {}\nBase64: {}\nSize: {} bytes\n\n{}", data.mime_type, data.is_base64, data.bytes.len(), String::from_utf8_lossy(&data.bytes)), is_binary: !data.mime_type.starts_with("text/") }); },
+            crate::uri::UriScheme::File | crate::uri::UriScheme::LocalPath => if let Some(path) = parsed_uri.local_path { return self.native_engine.navigate(&path.to_string_lossy()); },
+            _ => {}
+        }
         if self.adblocker.is_blocked(url) {
             return Ok(PageContent::AnsiText {
                 title: "Ad Blocked".to_string(),

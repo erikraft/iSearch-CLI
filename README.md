@@ -95,6 +95,8 @@ Inside the iSearch CLI™ prompt, run commands such as:
 
 ```text
 iSearch> browse
+iSearch> open https://example.com
+iSearch> erikraft-drop
 iSearch> version
 iSearch> version --check
 iSearch> self-update
@@ -109,15 +111,24 @@ You can open the official ErikrafT Drop site directly with a native CLI renderer
 isearch erikraft-drop
 ```
 
-To work with the integrated ErikrafT Drop source as a submodule (developer workflow):
+The Drop implementation remains in the external ErikrafT Drop service; this repository does not vendor or modify the Drop source as a submodule. The CLI identifies itself as `iSearch CLI™` / `iSearchCLI/<version>` when requesting the official endpoint at `https://drop.erikraft.com`.
+
+### URI Router and Local Resources
+
+Open supported resources through the centralized router:
 
 ```bash
-git clone --recurse-submodules https://github.com/erikraft/iSearch-CLI.git
-cd iSearch-CLI
-git submodule update --init --recursive
-# To update the Drop submodule later:
-git submodule update --remote --merge
+isearch open https://example.com
+isearch open wss://example.com/socket
+isearch open file:C:\Users\Vera\Downloads\me.png
+isearch C:\Users\Vera\Downloads\me.png
 ```
+
+The router recognizes `http`, `https`, `ws`, `wss`, `ftp`, `ftps`, `sftp`, `smtp`, `smtps`, standard `data:`, standard `blob:`, compatibility `data://` / `blob://`, `file:`, and local filesystem paths without treating Windows drive letters such as `C:\` as URI schemes. Local files are classified as images, videos, audio, documents, archives, directories, files, or unknown resources. Remote content is never executed automatically.
+
+### Browser Backend
+
+When Chromium rendering is required, iSearch CLI™ detects installed Chromium-based browsers such as Google Chrome, Chromium, Microsoft Edge, Brave, Opera, and Vivaldi. If no compatible browser is found, native TUI/local rendering continues where possible and the UI explains the limitation instead of downloading a browser without explicit user action.
 
 
 ---

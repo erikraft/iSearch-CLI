@@ -18,10 +18,14 @@ pub struct CliDocument {
 struct CliApiResponse {
     cli: Option<bool>,
     version: Option<String>,
-    endpoint: Option<String>,
-    clientType: Option<String>,
-    signalingServer: Option<String>,
-    wsUrl: Option<String>,
+    #[serde(rename = "endpoint")]
+    _endpoint: Option<String>,
+    #[serde(rename = "clientType")]
+    client_type: Option<String>,
+    #[serde(rename = "signalingServer")]
+    signaling_server: Option<String>,
+    #[serde(rename = "wsUrl")]
+    ws_url: Option<String>,
     features: Option<BTreeMap<String, serde_json::Value>>,
     message: Option<String>,
 }
@@ -42,10 +46,10 @@ pub fn parse_cli_json(json: &str) -> Result<CliDocument, Box<dyn std::error::Err
     Ok(CliDocument {
         title: "ErikrafT Drop CLI".to_string(),
         message: response.message,
-        client_type: response.clientType,
+        client_type: response.client_type,
         server_version: response.version,
-        signaling_server: response.signalingServer,
-        ws_url: response.wsUrl,
+        signaling_server: response.signaling_server,
+        ws_url: response.ws_url,
         features,
         raw_json: json.to_string(),
     })
