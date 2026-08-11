@@ -66,44 +66,154 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /**
+ * Helper to update progress bar characters and percentages
+ */
+function updateProgress(percent) {
+    const totalBlocks = 20;
+    const filledBlocks = Math.round((percent / 100) * totalBlocks);
+    const emptyBlocks = totalBlocks - filledBlocks;
+    const barStr = "[" + "█".repeat(filledBlocks) + "░".repeat(emptyBlocks) + "]";
+
+    const barEl = document.querySelector('.progress-bar');
+    const percentEl = document.querySelector('.progress-percent');
+    if (barEl) barEl.textContent = barStr;
+    if (percentEl) percentEl.textContent = percent + "%";
+}
+
+/**
  * Site Loader Handler
  */
 function initLoader() {
     const loader = document.querySelector('.site-loader');
     if (!loader) return;
 
-    window.addEventListener('load', () => {
-        setTimeout(() => {
-            loader.classList.add('hidden');
-            document.body.classList.remove('loading');
+    // Check if user prefers reduced motion
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-            // Trigger Hero entry animations via GSAP
-            if (typeof gsap !== 'undefined') {
-                gsap.from('.hero-content > *', {
-                    opacity: 0,
-                    y: 30,
-                    duration: 1,
-                    stagger: 0.12,
-                    ease: "power3.out"
-                });
+    if (prefersReducedMotion) {
+        // Fast-track initial state if motion is reduced
+        loader.classList.add('hidden');
+        document.body.classList.remove('loading');
+        triggerEntranceAnimations();
+        return;
+    }
 
+    // Command to type
+    const commandText = "init --isearch-download";
+    const cmdTextEl = document.querySelector('.cmd-text');
+    const loaderCursor = document.querySelector('.loader-cursor');
 
-                // Smooth continuous marquee text translation
-                const marqueeInner = document.querySelector('.hero-marquee-inner');
-                if (marqueeInner) {
-                    const marqueeText = marqueeInner.textContent;
-                    marqueeInner.textContent = marqueeText + ' ' + marqueeText;
-
-                    gsap.to(marqueeInner, {
-                        xPercent: -50,
-                        ease: "none",
-                        duration: 40,
-                        repeat: -1
-                    });
+    // Create a GSAP Timeline for the terminal booting sequence
+    const tl = gsap.timeline({
+        onComplete: () => {
+            // Once boot is completely finished, fade out loader
+            gsap.to(loader, {
+                opacity: 0,
+                duration: 0.5,
+                ease: "power2.out",
+                onComplete: () => {
+                    loader.classList.add('hidden');
+                    document.body.classList.remove('loading');
+                    triggerEntranceAnimations();
                 }
-            }
-        }, 500);
+            });
+        }
     });
+
+    // 1. Type out the command line
+    let typedObj = { length: 0 };
+    tl.to(typedObj, {
+        length: commandText.length,
+        duration: 0.8,
+        ease: "none",
+        onUpdate: () => {
+            const currentLen = Math.floor(typedObj.length);
+            if (cmdTextEl) cmdTextEl.textContent = commandText.substring(0, currentLen);
+        }
+    });
+
+    // 2. Pause slightly with command typed, then hide first cursor
+    tl.to({}, { duration: 0.25 });
+    tl.call(() => {
+        if (loaderCursor) loaderCursor.style.display = 'none';
+    });
+
+    // 3. Sequentially show [ OK ] log lines
+    const logLines = document.querySelectorAll('.log-line');
+    logLines.forEach((line) => {
+        tl.call(() => {
+            line.style.display = 'flex';
+        });
+        tl.to(line, {
+            opacity: 1,
+            duration: 0.15,
+            ease: "power1.out"
+        });
+        tl.to({}, { duration: 0.1 });
+    });
+
+    // 4. Show the progress bar line
+    const progressLine = document.querySelector('.progress-line');
+    tl.call(() => {
+        if (progressLine) progressLine.style.display = 'flex';
+    });
+    tl.to(progressLine, {
+        opacity: 1,
+        duration: 0.15,
+        ease: "power1.out"
+    });
+
+    // 5. Progressively update loading bar
+    let progressObj = { val: 0 };
+    tl.to(progressObj, {
+        val: 100,
+        duration: 1.2,
+        ease: "power1.inOut",
+        onUpdate: () => {
+            updateProgress(Math.floor(progressObj.val));
+        }
+    });
+
+    // 6. Show final prompt line
+    const finalLine = document.querySelector('.final-line');
+    tl.call(() => {
+        if (finalLine) finalLine.style.display = 'flex';
+    });
+    tl.to(finalLine, {
+        opacity: 1,
+        duration: 0.15,
+        ease: "power1.out"
+    });
+
+    // 7. Pause briefly before completing the boot
+    tl.to({}, { duration: 0.4 });
+}
+
+function triggerEntranceAnimations() {
+    // Trigger Hero entry animations via GSAP
+    if (typeof gsap !== 'undefined') {
+        gsap.from('.hero-content > *', {
+            opacity: 0,
+            y: 30,
+            duration: 1,
+            stagger: 0.12,
+            ease: "power3.out"
+        });
+
+        // Smooth continuous marquee text translation
+        const marqueeInner = document.querySelector('.hero-marquee-inner');
+        if (marqueeInner) {
+            const marqueeText = marqueeInner.textContent;
+            marqueeInner.textContent = marqueeText + ' ' + marqueeText;
+
+            gsap.to(marqueeInner, {
+                xPercent: -50,
+                ease: "none",
+                duration: 40,
+                repeat: -1
+            });
+        }
+    }
 }
 
 /**

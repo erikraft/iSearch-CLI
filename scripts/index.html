@@ -75,8 +75,20 @@
     <!-- Site Loader -->
     <div class="site-loader">
         <div class="loader-terminal">
-            <span>root@erikraft:~$ init --isearch-downloads</span>
-            <div class="loader-cursor"></div>
+            <div class="loader-line cmd-line">
+                <span class="prompt">root@erikraft:~$</span> <span class="cmd-text"></span><span class="loader-cursor"></span>
+            </div>
+            <div class="loader-boot-logs">
+                <div class="loader-line log-line">[ <span class="log-ok">OK</span> ] Initializing interface</div>
+                <div class="loader-line log-line">[ <span class="log-ok">OK</span> ] Loading resources</div>
+                <div class="loader-line log-line">[ <span class="log-ok">OK</span> ] Starting interface</div>
+            </div>
+            <div class="loader-line progress-line">
+                <span class="progress-bar">[░░░░░░░░░░░░░░░░░░░░]</span> <span class="progress-percent">0%</span>
+            </div>
+            <div class="loader-line final-line">
+                <span class="prompt">root@erikraft:~$</span> <span class="final-cursor"></span>
+            </div>
         </div>
     </div>
 

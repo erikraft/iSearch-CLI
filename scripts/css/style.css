@@ -280,28 +280,87 @@ img {
 .loader-terminal {
   font-family: var(--mono);
   color: var(--accent-light);
-  font-size: clamp(0.75rem, 3vw, 0.9rem);
-  background: rgba(134, 125, 108, 0.05);
+  font-size: clamp(0.72rem, 3.2vw, 0.9rem);
+  background: rgba(13, 14, 20, 0.98);
   border: 1px solid var(--border);
-  padding: clamp(12px, 2vw, 18px) clamp(20px, 4vw, 32px);
+  padding: clamp(16px, 4vw, 24px) clamp(20px, 5vw, 36px);
   border-radius: var(--radius-sm);
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 10px;
-  box-shadow: var(--glow-shadow);
-  max-width: 90vw;
+  box-shadow: var(--glow-shadow), 0 20px 50px rgba(0, 0, 0, 0.8);
+  width: min(calc(100% - 2rem), 480px);
+  max-width: 100%;
   box-sizing: border-box;
+  text-align: left;
 }
 
-.loader-cursor {
+.loader-line {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  overflow-wrap: break-word;
+}
+
+.prompt {
+  color: var(--accent);
+  font-weight: bold;
+}
+
+.log-ok {
+  color: #10b981;
+  font-weight: bold;
+}
+
+.loader-cursor, .final-cursor {
+  display: inline-block;
   width: 8px;
   height: 16px;
   background: var(--accent-light);
-  animation: blink 1s infinite steps(2, start);
+  animation: blink-cursor 1s infinite steps(2, start);
+  vertical-align: middle;
+  margin-left: 4px;
 }
 
-@keyframes blink {
+.loader-boot-logs {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.log-line, .progress-line, .final-line {
+  opacity: 0;
+  display: none;
+}
+
+.progress-bar {
+  color: var(--accent-light);
+  letter-spacing: 1px;
+}
+
+.progress-percent {
+  color: var(--accent);
+  font-weight: bold;
+}
+
+@keyframes blink-cursor {
   to { visibility: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-loader {
+    transition: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+  .loader-cursor, .final-cursor {
+    animation: none !important;
+  }
 }
 
 /* Premium Header styling */
