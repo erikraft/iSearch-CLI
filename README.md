@@ -6,6 +6,8 @@
  | \__ \/ -_) _` | '_/ _| ' \  | (__| |__ | | 
  |_|___/\___\__,_|_| \__|_||_|  \___|____|___|
 ```
+
+<a href="https://www.producthunt.com/products/isearch-cli?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-isearch-cli" target="_blank" rel="noopener noreferrer"><img alt="iSearch CLI™ - iSearch CLI™ — A next-generation terminal browser. | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1224227&amp;theme=dark&amp;t=1786916833217"></a>
                                               
 
 **iSearch CLI™** is a polished terminal browser and search assistant designed for modern developers, power users, and terminal-first workflows.
