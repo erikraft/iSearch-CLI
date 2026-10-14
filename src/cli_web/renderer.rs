@@ -79,7 +79,7 @@ pub fn run_drop_tui(
             let footer = Paragraph::new(Line::from(vec![
                 Span::styled("[Q/Esc] Exit", Style::default().fg(Color::Gray)),
                 Span::raw(" │ "),
-                Span::raw("Real CLI mode enabled. Connect files with ErikrafT Drop over the same network."),
+                Span::raw("API metadata preview only; full interactive site support is not available in this view."),
             ]));
             f.render_widget(footer, chunks[2]);
         })?;

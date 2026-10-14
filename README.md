@@ -107,13 +107,17 @@ iSearch> donate
 
 ### ErikrafT Drop Integration
 
-You can open the official ErikrafT Drop site directly with a native CLI renderer:
+Open the official ErikrafT Drop website in the terminal browser:
 
 ```bash
 isearch erikraft-drop
 ```
 
-The Drop implementation remains in the external ErikrafT Drop service; this repository does not vendor or modify the Drop source as a submodule. The CLI identifies itself as `iSearch CLI™` / `iSearchCLI/<version>` when requesting the official endpoint at `https://drop.erikraft.com`.
+The command now opens `https://drop.erikraft.com` in the existing browser renderer and checks the site's CLI metadata endpoint for compatibility. When a compatible Chromium executable is available, it renders the JavaScript-generated DOM; otherwise it falls back to native HTML rendering.
+
+**Current limitation:** the terminal renderer is not a full interactive Chromium window. Controls that depend on live JavaScript events, browser file pickers, WebRTC data channels, or persistent browser APIs may not work yet. The API metadata endpoint is not itself a file-transfer REST API. Full transfer support requires a persistent browser-control/interaction layer and end-to-end tests.
+
+The Drop implementation remains in the external ErikrafT Drop service; this repository does not vendor or modify the Drop source as a submodule. The CLI identifies itself as `iSearchCLI/<version>` when requesting the official endpoint at `https://drop.erikraft.com`.
 
 ### URI Router and Local Resources
 
