@@ -37,15 +37,6 @@ enum FeatureValue {
     Map(BTreeMap<String, serde_json::Value>),
 }
 
-impl FeatureValue {
-    fn into_names(self) -> Vec<String> {
-        match self {
-            Self::List(values) => values,
-            Self::Map(values) => values.into_keys().collect(),
-        }
-    }
-}
-
 #[derive(Debug, Deserialize, Default)]
 struct ClientMetadata {
     cli: Option<bool>,
