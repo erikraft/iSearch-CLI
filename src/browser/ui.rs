@@ -413,16 +413,25 @@ impl BrowserApp {
 ///
 /// Returns an error if terminal setup fails.
 pub fn run_browser_tui() -> Result<(), Box<dyn std::error::Error>> {
-    run_browser_tui_with_initial(None)
+    run_browser_tui_with_initial(None, None)
 }
 
 /// Opens the browser TUI with a specific initial URI or local file.
 pub fn run_browser_tui_with_url(url: &str) -> Result<(), Box<dyn std::error::Error>> {
-    run_browser_tui_with_initial(Some(url))
+    run_browser_tui_with_initial(Some(url), None)
+}
+
+/// Opens a URL using a selected rendering engine from the first navigation.
+pub fn run_browser_tui_with_url_and_engine(
+    url: &str,
+    engine: EngineType,
+) -> Result<(), Box<dyn std::error::Error>> {
+    run_browser_tui_with_initial(Some(url), Some(engine))
 }
 
 fn run_browser_tui_with_initial(
     initial_url: Option<&str>,
+    initial_engine: Option<EngineType>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -431,6 +440,9 @@ fn run_browser_tui_with_initial(
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = BrowserApp::new();
+    if let Some(engine) = initial_engine {
+        app.core.set_engine(engine);
+    }
     if let Some(url) = initial_url {
         let parsed = crate::uri::parse(url);
         app.tabs[app.active_tab_idx].url = parsed.normalized.clone();
