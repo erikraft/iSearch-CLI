@@ -127,6 +127,11 @@ pub fn parse_cli_json(json: &str) -> Result<CliDocument, Box<dyn std::error::Err
         return Err("Drop API returned a non-CLI response".into());
     }
 
+    // Resolve borrowed metadata before moving any fields out of the response.
+    let client_type = response.client_type();
+    let ws_url = response.ws_url();
+    let features = response.features();
+
     let server_version = response.version.map(VersionValue::into_string);
     let title = response.title
         .or_else(|| response.client.as_ref().and_then(|client| client.name.clone()))
@@ -139,11 +144,11 @@ pub fn parse_cli_json(json: &str) -> Result<CliDocument, Box<dyn std::error::Err
     Ok(CliDocument {
         title,
         message,
-        client_type: response.client_type(),
+        client_type,
         server_version,
         signaling_server,
-        ws_url: response.ws_url(),
-        features: response.features(),
+        ws_url,
+        features,
         raw_json: json.to_string(),
     })
 }
@@ -201,6 +206,28 @@ mod tests {
         let document = parse_cli_json(json).expect("legacy response should parse");
         assert_eq!(document.client_type.as_deref(), Some("isearch-cli"));
         assert_eq!(document.features, vec!["deviceDiscovery", "pairing"]);
+    }
+
+    #[test]
+    fn prefers_top_level_signaling_server_with_nested_protocol_metadata() {
+        let json = r#"{
+            "signalingServer": "top-level.example",
+            "protocol": {
+                "signalingServer": "nested.example",
+                "websocket": "/server",
+                "clientIdentification": { "clientType": "nested-cli" },
+                "messages": ["peer-joined"]
+            }
+        }"#;
+
+        let document = parse_cli_json(json).expect("nested protocol metadata should parse");
+        assert_eq!(
+            document.signaling_server.as_deref(),
+            Some("top-level.example")
+        );
+        assert_eq!(document.client_type.as_deref(), Some("nested-cli"));
+        assert_eq!(document.ws_url.as_deref(), Some("/server"));
+        assert_eq!(document.features, vec!["peer-joined"]);
     }
 
     #[test]
