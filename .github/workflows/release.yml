@@ -427,7 +427,7 @@ jobs:
           APP_CONTENTS="$(cd "$(dirname "$0")/.." && pwd)"
           BIN="$APP_CONTENTS/MacOS/isearch-cli"
           COMMAND="$(printf '%q' "$BIN")"
-          /usr/bin/osascript -e 'tell application "Terminal" to activate' -e "tell application \"Terminal\" to do script \"$COMMAND\""
+          /usr/bin/osascript -e 'tell application "Terminal" to activate' -e "tell application \"Terminal\" to do script quoted form of POSIX path of (POSIX file "$BIN")"
           LAUNCHER
             chmod +x "$app_dir/Contents/MacOS/isearch-launcher"
             cat > "$app_dir/Contents/Info.plist" <<'PLIST'
