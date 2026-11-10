@@ -13,6 +13,8 @@ RequestExecutionLevel admin
 
 ; Interface Settings
 !define MUI_ABORTWARNING
+!define MUI_ICON "icons\\windows-cmd.ico"
+!define MUI_UNICON "icons\\windows-cmd.ico"
 
 ; Pages
 !insertmacro MUI_PAGE_WELCOME
@@ -36,7 +38,7 @@ Section "Install" SecInstall
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\iSearch CLI" "DisplayName" "iSearch CLI™"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\iSearch CLI" "UninstallString" '"$INSTDIR\uninstall.exe"'
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\iSearch CLI" "Publisher" "ErikrafT"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\iSearch CLI" "DisplayVersion" "0.1.0"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\iSearch CLI" "DisplayVersion" "2.1.0"
 
     WriteUninstaller "$INSTDIR\uninstall.exe"
 SectionEnd
