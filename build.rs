@@ -6,7 +6,7 @@ use std::process::Command;
 fn main() {
     println!("cargo:rerun-if-env-changed=ISEARCH_WINDOWS_ICON");
 
-    if env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("windows") {
+    if env::var("CARGO_CFG_TARGET_OS").ok().as_deref() != Some("windows") {
         return;
     }
 
