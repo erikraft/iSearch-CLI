@@ -123,7 +123,7 @@ jobs:
           EOF
 
           # Use the Linux desktop environment's standard terminal icon (freedesktop theme).
-          TERMINAL_ICON="$(find /usr/share/icons -type f \( -iname 'utilities-terminal.png' -o -iname 'utilities-terminal.svg' -o -iname 'org.gnome.Terminal.png' -o -iname 'org.gnome.Terminal.svg' \) | sort | head -n 1)"
+          TERMINAL_ICON="$(find /usr/share/icons -type f \\( -iname 'utilities-terminal.png' -o -iname 'utilities-terminal.svg' -o -iname 'utilities-terminal-symbolic.svg' -o -iname 'org.gnome.Terminal.png' -o -iname 'org.gnome.Terminal.svg' \\) | sort | head -n 1)"
           if [ -z "$TERMINAL_ICON" ]; then
             echo "A native Linux terminal icon was not found in the installed icon theme."
             exit 1
@@ -191,10 +191,7 @@ jobs:
           if ((Get-Item $iconPath).Length -lt 100) { throw "Extracted CMD icon is unexpectedly small" }
           $sdkBin = Join-Path "${env:ProgramFiles(x86)}" "Windows Kits\10\bin"
           $rc = Get-ChildItem -Path $sdkBin -Filter rc.exe -Recurse -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -match '\\x64\\rc\.exe$' } |
-
-      - name: Build Windows x64
-        run: cargo build --release --target x86_64-pc-windows-msvc
+            Where-Object { $_.FullName -match '\\\\x64\\\\rc\\.exe
 
       - name: Build Windows ARM64
         run: cargo build --release --target aarch64-pc-windows-msvc
@@ -865,44 +862,14 @@ jobs:
           cp target/x86_64-apple-darwin/release/isearch-cli osx-pkg-x86_64/usr/local/bin/isearch
           pkgbuild --identifier com.erikraft.isearch.x86_64 --version 2.1.0 --install-location / --root osx-pkg-x86_64 dist/isearch-installer-macos-x86_64.pkg
 
-          # Build Finder-visible .app bundles with the native macOS Terminal icon.
-          TERMINAL_ICNS="/System/Applications/Utilities/Terminal.app/Contents/Resources/Terminal.icns"
-          if [ ! -f "$TERMINAL_ICNS" ]; then
-            TERMINAL_ICNS="/Applications/Utilities/Terminal.app/Contents/Resources/Terminal.icns"
-          fi
-          if [ ! -f "$TERMINAL_ICNS" ]; then
-            echo "The native Terminal.app icon was not found on this macOS runner."
-            exit 1
-          fi
+          # Build DMG
+          mkdir -p dmg-folder-x86_64
+          cp target/x86_64-apple-darwin/release/isearch-cli dmg-folder-x86_64/isearch
+          hdiutil create -volname "iSearch CLI x86_64" -srcfolder dmg-folder-x86_64 -ov -format UDZO dist/isearch-installer-macos-x86_64.dmg
 
-          create_terminal_app() {
-            local target="$1"
-            local app_dir="$2"
-            mkdir -p "$(dirname "$app_dir")"
-            /usr/bin/osacompile -o "$app_dir" -e 'on run
-              set appPath to POSIX path of (path to me)
-              set binaryPath to appPath & "Contents/MacOS/isearch-cli"
-              tell application "Terminal"
-                activate
-                do script quoted form of binaryPath
-              end tell
-            end run'
-            mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
-            cp "$target" "$app_dir/Contents/MacOS/isearch-cli"
-            cp "$TERMINAL_ICNS" "$app_dir/Contents/Resources/Terminal.icns"
-            /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile Terminal.icns" "$app_dir/Contents/Info.plist"
-            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 2.1.0" "$app_dir/Contents/Info.plist"
-            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 2.1.0" "$app_dir/Contents/Info.plist"
-            chmod +x "$app_dir/Contents/MacOS/isearch-cli"
-          }
-
-          mkdir -p dmg-folder-x86_64 dmg-folder-aarch64
-          create_terminal_app target/x86_64-apple-darwin/release/isearch-cli "dmg-folder-x86_64/iSearch CLI.app"
-          create_terminal_app target/aarch64-apple-darwin/release/isearch-cli "dmg-folder-aarch64/iSearch CLI.app"
-          ln -s /Applications "dmg-folder-x86_64/Applications"
-          ln -s /Applications "dmg-folder-aarch64/Applications"
-          hdiutil create -volname "iSearch CLI Intel" -srcfolder dmg-folder-x86_64 -ov -format UDZO dist/isearch-installer-macos-x86_64.dmg
-          hdiutil create -volname "iSearch CLI Apple Silicon" -srcfolder dmg-folder-aarch64 -ov -format UDZO dist/isearch-installer-macos-aarch64.dmg
+          mkdir -p dmg-folder-aarch64
+          cp target/aarch64-apple-darwin/release/isearch-cli dmg-folder-aarch64/isearch
+          hdiutil create -volname "iSearch CLI aarch64" -srcfolder dmg-folder-aarch64 -ov -format UDZO dist/isearch-installer-macos-aarch64.dmg
 
       - name: Upload macOS Assets
         uses: actions/upload-artifact@v4
