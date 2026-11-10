@@ -63,7 +63,7 @@ iSearch CLI™ delivers a premium terminal experience with a professional intera
 ### Native platform icons
 
 Desktop installers use the operating system's own terminal icon:
-- **Windows:** Command Prompt (cmd.exe) icon on the installer and created shortcuts.
+- **Windows:** Command Prompt (cmd.exe) icon embedded in the portable executable and shown on the installer and created shortcuts.
 - **Linux:** the standard utilities-terminal icon from the installed desktop icon theme in AppImage.
 - **macOS:** the native Terminal.app icon on the Finder-visible application bundle inside the DMG. Opening the bundle starts iSearch CLI in Terminal.
 
