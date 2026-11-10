@@ -161,6 +161,8 @@ jobs:
   build-windows:
     name: Build Windows Binaries & Installers
     runs-on: windows-latest
+    env:
+      ISEARCH_WINDOWS_ICON: scripts/icons/windows-cmd.ico
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -187,6 +189,463 @@ jobs:
           $stream = [System.IO.File]::Create($iconPath)
           try { $icon.Save($stream) } finally { $stream.Dispose(); $icon.Dispose() }
           if ((Get-Item $iconPath).Length -lt 100) { throw "Extracted CMD icon is unexpectedly small" }
+          $sdkBin = Join-Path "${env:ProgramFiles(x86)}" "Windows Kits\\10\\bin"
+          $rc = Get-ChildItem -Path $sdkBin -Filter rc.exe -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match '\\\\x64\\\\rc\\.exe
+
+      - name: Build Windows x64
+        run: cargo build --release --target x86_64-pc-windows-msvc
+
+      - name: Build Windows ARM64
+        run: cargo build --release --target aarch64-pc-windows-msvc
+
+      - name: Install WiX and NSIS
+        shell: pwsh
+        run: |
+          Write-Host "=== Installing and Configuring NSIS & WiX ==="
+
+          # Force install NSIS and WiX Toolset via Chocolatey
+          choco install nsis wixtoolset -y --no-progress
+
+          # Standard installation directories
+          $nsisDirs = @(
+              "C:\Program Files (x86)\NSIS",
+              "C:\Program Files\NSIS",
+              "C:\ProgramData\chocolatey\bin",
+              "C:\ProgramData\chocolatey\lib\nsis\tools"
+          )
+
+          $wixDirs = @(
+              "C:\Program Files (x86)\WiX Toolset v3.14\bin",
+              "C:\Program Files (x86)\WiX Toolset v3.11\bin",
+              "C:\Program Files (x86)\WiX Toolset v3.10\bin",
+              "C:\Program Files\WiX Toolset v3.11",
+              "C:\Program Files\WiX Toolset v3.14",
+              "C:\Program Files\WiX Toolset v3.9\bin",
+              "C:\Program Files\WiX Toolset v3.12\bin"
+          )
+
+          # Find NSIS directory
+          $nsisDir = $null
+          foreach ($dir in $nsisDirs) {
+              if (Test-Path (Join-Path $dir "makensis.exe")) {
+                  $nsisDir = $dir
+                  break
+              }
+          }
+
+          # If not found in standard paths, do a targeted recursive search inside Program Files
+          if ($null -eq $nsisDir) {
+              Write-Host "Performing targeted search for makensis.exe..."
+              $found = Get-ChildItem -Path "C:\Program Files (x86)", "C:\Program Files", "C:\ProgramData" -Filter "makensis.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($found) {
+                  $nsisDir = Split-Path $found.FullName
+              }
+          }
+
+          # Find WiX directory
+          $wixDir = $null
+          foreach ($dir in $wixDirs) {
+              if ((Test-Path (Join-Path $dir "candle.exe")) -and (Test-Path (Join-Path $dir "light.exe"))) {
+                  $wixDir = $dir
+                  break
+              }
+          }
+
+          # If not found in standard paths, do a targeted recursive search inside Program Files
+          if ($null -eq $wixDir) {
+              Write-Host "Performing targeted search for candle.exe..."
+              $found = Get-ChildItem -Path "C:\Program Files (x86)", "C:\Program Files", "C:\ProgramData" -Filter "candle.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($found) {
+                  $wixDir = Split-Path $found.FullName
+              }
+          }
+
+          if ($null -eq $nsisDir) {
+              Write-Error "NSIS directory containing makensis.exe could not be found!"
+              exit 1
+          }
+          if ($null -eq $wixDir) {
+              Write-Error "WiX directory containing candle.exe / light.exe could not be found!"
+              exit 1
+          }
+
+          Write-Host "Found NSIS Dir: $nsisDir"
+          Write-Host "Found WiX Dir: $wixDir"
+
+          # Add to GITHUB_PATH and GITHUB_ENV cleanly (using UTF-8 without BOM)
+          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+          [System.IO.File]::AppendAllLines($env:GITHUB_PATH, [string[]]($nsisDir, $wixDir), $utf8NoBom)
+          [System.IO.File]::AppendAllLines($env:GITHUB_ENV, [string[]]("MAKENSIS_PATH=$(Join-Path $nsisDir 'makensis.exe')", "CANDLE_PATH=$(Join-Path $wixDir 'candle.exe')", "LIGHT_PATH=$(Join-Path $wixDir 'light.exe')"), $utf8NoBom)
+
+      - name: Verify WiX and NSIS
+        shell: pwsh
+        run: |
+          Write-Host "=== Verifying WiX and NSIS installation ==="
+
+          # Native PowerShell check to avoid external where.exe exit code issues
+          $makensis = Get-Command makensis -ErrorAction SilentlyContinue
+          if ($null -eq $makensis) {
+              Write-Error "CRITICAL ERROR: makensis is not in the system PATH!"
+              exit 1
+          }
+          Write-Host "makensis found at: $($makensis.Source)"
+
+          $candle = Get-Command candle -ErrorAction SilentlyContinue
+          if ($null -eq $candle) {
+              Write-Error "CRITICAL ERROR: candle is not in the system PATH!"
+              exit 1
+          }
+          Write-Host "candle found at: $($candle.Source)"
+
+          $light = Get-Command light -ErrorAction SilentlyContinue
+          if ($null -eq $light) {
+              Write-Error "CRITICAL ERROR: light is not in the system PATH!"
+              exit 1
+          }
+          Write-Host "light found at: $($light.Source)"
+
+          # Run basic version check commands
+          makensis /VERSION
+          candle -?
+          light -?
+
+          Write-Host "All tools verified successfully!"
+
+      - name: Build Installers (.exe, .msi)
+        shell: pwsh
+        run: |
+          mkdir dist -Force
+          cp target/x86_64-pc-windows-msvc/release/isearch-cli.exe dist/isearch-windows-x86_64.exe
+          cp target/aarch64-pc-windows-msvc/release/isearch-cli.exe dist/isearch-windows-arm64.exe
+
+          # Compile NSIS Installer (.exe) and WiX (.msi) from inside scripts/ to resolve relative paths
+          cd scripts
+
+          Write-Host "Compiling NSIS installer..."
+          makensis installer.nsi
+          if ($LASTEXITCODE -ne 0) {
+              Write-Error "NSIS compilation failed!"
+              exit 1
+          }
+
+          Write-Host "Compiling WiX installer..."
+          candle installer.wxs -o installer.wixobj
+          if ($LASTEXITCODE -ne 0) {
+              Write-Error "WiX compilation (candle) failed!"
+              exit 1
+          }
+          light -ext WixUIExtension installer.wixobj -o ../dist/isearch-installer-x86_64.msi
+          if ($LASTEXITCODE -ne 0) {
+              Write-Error "WiX compilation (light) failed!"
+              exit 1
+          }
+
+          cd ..
+
+          # Create flat zip archives for portable targets to prevent nested empty folder structures
+          mkdir temp-x64 -Force
+          cp target/x86_64-pc-windows-msvc/release/isearch-cli.exe temp-x64/
+          Compress-Archive -Path temp-x64/* -DestinationPath dist/isearch-cli-windows-x64.zip -Force
+
+          mkdir temp-arm64 -Force
+          cp target/aarch64-pc-windows-msvc/release/isearch-cli.exe temp-arm64/
+          Compress-Archive -Path temp-arm64/* -DestinationPath dist/isearch-cli-windows-arm64.zip -Force
+
+          rm -Recurse -Force temp-x64, temp-arm64
+
+      - name: Upload Windows Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-assets
+          path: dist/*
+
+  build-macos:
+    name: Build macOS Binaries & Installers
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin, aarch64-apple-darwin
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build macOS Intel
+        run: cargo build --release --target x86_64-apple-darwin
+
+      - name: Build macOS Apple Silicon
+        run: cargo build --release --target aarch64-apple-darwin
+
+      - name: Package macOS Installers (.pkg, .dmg, .tar.gz)
+        run: |
+          mkdir dist
+          cp target/x86_64-apple-darwin/release/isearch-cli dist/isearch-macos-x86_64
+          cp target/aarch64-apple-darwin/release/isearch-cli dist/isearch-macos-aarch64
+
+          # Package as .tar.gz (old names)
+          tar -czf dist/isearch-macos-x86_64.tar.gz -C dist isearch-macos-x86_64
+          tar -czf dist/isearch-macos-aarch64.tar.gz -C dist isearch-macos-aarch64
+
+          # Package as .tar.gz (new consistent names)
+          tar -czf dist/isearch-cli-macos-intel.tar.gz -C dist isearch-macos-x86_64
+          tar -czf dist/isearch-cli-macos-arm64.tar.gz -C dist isearch-macos-aarch64
+
+          # Package as .zip (new consistent names)
+          zip -j dist/isearch-cli-macos-intel.zip target/x86_64-apple-darwin/release/isearch-cli
+          zip -j dist/isearch-cli-macos-arm64.zip target/aarch64-apple-darwin/release/isearch-cli
+
+          # Build Apple Silicon PKG
+          mkdir -p osx-pkg-aarch64/usr/local/bin
+          cp target/aarch64-apple-darwin/release/isearch-cli osx-pkg-aarch64/usr/local/bin/isearch
+          pkgbuild --identifier com.erikraft.isearch.aarch64 --version 2.1.0 --install-location / --root osx-pkg-aarch64 dist/isearch-installer-macos-aarch64.pkg
+
+          # Build Intel PKG
+          mkdir -p osx-pkg-x86_64/usr/local/bin
+          cp target/x86_64-apple-darwin/release/isearch-cli osx-pkg-x86_64/usr/local/bin/isearch
+          pkgbuild --identifier com.erikraft.isearch.x86_64 --version 2.1.0 --install-location / --root osx-pkg-x86_64 dist/isearch-installer-macos-x86_64.pkg
+
+          # Build Finder-visible .app bundles with the native macOS Terminal icon.
+          TERMINAL_ICNS="/System/Applications/Utilities/Terminal.app/Contents/Resources/Terminal.icns"
+          if [ ! -f "$TERMINAL_ICNS" ]; then
+            TERMINAL_ICNS="/Applications/Utilities/Terminal.app/Contents/Resources/Terminal.icns"
+          fi
+          if [ ! -f "$TERMINAL_ICNS" ]; then
+            echo "The native Terminal.app icon was not found on this macOS runner."
+            exit 1
+          fi
+
+          create_terminal_app() {
+            local target="$1"
+            local app_dir="$2"
+            mkdir -p "$(dirname "$app_dir")"
+            /usr/bin/osacompile -o "$app_dir" -e 'on run
+              set appPath to POSIX path of (path to me)
+              set binaryPath to appPath & "Contents/MacOS/isearch-cli"
+              tell application "Terminal"
+                activate
+                do script quoted form of binaryPath
+              end tell
+            end run'
+            mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
+            cp "$target" "$app_dir/Contents/MacOS/isearch-cli"
+            cp "$TERMINAL_ICNS" "$app_dir/Contents/Resources/Terminal.icns"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile Terminal.icns" "$app_dir/Contents/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 2.1.0" "$app_dir/Contents/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 2.1.0" "$app_dir/Contents/Info.plist"
+            chmod +x "$app_dir/Contents/MacOS/isearch-cli"
+          }
+
+          mkdir -p dmg-folder-x86_64 dmg-folder-aarch64
+          create_terminal_app target/x86_64-apple-darwin/release/isearch-cli "dmg-folder-x86_64/iSearch CLI.app"
+          create_terminal_app target/aarch64-apple-darwin/release/isearch-cli "dmg-folder-aarch64/iSearch CLI.app"
+          ln -s /Applications "dmg-folder-x86_64/Applications"
+          ln -s /Applications "dmg-folder-aarch64/Applications"
+          hdiutil create -volname "iSearch CLI Intel" -srcfolder dmg-folder-x86_64 -ov -format UDZO dist/isearch-installer-macos-x86_64.dmg
+          hdiutil create -volname "iSearch CLI Apple Silicon" -srcfolder dmg-folder-aarch64 -ov -format UDZO dist/isearch-installer-macos-aarch64.dmg
+
+      - name: Upload macOS Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release-assets
+          path: dist/*
+
+  build-android:
+    name: Build Android Termux Binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Compile native Android binaries
+        run: |
+          mkdir dist
+          NDK_BIN="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
+
+          # 1. Compile for Android Aarch64 (ARM64)
+          CLANG_AARCH64=$(find "$NDK_BIN" -name "aarch64-linux-android*-clang" | sort -V | tail -n 1)
+          if [ -z "$CLANG_AARCH64" ]; then
+            CLANG_AARCH64="$NDK_BIN/aarch64-linux-android33-clang"
+          fi
+          echo "Using Aarch64 clang: $CLANG_AARCH64"
+
+          export CC_aarch64_linux_android="$CLANG_AARCH64"
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$CLANG_AARCH64"
+          export AR_aarch64_linux_android="$NDK_BIN/llvm-ar"
+
+          cargo build --release --target aarch64-linux-android
+          cp target/aarch64-linux-android/release/isearch-cli dist/isearch-linux-android-aarch64
+          # Keep old name for backwards compatibility
+          cp target/aarch64-linux-android/release/isearch-cli dist/isearch-linux-aarch64
+
+          # 2. Compile for Android Armv7
+          CLANG_ARMV7=$(find "$NDK_BIN" -name "armv7a-linux-androideabi*-clang" | sort -V | tail -n 1)
+          if [ -z "$CLANG_ARMV7" ]; then
+            CLANG_ARMV7="$NDK_BIN/armv7a-linux-androideabi33-clang"
+          fi
+          echo "Using Armv7 clang: $CLANG_ARMV7"
+
+          export CC_armv7_linux_androideabi="$CLANG_ARMV7"
+          export CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER="$CLANG_ARMV7"
+          export AR_armv7_linux_androideabi="$NDK_BIN/llvm-ar"
+
+          cargo build --release --target armv7-linux-androideabi
+          cp target/armv7-linux-androideabi/release/isearch-cli dist/isearch-linux-android-armv7
+          # Keep old name for backwards compatibility
+          cp target/armv7-linux-androideabi/release/isearch-cli dist/isearch-linux-arm
+
+          # 3. Compile for Android x86_64
+          CLANG_X86_64=$(find "$NDK_BIN" -name "x86_64-linux-android*-clang" | sort -V | tail -n 1)
+          if [ -z "$CLANG_X86_64" ]; then
+            CLANG_X86_64="$NDK_BIN/x86_64-linux-android33-clang"
+          fi
+          echo "Using x86_64 clang: $CLANG_X86_64"
+
+          export CC_x86_64_linux_android="$CLANG_X86_64"
+          export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$CLANG_X86_64"
+          export AR_x86_64_linux_android="$NDK_BIN/llvm-ar"
+
+          cargo build --release --target x86_64-linux-android
+          cp target/x86_64-linux-android/release/isearch-cli dist/isearch-linux-android-x86_64
+          # Keep old name for backwards compatibility
+          cp target/x86_64-linux-android/release/isearch-cli dist/isearch-linux-x86_64
+
+          # Package consistent Android release archives
+          tar -czf dist/isearch-cli-termux-aarch64.tar.gz -C target/aarch64-linux-android/release isearch-cli
+          tar -czf dist/isearch-cli-termux-arm.tar.gz -C target/armv7-linux-androideabi/release isearch-cli
+          tar -czf dist/isearch-cli-termux-x64.tar.gz -C target/x86_64-linux-android/release isearch-cli
+
+      - name: Upload Android Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-assets
+          path: dist/*
+
+  release:
+    name: Draft and Publish GitHub Release
+    needs: [build-linux, build-windows, build-macos, build-android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download Linux Assets
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-release-assets
+          path: release-binaries
+
+      - name: Download Windows Assets
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-release-assets
+          path: release-binaries
+
+      - name: Download macOS Assets
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-release-assets
+          path: release-binaries
+
+      - name: Download Android Assets
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release-assets
+          path: release-binaries
+
+      - name: Copy Installer Script
+        run: |
+          cp scripts/install-termux.sh release-binaries/
+
+      - name: Compute Checksums
+        run: |
+          cd release-binaries
+          find . -type f -not -name "SHA256SUMS" -not -name "checksums.txt" -print0 | xargs -0 sha256sum | sed 's|^\./||' > SHA256SUMS
+          cp SHA256SUMS checksums.txt
+          echo "Checksums computed successfully."
+
+      - name: Generate Release Notes
+        run: |
+          cat << 'EOF' > release_notes.md
+          # iSearch CLI™ Release
+
+          Official Author: ErikrafT
+          Copyright: Copyright © 2026 ErikrafT
+
+          ## Introduction
+          This release contains the latest premium terminal browser and developer assistant - **iSearch CLI™**. All binaries, installers, and checksum files were built and verified entirely by GitHub Actions CI.
+
+          ## Supported Platforms
+          - **Linux (x86_64, aarch64, armv7):** Portable binary, `.deb`, `.rpm`, `.AppImage`, and `.tar.gz`
+          - **Windows (x86_64):** Portable `.exe`, Installer executable, and `.msi`
+          - **macOS (Intel, Apple Silicon):** Portable binaries, `.pkg` installers, `.dmg` files, and `.tar.gz`
+          - **Android (Termux):** Custom installation via `install-termux.sh`
+
+          ## Installation Methods
+
+          ### 📦 Android Termux (Automatic Installation)
+          ```bash
+          curl -fsSL https://download.erikraft.com/install-termux.sh | bash
+          ```
+          Or using `wget`:
+          ```bash
+          wget -qO- https://download.erikraft.com/install-termux.sh | bash
+          ```
+
+          ### 📦 Manual Installation
+          1. Download the compatible binary from the assets list below.
+          2. Move the binary into your PATH (e.g. `/usr/local/bin` on Unix or `C:\Windows\System32` on Windows).
+          3. Set permissions (`chmod +x`) and run `isearch`.
+
+          ### 🔄 Updating
+          To update your existing installation automatically, run:
+          ```bash
+          isearch self-update
+          ```
+
+          ## 🔒 Integrity and Verification
+          Verify download integrity using SHA256 checksums:
+          ```bash
+          sha256sum --check SHA256SUMS
+          ```
+
+          Known issues and limitations are documented in the [docs/releases.md](https://download.erikraft.com/docs/releases.html).
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release'
+        with:
+          tag_name: ${{ github.event.release.tag_name || github.ref_name }}
+          body_path: release_notes.md
+          files: |
+            release-binaries/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+ } |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if ($null -eq $rc) { throw "Windows SDK rc.exe (x64) was not found" }
+          Add-Content -Path $env:GITHUB_PATH -Value (Split-Path $rc.FullName)
 
       - name: Build Windows x64
         run: cargo build --release --target x86_64-pc-windows-msvc
