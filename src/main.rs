@@ -15,7 +15,7 @@ use ui::run_donation_tui;
 
 /// Formats and outputs the global list of interactive commands.
 pub fn print_help() {
-    println!("{} - Version 0.1.0", isearch_cli());
+    println!("{} - Version {}", isearch_cli(), env!("CARGO_PKG_VERSION"));
     println!("Available commands:");
     println!("  browse         - Open the premium multi-engine interactive terminal browser");
     println!("  open <URI>     - Open a URI or local file through the centralized URI router");

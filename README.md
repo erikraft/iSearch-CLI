@@ -60,6 +60,13 @@ iSearch CLI™ delivers a premium terminal experience with a professional intera
 - **Package:** Run `isearch-installer-macos-aarch64.pkg` (Apple Silicon) or `isearch-installer-macos-x86_64.pkg` (Intel).
 - **Disk Image:** Drag and drop `isearch.dmg` into Applications.
 
+### Native platform icons
+
+Desktop installers use the operating system's own terminal icon:
+- **Windows:** Command Prompt (cmd.exe) icon embedded in the portable executable and shown on the installer and created shortcuts.
+- **Linux:** the standard utilities-terminal icon from the installed desktop icon theme in AppImage.
+- **macOS:** the native Terminal.app icon on the Finder-visible application bundle inside the DMG. Opening the bundle starts iSearch CLI in Terminal.
+
 ### 🤖 Android Termux (Automatic Installation)
 
 Install iSearch CLI™ inside Termux automatically using one of the following commands:
@@ -79,7 +86,7 @@ If you wish to compile **iSearch CLI™** from source, you can clone and checkou
 ```bash
 git clone https://github.com/erikraft/iSearch-CLI.git
 cd iSearch-CLI
-git checkout v1.0.0
+git checkout v2.1.0
 cargo build --release
 ```
 

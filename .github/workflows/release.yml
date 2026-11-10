@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-linux:
@@ -29,6 +29,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -43,7 +45,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y alien dpkg-dev rpm pkg-config \
             gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu \
-            gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
+            gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf binutils-arm-linux-gnueabihf \
+            adwaita-icon-theme librsvg2-bin
 
       - name: Verify Cross Toolchain
         run: |
@@ -87,7 +90,7 @@ jobs:
           cp target/x86_64-unknown-linux-gnu/release/isearch-cli debian/usr/bin/isearch
           cat <<EOF > debian/DEBIAN/control
           Package: isearch-cli
-          Version: 0.1.0
+          Version: 2.1.0
           Section: utils
           Priority: optional
           Architecture: amd64
@@ -119,8 +122,17 @@ jobs:
           Categories=Utility;
           EOF
 
-          # Generate valid 1x1 transparent PNG icon dynamically without committing binary assets to Git
-          python3 -c "import sys; open('AppDir/isearch.png', 'wb').write(bytes.fromhex('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000b49444154789cc5c0010d00000002000183b118af0000000049454e44ae426082'))"
+          # Use the Linux desktop environment's standard terminal icon (freedesktop theme).
+          TERMINAL_ICON="$(find /usr/share/icons -type f \( -iname 'utilities-terminal.png' -o -iname 'utilities-terminal.svg' -o -iname 'utilities-terminal-symbolic.svg' -o -iname 'org.gnome.Terminal.png' -o -iname 'org.gnome.Terminal.svg' \) | sort | head -n 1)"
+          if [ -z "$TERMINAL_ICON" ]; then
+            echo "A native Linux terminal icon was not found in the installed icon theme."
+            exit 1
+          fi
+          case "$TERMINAL_ICON" in
+            *.svg) rsvg-convert -w 256 -h 256 "$TERMINAL_ICON" > AppDir/isearch.png ;;
+            *.png) cp "$TERMINAL_ICON" AppDir/isearch.png ;;
+          esac
+          test -s AppDir/isearch.png
 
           # Download and run appimagetool safely without FUSE dependencies
           curl -LO https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
@@ -149,9 +161,13 @@ jobs:
   build-windows:
     name: Build Windows Binaries & Installers
     runs-on: windows-latest
+    env:
+      ISEARCH_WINDOWS_ICON: scripts/icons/windows-cmd.ico
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -160,6 +176,25 @@ jobs:
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+
+      - name: Extract native Windows CMD icon
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Drawing
+          $cmdPath = Join-Path $env:WINDIR "System32\cmd.exe"
+          $iconPath = Join-Path $PWD "scripts\icons\windows-cmd.ico"
+          New-Item -ItemType Directory -Force -Path (Split-Path $iconPath) | Out-Null
+          $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($cmdPath)
+          if ($null -eq $icon) { throw "Could not extract the native CMD icon from $cmdPath" }
+          $stream = [System.IO.File]::Create($iconPath)
+          try { $icon.Save($stream) } finally { $stream.Dispose(); $icon.Dispose() }
+          if ((Get-Item $iconPath).Length -lt 100) { throw "Extracted CMD icon is unexpectedly small" }
+          $sdkBin = Join-Path "${env:ProgramFiles(x86)}" "Windows Kits\10\bin"
+          $rc = Get-ChildItem -Path $sdkBin -Filter rc.exe -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match '\\x64\\rc\.exe$' } |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if ($null -eq $rc) { throw "Windows SDK rc.exe (x64) was not found" }
+          Add-Content -Path $env:GITHUB_PATH -Value (Split-Path $rc.FullName)
 
       - name: Build Windows x64
         run: cargo build --release --target x86_64-pc-windows-msvc
@@ -334,6 +369,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -370,21 +407,51 @@ jobs:
           # Build Apple Silicon PKG
           mkdir -p osx-pkg-aarch64/usr/local/bin
           cp target/aarch64-apple-darwin/release/isearch-cli osx-pkg-aarch64/usr/local/bin/isearch
-          pkgbuild --identifier com.erikraft.isearch.aarch64 --version 0.1.0 --install-location / --root osx-pkg-aarch64 dist/isearch-installer-macos-aarch64.pkg
+          pkgbuild --identifier com.erikraft.isearch.aarch64 --version 2.1.0 --install-location / --root osx-pkg-aarch64 dist/isearch-installer-macos-aarch64.pkg
 
           # Build Intel PKG
           mkdir -p osx-pkg-x86_64/usr/local/bin
           cp target/x86_64-apple-darwin/release/isearch-cli osx-pkg-x86_64/usr/local/bin/isearch
-          pkgbuild --identifier com.erikraft.isearch.x86_64 --version 0.1.0 --install-location / --root osx-pkg-x86_64 dist/isearch-installer-macos-x86_64.pkg
+          pkgbuild --identifier com.erikraft.isearch.x86_64 --version 2.1.0 --install-location / --root osx-pkg-x86_64 dist/isearch-installer-macos-x86_64.pkg
 
-          # Build DMG
-          mkdir -p dmg-folder-x86_64
-          cp target/x86_64-apple-darwin/release/isearch-cli dmg-folder-x86_64/isearch
-          hdiutil create -volname "iSearch CLI x86_64" -srcfolder dmg-folder-x86_64 -ov -format UDZO dist/isearch-installer-macos-x86_64.dmg
+          # Build Finder-visible .app bundles with the native macOS Terminal icon.
+          TERMINAL_ICNS="/System/Applications/Utilities/Terminal.app/Contents/Resources/Terminal.icns"
+          if [ ! -f "$TERMINAL_ICNS" ]; then
+            TERMINAL_ICNS="/Applications/Utilities/Terminal.app/Contents/Resources/Terminal.icns"
+          fi
+          if [ ! -f "$TERMINAL_ICNS" ]; then
+            echo "The native Terminal.app icon was not found on this macOS runner."
+            exit 1
+          fi
 
-          mkdir -p dmg-folder-aarch64
-          cp target/aarch64-apple-darwin/release/isearch-cli dmg-folder-aarch64/isearch
-          hdiutil create -volname "iSearch CLI aarch64" -srcfolder dmg-folder-aarch64 -ov -format UDZO dist/isearch-installer-macos-aarch64.dmg
+          create_terminal_app() {
+            local target="$1"
+            local app_dir="$2"
+            mkdir -p "$(dirname "$app_dir")"
+            /usr/bin/osacompile -o "$app_dir" -e 'on run
+              set appPath to POSIX path of (path to me)
+              set binaryPath to appPath & "Contents/MacOS/isearch-cli"
+              tell application "Terminal"
+                activate
+                do script quoted form of binaryPath
+              end tell
+            end run'
+            mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
+            cp "$target" "$app_dir/Contents/MacOS/isearch-cli"
+            cp "$TERMINAL_ICNS" "$app_dir/Contents/Resources/Terminal.icns"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile Terminal.icns" "$app_dir/Contents/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 2.1.0" "$app_dir/Contents/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 2.1.0" "$app_dir/Contents/Info.plist"
+            chmod +x "$app_dir/Contents/MacOS/isearch-cli"
+          }
+
+          mkdir -p dmg-folder-x86_64 dmg-folder-aarch64
+          create_terminal_app target/x86_64-apple-darwin/release/isearch-cli "dmg-folder-x86_64/iSearch CLI.app"
+          create_terminal_app target/aarch64-apple-darwin/release/isearch-cli "dmg-folder-aarch64/iSearch CLI.app"
+          ln -s /Applications "dmg-folder-x86_64/Applications"
+          ln -s /Applications "dmg-folder-aarch64/Applications"
+          hdiutil create -volname "iSearch CLI Intel" -srcfolder dmg-folder-x86_64 -ov -format UDZO dist/isearch-installer-macos-x86_64.dmg
+          hdiutil create -volname "iSearch CLI Apple Silicon" -srcfolder dmg-folder-aarch64 -ov -format UDZO dist/isearch-installer-macos-aarch64.dmg
 
       - name: Upload macOS Assets
         uses: actions/upload-artifact@v4
@@ -398,6 +465,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -475,9 +544,13 @@ jobs:
     name: Draft and Publish GitHub Release
     needs: [build-linux, build-windows, build-macos, build-android]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Download Linux Assets
         uses: actions/download-artifact@v4

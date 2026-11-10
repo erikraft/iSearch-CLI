@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-    <Product Id="*" Name="iSearch CLI" Language="1033" Version="0.1.0" Manufacturer="ErikrafT" UpgradeCode="a123bcde-1234-4567-8901-1234567890ab">
+    <Product Id="*" Name="iSearch CLI" Language="1033" Version="2.1.0" Manufacturer="ErikrafT" UpgradeCode="a123bcde-1234-4567-8901-1234567890ab">
+        <Icon Id="AppIcon" SourceFile="icons\windows-cmd.ico" />
+        <Property Id="ARPPRODUCTICON" Value="AppIcon" />
         <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
         <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
         <MediaTemplate EmbedCab="yes" />
@@ -21,7 +23,10 @@
     <Fragment>
         <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
             <Component Id="MainExecutable" Guid="b123bcde-1234-4567-8901-1234567890bc">
-                <File Id="IsearchExe" Source="..\target\x86_64-pc-windows-msvc\release\isearch-cli.exe" KeyPath="yes" />
+                <File Id="IsearchExe" Source="..\target\x86_64-pc-windows-msvc\release\isearch-cli.exe" KeyPath="yes">
+                    <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="iSearch CLI" WorkingDirectory="INSTALLFOLDER" Advertise="no" Icon="AppIcon" IconIndex="0" />
+                    <Shortcut Id="DesktopShortcut" Directory="DesktopFolder" Name="iSearch CLI" WorkingDirectory="INSTALLFOLDER" Advertise="no" Icon="AppIcon" IconIndex="0" />
+                </File>
             </Component>
         </ComponentGroup>
     </Fragment>

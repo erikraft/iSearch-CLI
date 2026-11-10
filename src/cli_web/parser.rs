@@ -87,20 +87,32 @@ impl CliApiResponse {
     fn client_type(&self) -> Option<String> {
         self.client_type
             .clone()
-            .or_else(|| self.client.as_ref().and_then(|client| client.client_type.clone()))
             .or_else(|| {
-                self.protocol.as_ref()
+                self.client
+                    .as_ref()
+                    .and_then(|client| client.client_type.clone())
+            })
+            .or_else(|| {
+                self.protocol
+                    .as_ref()
                     .and_then(|protocol| protocol.client_identification.as_ref())
                     .and_then(|identification| identification.client_type.clone())
             })
     }
 
     fn ws_url(&self) -> Option<String> {
-        self.ws_url.clone().or_else(|| {
-            self.protocol.as_ref().and_then(|protocol| protocol.websocket.clone())
-        }).or_else(|| {
-            self.protocol.as_ref().and_then(|protocol| protocol.ws_url.clone())
-        })
+        self.ws_url
+            .clone()
+            .or_else(|| {
+                self.protocol
+                    .as_ref()
+                    .and_then(|protocol| protocol.websocket.clone())
+            })
+            .or_else(|| {
+                self.protocol
+                    .as_ref()
+                    .and_then(|protocol| protocol.ws_url.clone())
+            })
     }
 
     fn features(&self) -> Vec<String> {
@@ -111,7 +123,8 @@ impl CliApiResponse {
             };
         }
 
-        self.protocol.as_ref()
+        self.protocol
+            .as_ref()
             .and_then(|protocol| protocol.messages.clone())
             .unwrap_or_default()
     }
@@ -127,23 +140,37 @@ pub fn parse_cli_json(json: &str) -> Result<CliDocument, Box<dyn std::error::Err
         return Err("Drop API returned a non-CLI response".into());
     }
 
+    // Resolve borrowed metadata before moving any fields out of the response.
+    let client_type = response.client_type();
+    let ws_url = response.ws_url();
+    let features = response.features();
+
     let server_version = response.version.map(VersionValue::into_string);
-    let title = response.title
-        .or_else(|| response.client.as_ref().and_then(|client| client.name.clone()))
+    let title = response
+        .title
+        .or_else(|| {
+            response
+                .client
+                .as_ref()
+                .and_then(|client| client.name.clone())
+        })
         .unwrap_or_else(|| "ErikrafT Drop CLI".to_string());
     let message = response.message.or(response.description);
     let signaling_server = response.signaling_server.or_else(|| {
-        response.protocol.as_ref().and_then(|protocol| protocol.signaling_server.clone())
+        response
+            .protocol
+            .as_ref()
+            .and_then(|protocol| protocol.signaling_server.clone())
     });
 
     Ok(CliDocument {
         title,
         message,
-        client_type: response.client_type(),
+        client_type,
         server_version,
         signaling_server,
-        ws_url: response.ws_url(),
-        features: response.features(),
+        ws_url,
+        features,
         raw_json: json.to_string(),
     })
 }
@@ -183,7 +210,10 @@ mod tests {
             document.ws_url.as_deref(),
             Some("/server?client_type=isearch-cli&webrtc_supported=false")
         );
-        assert_eq!(document.features, vec!["Send files", "Receive files", "Device discovery"]);
+        assert_eq!(
+            document.features,
+            vec!["Send files", "Receive files", "Device discovery"]
+        );
         assert_eq!(document.title, "ErikrafT Drop");
     }
 
@@ -201,6 +231,28 @@ mod tests {
         let document = parse_cli_json(json).expect("legacy response should parse");
         assert_eq!(document.client_type.as_deref(), Some("isearch-cli"));
         assert_eq!(document.features, vec!["deviceDiscovery", "pairing"]);
+    }
+
+    #[test]
+    fn prefers_top_level_signaling_server_with_nested_protocol_metadata() {
+        let json = r#"{
+            "signalingServer": "top-level.example",
+            "protocol": {
+                "signalingServer": "nested.example",
+                "websocket": "/server",
+                "clientIdentification": { "clientType": "nested-cli" },
+                "messages": ["peer-joined"]
+            }
+        }"#;
+
+        let document = parse_cli_json(json).expect("nested protocol metadata should parse");
+        assert_eq!(
+            document.signaling_server.as_deref(),
+            Some("top-level.example")
+        );
+        assert_eq!(document.client_type.as_deref(), Some("nested-cli"));
+        assert_eq!(document.ws_url.as_deref(), Some("/server"));
+        assert_eq!(document.features, vec!["peer-joined"]);
     }
 
     #[test]
