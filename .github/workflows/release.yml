@@ -189,9 +189,9 @@ jobs:
           $stream = [System.IO.File]::Create($iconPath)
           try { $icon.Save($stream) } finally { $stream.Dispose(); $icon.Dispose() }
           if ((Get-Item $iconPath).Length -lt 100) { throw "Extracted CMD icon is unexpectedly small" }
-          $sdkBin = Join-Path "${env:ProgramFiles(x86)}" "Windows Kits\\10\\bin"
+          $sdkBin = Join-Path "${env:ProgramFiles(x86)}" "Windows Kits\10\bin"
           $rc = Get-ChildItem -Path $sdkBin -Filter rc.exe -Recurse -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -match '\\\\x64\\\\rc\\.exe
+            Where-Object { $_.FullName -match '\\x64\\rc\.exe$' } |
 
       - name: Build Windows x64
         run: cargo build --release --target x86_64-pc-windows-msvc
