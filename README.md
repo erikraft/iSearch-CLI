@@ -79,7 +79,7 @@ If you wish to compile **iSearch CLI™** from source, you can clone and checkou
 ```bash
 git clone https://github.com/erikraft/iSearch-CLI.git
 cd iSearch-CLI
-git checkout v1.0.0
+git checkout v2.1.0
 cargo build --release
 ```
 
