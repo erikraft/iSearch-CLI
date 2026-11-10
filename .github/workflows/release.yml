@@ -191,7 +191,7 @@ jobs:
           if ((Get-Item $iconPath).Length -lt 100) { throw "Extracted CMD icon is unexpectedly small" }
           $sdkBin = Join-Path "${env:ProgramFiles(x86)}" "Windows Kits\10\bin"
           $rc = Get-ChildItem -Path $sdkBin -Filter rc.exe -Recurse -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -match '\\\\x64\\\\rc\\.exe$' } |
+            Where-Object { $_.FullName -match '\\x64\\rc\.exe$' } |
             Sort-Object FullName -Descending | Select-Object -First 1
           if ($null -eq $rc) { throw "Windows SDK rc.exe (x64) was not found" }
           Add-Content -Path $env:GITHUB_PATH -Value (Split-Path $rc.FullName)
