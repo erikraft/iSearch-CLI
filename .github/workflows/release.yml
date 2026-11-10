@@ -419,40 +419,21 @@ jobs:
           create_terminal_app() {
             local target="$1"
             local app_dir="$2"
+            mkdir -p "$(dirname "$app_dir")"
+            /usr/bin/osacompile -o "$app_dir" -e 'on run
+              set appPath to POSIX path of (path to me)
+              set binaryPath to appPath & "Contents/MacOS/isearch-cli"
+              tell application "Terminal"
+                activate
+                do script quoted form of binaryPath
+              end tell
+            end run'
             mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
             cp "$target" "$app_dir/Contents/MacOS/isearch-cli"
             cp "$TERMINAL_ICNS" "$app_dir/Contents/Resources/Terminal.icns"
-            cat > "$app_dir/Contents/MacOS/isearch-launcher" <<'LAUNCHER'
-          #!/bin/sh
-          APP_CONTENTS="$(cd "$(dirname "$0")/.." && pwd)"
-          BIN="$APP_CONTENTS/MacOS/isearch-cli"
-          /usr/bin/osascript - "$BIN" <<'APPLESCRIPT'
-          on run argv
-            set binaryPath to item 1 of argv
-            tell application "Terminal"
-              activate
-              do script quoted form of binaryPath
-            end tell
-          end run
-          APPLESCRIPT
-          LAUNCHER
-            chmod +x "$app_dir/Contents/MacOS/isearch-launcher"
-            cat > "$app_dir/Contents/Info.plist" <<'PLIST'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>CFBundleName</key><string>iSearch CLI</string>
-            <key>CFBundleDisplayName</key><string>iSearch CLI</string>
-            <key>CFBundleIdentifier</key><string>com.erikraft.isearch.cli</string>
-            <key>CFBundlePackageType</key><string>APPL</string>
-            <key>CFBundleExecutable</key><string>isearch-launcher</string>
-            <key>CFBundleIconFile</key><string>Terminal.icns</string>
-            <key>CFBundleShortVersionString</key><string>2.1.0</string>
-            <key>CFBundleVersion</key><string>2.1.0</string>
-          </dict>
-          </plist>
-          PLIST
+            /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile Terminal.icns" "$app_dir/Contents/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 2.1.0" "$app_dir/Contents/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 2.1.0" "$app_dir/Contents/Info.plist"
             chmod +x "$app_dir/Contents/MacOS/isearch-cli"
           }
 
