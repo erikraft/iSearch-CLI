@@ -45,7 +45,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y alien dpkg-dev rpm pkg-config \
             gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu \
-            gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf binutils-arm-linux-gnueabihf \\
+            gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf binutils-arm-linux-gnueabihf \
             adwaita-icon-theme librsvg2-bin
 
       - name: Verify Cross Toolchain
@@ -123,7 +123,7 @@ jobs:
           EOF
 
           # Use the Linux desktop environment's standard terminal icon (freedesktop theme).
-          TERMINAL_ICON="$(find /usr/share/icons -type f \\( -iname 'utilities-terminal.png' -o -iname 'utilities-terminal.svg' -o -iname 'org.gnome.Terminal.png' -o -iname 'org.gnome.Terminal.svg' \\) | sort | head -n 1)"
+          TERMINAL_ICON="$(find /usr/share/icons -type f \( -iname 'utilities-terminal.png' -o -iname 'utilities-terminal.svg' -o -iname 'org.gnome.Terminal.png' -o -iname 'org.gnome.Terminal.svg' \) | sort | head -n 1)"
           if [ -z "$TERMINAL_ICON" ]; then
             echo "A native Linux terminal icon was not found in the installed icon theme."
             exit 1
@@ -179,8 +179,8 @@ jobs:
         shell: pwsh
         run: |
           Add-Type -AssemblyName System.Drawing
-          $cmdPath = Join-Path $env:WINDIR "System32\\cmd.exe"
-          $iconPath = Join-Path $PWD "scripts\\icons\\windows-cmd.ico"
+          $cmdPath = Join-Path $env:WINDIR "System32\cmd.exe"
+          $iconPath = Join-Path $PWD "scripts\icons\windows-cmd.ico"
           New-Item -ItemType Directory -Force -Path (Split-Path $iconPath) | Out-Null
           $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($cmdPath)
           if ($null -eq $icon) { throw "Could not extract the native CMD icon from $cmdPath" }
@@ -426,8 +426,15 @@ jobs:
           #!/bin/sh
           APP_CONTENTS="$(cd "$(dirname "$0")/.." && pwd)"
           BIN="$APP_CONTENTS/MacOS/isearch-cli"
-          COMMAND="$(printf '%q' "$BIN")"
-          /usr/bin/osascript -e 'tell application "Terminal" to activate' -e "tell application \"Terminal\" to do script quoted form of POSIX path of (POSIX file "$BIN")"
+          /usr/bin/osascript - "$BIN" <<'APPLESCRIPT'
+          on run argv
+            set binaryPath to item 1 of argv
+            tell application "Terminal"
+              activate
+              do script quoted form of binaryPath
+            end tell
+          end run
+          APPLESCRIPT
           LAUNCHER
             chmod +x "$app_dir/Contents/MacOS/isearch-launcher"
             cat > "$app_dir/Contents/Info.plist" <<'PLIST'
