@@ -1,7 +1,10 @@
 //! Automated version checking, update checking, and safe self-updating logic for iSearch CLI™.
 
 use crate::branding::{ascii_logo, isearch_cli};
-use crate::browser::release_config::{get_download_url, get_latest_release_url, AUTHOR, COPYRIGHT};
+use crate::browser::release_config::{
+    get_checksum_url, get_download_url, get_latest_release_url, AUTHOR, COPYRIGHT,
+};
+use crate::utils::{checksum_for_asset, sha256_hex};
 use serde::Deserialize;
 use std::env;
 use std::fs;
@@ -173,8 +176,26 @@ pub fn perform_self_update() -> Result<(), String> {
 
     println!("Downloading asset: {}...", asset_name);
     let download_url = get_download_url(&info.latest_version, asset_name);
+    let checksum_url = get_checksum_url(&info.latest_version);
 
     let agent = ureq::Agent::new_with_defaults();
+    let checksum_response = agent
+        .get(&checksum_url)
+        .header("User-Agent", "isearch-cli-update-agent")
+        .call()
+        .map_err(|e| {
+            format!(
+                "Failed to download checksum manifest from {}: {:?}",
+                checksum_url, e
+            )
+        })?;
+    let checksum_manifest = checksum_response
+        .into_body()
+        .read_to_string()
+        .map_err(|e| format!("Failed to read checksum manifest: {:?}", e))?;
+    let expected_checksum = checksum_for_asset(&checksum_manifest, asset_name)
+        .ok_or_else(|| format!("No SHA-256 checksum found for release asset {}", asset_name))?;
+
     let response = agent.get(&download_url).call().map_err(|e| {
         format!(
             "Failed to download update binary from {}: {:?}",
@@ -189,6 +210,13 @@ pub fn perform_self_update() -> Result<(), String> {
 
     if binary_data.is_empty() {
         return Err("Downloaded binary data is empty!".to_string());
+    }
+    let actual_checksum = sha256_hex(&binary_data);
+    if actual_checksum != expected_checksum {
+        return Err(format!(
+            "SHA-256 checksum mismatch for {}: update aborted",
+            asset_name
+        ));
     }
 
     // Backup current executable path to prevent corruption/write locks

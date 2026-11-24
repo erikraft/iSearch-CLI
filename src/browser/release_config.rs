@@ -42,3 +42,15 @@ pub fn get_download_url(version: &str, filename: &str) -> String {
         )
     }
 }
+
+/// Retrieves the published SHA-256 manifest URL for a release.
+pub fn get_checksum_url(version: &str) -> String {
+    if USE_DOWNLOAD_DOMAIN_FOR_UPDATES {
+        format!("{}/releases/{}/SHA256SUMS", DOWNLOAD_DOMAIN, version)
+    } else {
+        format!(
+            "https://github.com/{}/releases/download/v{}/SHA256SUMS",
+            GITHUB_ORG_REPO, version
+        )
+    }
+}
