@@ -134,6 +134,7 @@ get_release_info() {
     local arch=$1
     local latest_version=""
     local download_url=""
+    local checksum_url=""
     local filename=""
 
     # Determine filename based on architecture
@@ -161,6 +162,7 @@ get_release_info() {
         fi
         latest_version=${latest_version#v}
         download_url="${DOWNLOAD_DOMAIN}/releases/${latest_version}/${filename}"
+        checksum_url="${DOWNLOAD_DOMAIN}/releases/${latest_version}/SHA256SUMS"
     else
         local api_url="https://api.github.com/repos/${GITHUB_ORG_REPO}/releases/latest"
         log_info "Querying GitHub Releases API: $api_url"
@@ -176,6 +178,7 @@ get_release_info() {
 
         # Search for matching asset download url
         download_url=$(echo "$response" | grep -o '"browser_download_url": *"[^"]*"' | grep "$filename" | head -n 1 | cut -d'"' -f4)
+        checksum_url="https://github.com/${GITHUB_ORG_REPO}/releases/download/v${latest_version}/SHA256SUMS"
     fi
 
     if [ -z "$latest_version" ] || [ -z "$download_url" ]; then
@@ -184,32 +187,82 @@ get_release_info() {
     fi
 
     log_success "Latest release version: v${latest_version}"
-    echo "$latest_version|$download_url"
+    echo "$latest_version|$download_url|$checksum_url"
 }
 
 install_binary() {
     local download_url=$2
+    local checksum_url=$3
     local install_dir="${PREFIX:-/data/data/com.termux/files/usr}/bin"
     local dest_path="${install_dir}/isearch"
+    local filename
+    filename=$(basename "$download_url")
+    local temp_archive
+    local temp_checksum
+    local temp_extract
+    temp_archive=$(mktemp)
+    temp_checksum=$(mktemp)
+    temp_extract=$(mktemp -d)
 
     # Create directory if it doesn't exist
     mkdir -p "$install_dir"
 
     log_info "Downloading binary to temporary path..."
-    local temp_bin
-    temp_bin=$(mktemp)
-
-    if ! curl -fsSL -o "$temp_bin" "$download_url"; then
-        if ! wget -qO "$temp_bin" "$download_url"; then
+    if ! curl -fsSL -o "$temp_archive" "$download_url"; then
+        if ! wget -qO "$temp_archive" "$download_url"; then
             log_error "Failed to download binary from: $download_url"
-            rm -f "$temp_bin"
+            rm -f "$temp_archive" "$temp_checksum"
+            rm -rf "$temp_extract"
             exit 1
         fi
     fi
 
+    if ! curl -fsSL -o "$temp_checksum" "$checksum_url"; then
+        if ! wget -qO "$temp_checksum" "$checksum_url"; then
+            log_error "Failed to download checksum manifest from: $checksum_url"
+            rm -f "$temp_archive" "$temp_checksum"
+            rm -rf "$temp_extract"
+            exit 1
+        fi
+    fi
+
+    local expected_checksum
+    expected_checksum=$(awk -v name="$filename" '$2 == name || $2 == "*" name { print $1 }' "$temp_checksum")
+    if [ -z "$expected_checksum" ] || [ ${#expected_checksum} -ne 64 ]; then
+        log_error "No valid SHA-256 checksum found for $filename"
+        rm -f "$temp_archive" "$temp_checksum"
+        rm -rf "$temp_extract"
+        exit 1
+    fi
+
+    local actual_checksum
+    actual_checksum=$(sha256sum "$temp_archive" | awk '{ print $1 }')
+    if [ "$actual_checksum" != "$expected_checksum" ]; then
+        log_error "SHA-256 checksum mismatch for $filename; installation aborted."
+        rm -f "$temp_archive" "$temp_checksum"
+        rm -rf "$temp_extract"
+        exit 1
+    fi
+
+    if ! tar -xzf "$temp_archive" -C "$temp_extract"; then
+        log_error "Failed to extract downloaded archive."
+        rm -f "$temp_archive" "$temp_checksum"
+        rm -rf "$temp_extract"
+        exit 1
+    fi
+
+    if [ ! -f "$temp_extract/isearch-cli" ]; then
+        log_error "Downloaded archive did not contain the isearch-cli executable."
+        rm -f "$temp_archive" "$temp_checksum"
+        rm -rf "$temp_extract"
+        exit 1
+    fi
+
     log_info "Installing to: $dest_path"
-    mv "$temp_bin" "$dest_path"
-    chmod +x "$dest_path"
+    mv "$temp_extract/isearch-cli" "$dest_path"
+    chmod 0755 "$dest_path"
+    rm -f "$temp_archive" "$temp_checksum"
+    rm -rf "$temp_extract"
 
     log_success "Installation of isearch executable completed."
 }
@@ -244,10 +297,12 @@ main() {
 
     local version
     local download_url
+    local checksum_url
     version=$(echo "$release_info" | cut -d'|' -f1)
     download_url=$(echo "$release_info" | cut -d'|' -f2)
+    checksum_url=$(echo "$release_info" | cut -d'|' -f3)
 
-    install_binary "$version" "$download_url"
+    install_binary "$version" "$download_url" "$checksum_url"
     verify_installation
 
     echo -e "\n${GREEN}🎉 Congratulations! iSearch CLI™ v${version} has been successfully installed!${NC}"
