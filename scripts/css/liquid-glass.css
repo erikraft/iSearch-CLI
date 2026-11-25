@@ -1,0 +1,47 @@
+/* iSearch CLI download center — translucent glass fallback and edge highlights. */
+:root {
+  --isearch-glass-bg: rgba(17, 18, 27, .66);
+  --isearch-glass-border: rgba(255, 255, 255, .16);
+  --isearch-glass-shine: rgba(255, 255, 255, .12);
+}
+.site-header,
+.site-nav,
+.nav-shell,
+.glass-card,
+.feature-card,
+.project-card,
+.download-card,
+.terminal-window,
+[role="dialog"],
+.modal-card {
+  border-color: var(--isearch-glass-border);
+  background-color: var(--isearch-glass-bg);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, .3), inset 0 1px 0 var(--isearch-glass-shine);
+  -webkit-backdrop-filter: blur(22px) saturate(1.38);
+  backdrop-filter: blur(22px) saturate(1.38);
+}
+.site-header {
+  background: rgba(8, 9, 14, .62);
+}
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid rgba(197, 187, 168, .95);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-transparency: reduce) {
+  .site-header,
+  .site-nav,
+  .nav-shell,
+  .glass-card,
+  .feature-card,
+  .project-card,
+  .download-card,
+  .terminal-window,
+  [role="dialog"],
+  .modal-card {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: #10111a;
+  }
+}
