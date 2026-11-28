@@ -45,6 +45,16 @@ iSearch CLI™ delivers a premium terminal experience with a professional intera
 
 ---
 
+
+## Liquid Glass scope
+
+The web download center uses the optical Liquid Glass treatment: a translucent material,
+a highlighted rim and a generated refraction map where the browser supports SVG backdrop
+filters. The native Rust TUI is intentionally rendered with terminal cells and ANSI colors.
+A terminal cannot sample and refract the pixels behind a panel like a composited GUI, so its
+rounded panels and color themes are terminal-native styling rather than a claim of physical
+Liquid Glass refraction.
+
 ## Installation
 
 ### 💻 Windows
